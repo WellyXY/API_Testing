@@ -361,13 +361,6 @@
                     </small>
                 </div>
                 <div class="form-group">
-                    <label for="baseUrl">API Base URL:</label>
-                    <input type="text" id="baseUrl" class="form-control" value="http://localhost:5003">
-                    <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 提示：使用本地代理服務器解決 CORS 問題
-                    </small>
-                </div>
-                <div class="form-group">
                     <button type="button" class="btn" onclick="testConnection()" style="background: #28a745; margin-bottom: 10px;">
                         🔍 測試連接
                     </button>
@@ -497,7 +490,7 @@
         // 生成視頻
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = document.getElementById('baseUrl').value;
+            const baseUrl = "/";
             const imageFile = document.getElementById('imageFile').files[0];
             const promptText = document.getElementById('promptText').value;
 
@@ -587,7 +580,7 @@
         // 檢查視頻狀態
         async function checkVideoStatus() {
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = document.getElementById('baseUrl').value;
+            const baseUrl = "/";
             
             if (!apiKey) return;
             
@@ -855,7 +848,7 @@
             console.log('testConnection 函數被調用');
             
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = document.getElementById('baseUrl').value;
+            const baseUrl = "/";
 
             console.log('API Key:', apiKey ? `已設置 (${apiKey.length} 字符)` : '未設置');
             console.log('Base URL:', baseUrl);
@@ -923,8 +916,9 @@
 
         // 添加調試檢查功能
         async function debugCheck() {
+            console.log('debugCheck 函數被調用');
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = document.getElementById('baseUrl').value;
+            const baseUrl = "/";
 
             if (!apiKey) {
                 showError('請先輸入 API Key');

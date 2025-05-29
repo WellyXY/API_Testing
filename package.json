@@ -1,0 +1,26 @@
+{
+  "name": "pika-api-frontend",
+  "version": "1.0.0",
+  "description": "Pika API 圖片轉視頻生成器 - 支持多任務並行處理",
+  "main": "api/generate.js",
+  "scripts": {
+    "dev": "python pika_proxy_server.py",
+    "build": "echo 'Build complete'",
+    "start": "python pika_proxy_server.py"
+  },
+  "keywords": [
+    "pika",
+    "api",
+    "video",
+    "generation",
+    "image-to-video"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "dependencies": {
+    "python": "^3.9.0"
+  },
+  "engines": {
+    "node": ">=14.x"
+  }
+} 

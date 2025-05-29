@@ -1,0 +1,979 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pika API - 圖片轉視頻生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .file-upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .file-upload-area:hover {
+            border-color: #4facfe;
+            background: #f0f9ff;
+        }
+
+        .file-upload-area.drag-over {
+            border-color: #4facfe;
+            background: #e6f3ff;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #ddd;
+            margin-bottom: 15px;
+        }
+
+        .file-upload-area.has-file {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+
+        .file-upload-area.has-file .upload-icon {
+            color: #4caf50;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .api-config {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+        }
+
+        .api-config h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .status-area {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-value {
+            color: #666;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e1e5e9;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .result-area {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .video-container {
+            margin: 20px 0;
+        }
+
+        .video-container video {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .error-message {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .success-message {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+
+        .preview-image {
+            max-width: 300px;
+            max-height: 200px;
+            border-radius: 8px;
+            margin-top: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .task-card {
+            background: white;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .task-card.completed {
+            border-color: #4caf50;
+            background: #f8fff8;
+        }
+
+        .task-card.failed {
+            border-color: #f44336;
+            background: #fff8f8;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .task-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .task-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .task-status.processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .task-status.completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .task-status.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .task-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .task-detail-item {
+            text-align: center;
+        }
+
+        .task-detail-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .task-detail-value {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .task-video {
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+
+            .task-details {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Pika API 圖片轉視頻</h1>
+            <p>上傳圖片，添加提示詞，生成精美視頻</p>
+        </div>
+
+        <div class="content">
+            <!-- API 配置區域 -->
+            <div class="api-config">
+                <h3>🔧 API 配置</h3>
+                <div class="form-group">
+                    <label for="apiKey">API Key:</label>
+                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="請輸入您的 API Key">
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        💡 提示：API Key 通常以 "pk-" 或類似前綴開頭
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="baseUrl">API Base URL:</label>
+                    <input type="text" id="baseUrl" class="form-control" value="">
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        💡 提示：部署在 Vercel 上時使用相對路徑
+                    </small>
+                </div>
+                <div class="form-group">
+                    <button type="button" class="btn" onclick="testConnection()" style="background: #28a745; margin-bottom: 10px;">
+                        🔍 測試連接
+                    </button>
+                    <button type="button" class="btn" onclick="debugCheck()" style="background: #6c757d; margin-bottom: 10px;">
+                        🐛 調試檢查
+                    </button>
+                </div>
+            </div>
+
+            <!-- 圖片上傳區域 -->
+            <div class="form-group">
+                <label>📸 選擇圖片</label>
+                <div class="file-upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">
+                        <strong>點擊選擇圖片</strong> 或拖拽圖片到這裡<br>
+                        <small>支持 JPG, PNG, GIF 格式</small>
+                    </div>
+                    <input type="file" id="imageFile" accept="image/*">
+                    <div id="imagePreview"></div>
+                </div>
+            </div>
+
+            <!-- 提示詞輸入 -->
+            <div class="form-group">
+                <label for="promptText">✨ 提示詞 (可選)</label>
+                <textarea id="promptText" class="form-control" placeholder="描述您希望生成的視頻效果...&#10;例如：a beautiful sunset scene with gentle waves"></textarea>
+            </div>
+
+            <!-- 生成按鈕 -->
+            <button class="btn" id="generateBtn" onclick="generateVideo()">
+                🚀 開始生成視頻
+            </button>
+
+            <!-- 多任務管理區域 -->
+            <div class="tasks-area" id="tasksArea" style="display: none;">
+                <h3>📊 生成任務管理</h3>
+                <div class="task-summary" id="taskSummary" style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>📈 任務統計：共 <span id="totalTasks">0</span> 個任務</span>
+                        <span>⏱️ 平均用時：<span id="averageTime">-</span></span>
+                    </div>
+                </div>
+                <div id="tasksList"></div>
+            </div>
+
+            <!-- 錯誤訊息區域 -->
+            <div id="errorArea"></div>
+        </div>
+    </div>
+
+    <script>
+        // 多任務管理
+        let tasks = new Map(); // 使用 Map 存儲任務信息
+        let globalTaskCounter = 0;
+        let statusCheckInterval = null;
+        
+        // 任務數據結構
+        function createTask(videoId, promptText, imageName) {
+            return {
+                id: videoId,
+                taskNumber: ++globalTaskCounter,
+                status: 'waiting',
+                progress: 0,
+                promptText: promptText || '',
+                imageName: imageName || '',
+                startTime: null,
+                endTime: null,
+                duration: 0,
+                url: null,
+                created: new Date()
+            };
+        }
+
+        // 文件上傳處理
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('imageFile');
+        const imagePreview = document.getElementById('imagePreview');
+
+        // 點擊上傳區域
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        // 拖拽上傳
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('drag-over');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('drag-over');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('drag-over');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        // 文件選擇處理
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('請選擇圖片文件');
+                return;
+            }
+
+            // 顯示預覽
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="預覽圖片">`;
+                uploadArea.classList.add('has-file');
+                document.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong><br><small>點擊更換圖片</small>`;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 生成視頻
+        async function generateVideo() {
+            const apiKey = document.getElementById('apiKey').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            const imageFile = document.getElementById('imageFile').files[0];
+            const promptText = document.getElementById('promptText').value;
+
+            // 添加調試信息
+            console.log('=== 新任務提交 ===');
+            console.log('API Key:', apiKey ? '已設置' : '未設置');
+            console.log('Base URL:', baseUrl);
+            console.log('文件輸入元素:', document.getElementById('imageFile'));
+            console.log('文件列表:', document.getElementById('imageFile').files);
+            console.log('文件列表長度:', document.getElementById('imageFile').files.length);
+            console.log('選中的文件:', imageFile);
+            console.log('提示詞:', promptText);
+            console.log('===============');
+
+            // 驗證輸入
+            if (!apiKey) {
+                showError('請輸入 API Key');
+                return;
+            }
+
+            if (!imageFile) {
+                showError('請選擇圖片文件');
+                console.error('文件驗證失敗: imageFile 為空');
+                return;
+            }
+
+            // 清除之前的錯誤狀態
+            clearMessages();
+            setButtonLoading(true);
+
+            try {
+                // 準備 FormData
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                if (promptText.trim()) {
+                    formData.append('promptText', promptText.trim());
+                }
+
+                console.log('發送請求到:', `${baseUrl}/generate/v0/image-to-video`);
+
+                // 發送請求
+                const response = await fetch(`${baseUrl}/generate/v0/image-to-video`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-KEY': apiKey,
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Response result:', result);
+
+                if (response.ok) {
+                    // 創建新任務
+                    const videoId = result.video_id;
+                    const task = createTask(videoId, promptText, imageFile.name);
+                    tasks.set(videoId, task);
+                    
+                    // 創建任務卡片UI
+                    createTaskCard(task);
+                    
+                    // 顯示任務區域
+                    showTasksArea();
+                    
+                    // 更新統計
+                    updateTasksSummary();
+                    
+                    // 如果這是第一個任務或之前的輪詢已停止，開始輪詢
+                    if (!statusCheckInterval) {
+                        startStatusCheck();
+                    }
+                    
+                    showSuccess(`✅ 任務 #${task.taskNumber} 已提交，ID: ${videoId}`);
+                } else {
+                    const errorMsg = result.detail || result.message || `HTTP ${response.status}: ${response.statusText}`;
+                    throw new Error(errorMsg);
+                }
+
+            } catch (error) {
+                console.error('Error:', error);
+                showError(`生成失敗: ${error.message}`);
+            } finally {
+                setButtonLoading(false);
+            }
+        }
+
+        // 檢查視頻狀態
+        async function checkVideoStatus() {
+            const apiKey = document.getElementById('apiKey').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+            
+            if (!apiKey) return;
+            
+            const activeTasks = Array.from(tasks.values()).filter(task => 
+                !['finished', 'completed', 'failed', 'error'].includes(task.status)
+            );
+            
+            if (activeTasks.length === 0) {
+                stopStatusCheck();
+                return;
+            }
+
+            // 檢查所有活躍任務
+            for (const task of activeTasks) {
+                try {
+                    const response = await fetch(`${baseUrl}/videos/${task.id}`, {
+                        headers: {
+                            'X-API-KEY': apiKey,
+                            'Accept': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const result = await response.json();
+                        updateTaskFromAPI(task, result);
+                    }
+                } catch (error) {
+                    console.error(`檢查任務 ${task.id} 狀態時出錯:`, error);
+                }
+            }
+            
+            // 更新統計
+            updateTasksSummary();
+        }
+
+        function updateTaskFromAPI(task, result) {
+            console.log(`=== 任務 #${task.taskNumber} 狀態更新 ===`);
+            console.log('完整響應數據:', result);
+            
+            // 更新任務數據
+            task.status = result.status || task.status;
+            task.progress = result.progress || task.progress;
+            task.url = result.url || task.url;
+            
+            // 如果收到第一個 >0 的進度且還沒開始計時，開始計時
+            if (task.progress > 0 && !task.startTime) {
+                task.startTime = Date.now();
+                console.log(`⏱️ 任務 #${task.taskNumber} 開始計時`);
+            }
+            
+            // 如果任務完成且還沒記錄結束時間，記錄結束時間
+            const isCompleted = ['completed', 'finished', 'done'].includes(task.status);
+            if (isCompleted && !task.endTime) {
+                task.endTime = Date.now();
+                console.log(`🎉 任務 #${task.taskNumber} 完成！`);
+            }
+            
+            // 更新UI
+            updateTaskCard(task);
+            
+            // 更新到 Map 中
+            tasks.set(task.id, task);
+        }
+
+        // 開始狀態檢查
+        function startStatusCheck() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            statusCheckInterval = setInterval(checkVideoStatus, 3000); // 每3秒檢查一次
+            checkVideoStatus(); // 立即檢查一次
+        }
+
+        // 停止狀態檢查
+        function stopStatusCheck() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+                console.log('⏹️ 所有任務已完成，停止狀態檢查');
+            }
+        }
+
+        // 顯示狀態區域
+        function showStatusArea() {
+            document.getElementById('statusArea').style.display = 'block';
+        }
+
+        // 設置按鈕載入狀態
+        function setButtonLoading(loading) {
+            const btn = document.getElementById('generateBtn');
+            if (loading) {
+                btn.disabled = true;
+                btn.textContent = '🔄 提交中...';
+            } else {
+                btn.disabled = false;
+                btn.textContent = '🚀 開始生成視頻';
+            }
+        }
+
+        // 顯示錯誤訊息
+        function showError(message) {
+            const errorArea = document.getElementById('errorArea');
+            errorArea.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+        }
+
+        // 顯示成功訊息
+        function showSuccess(message) {
+            const errorArea = document.getElementById('errorArea');
+            errorArea.innerHTML = `<div class="success-message">✅ ${message}</div>`;
+        }
+
+        // 清除訊息
+        function clearMessages() {
+            document.getElementById('errorArea').innerHTML = '';
+        }
+
+        // 任務UI管理
+        function showTasksArea() {
+            document.getElementById('tasksArea').style.display = 'block';
+        }
+
+        function createTaskCard(task) {
+            const tasksList = document.getElementById('tasksList');
+            
+            const taskCard = document.createElement('div');
+            taskCard.className = 'task-card';
+            taskCard.id = `task-${task.id}`;
+            
+            taskCard.innerHTML = `
+                <div class="task-header">
+                    <div class="task-title">📋 任務 #${task.taskNumber}</div>
+                    <div class="task-status processing" id="status-${task.id}">處理中</div>
+                </div>
+                <div class="task-details">
+                    <div class="task-detail-item">
+                        <div class="task-detail-label">視頻ID</div>
+                        <div class="task-detail-value" style="font-size: 11px;">${task.id}</div>
+                    </div>
+                    <div class="task-detail-item">
+                        <div class="task-detail-label">進度</div>
+                        <div class="task-detail-value" id="progress-${task.id}">0%</div>
+                    </div>
+                    <div class="task-detail-item">
+                        <div class="task-detail-label">⏱️ 用時</div>
+                        <div class="task-detail-value" id="time-${task.id}">等待開始...</div>
+                    </div>
+                </div>
+                <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                    🖼️ 圖片：${task.imageName} | 💬 提示詞：${task.promptText || '無'}
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill-${task.id}"></div>
+                </div>
+                <div class="task-video" id="video-${task.id}" style="display: none;"></div>
+            `;
+            
+            // 插入到最前面（最新的任務在上面）
+            tasksList.insertBefore(taskCard, tasksList.firstChild);
+        }
+
+        function updateTaskCard(task) {
+            const statusElement = document.getElementById(`status-${task.id}`);
+            const progressElement = document.getElementById(`progress-${task.id}`);
+            const timeElement = document.getElementById(`time-${task.id}`);
+            const progressFillElement = document.getElementById(`progress-fill-${task.id}`);
+            const taskCard = document.getElementById(`task-${task.id}`);
+            
+            if (!statusElement) return;
+            
+            // 更新進度
+            progressElement.textContent = `${task.progress}%`;
+            progressFillElement.style.width = `${task.progress}%`;
+            
+            // 更新時間
+            if (task.startTime) {
+                const elapsed = task.endTime ? 
+                    Math.floor((task.endTime - task.startTime) / 1000) :
+                    Math.floor((Date.now() - task.startTime) / 1000);
+                
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                const timeText = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                
+                timeElement.textContent = task.endTime ? 
+                    `✅ ${timeText}` : 
+                    `🔄 ${timeText}`;
+                    
+                task.duration = elapsed;
+            }
+            
+            // 更新狀態
+            statusElement.className = 'task-status';
+            if (task.status === 'finished' || task.status === 'completed') {
+                statusElement.classList.add('completed');
+                statusElement.textContent = '✅ 完成';
+                taskCard.classList.add('completed');
+                
+                if (task.url) {
+                    showTaskVideo(task);
+                }
+            } else if (task.status === 'failed' || task.status === 'error') {
+                statusElement.classList.add('failed');
+                statusElement.textContent = '❌ 失敗';
+                taskCard.classList.add('failed');
+            } else {
+                statusElement.classList.add('processing');
+                statusElement.textContent = '🔄 處理中';
+            }
+        }
+
+        function showTaskVideo(task) {
+            const videoContainer = document.getElementById(`video-${task.id}`);
+            if (!videoContainer || !task.url) return;
+            
+            videoContainer.style.display = 'block';
+            videoContainer.innerHTML = `
+                <video controls width="60%" preload="metadata" style="display: block; margin: 10px auto;">
+                    <source src="${task.url}" type="video/mp4">
+                    您的瀏覽器不支持視頻播放。
+                </video>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">打開視頻</a> |
+                    <a href="#" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 下載</a>
+                </div>
+            `;
+        }
+
+        function downloadTaskVideo(taskId) {
+            const task = tasks.get(taskId);
+            if (task && task.url) {
+                const a = document.createElement('a');
+                a.href = task.url;
+                a.download = `pika_video_task${task.taskNumber}_${task.id}.mp4`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        }
+
+        function updateTasksSummary() {
+            const totalTasksElement = document.getElementById('totalTasks');
+            const averageTimeElement = document.getElementById('averageTime');
+            
+            const completedTasks = Array.from(tasks.values()).filter(task => 
+                task.endTime && (task.status === 'finished' || task.status === 'completed')
+            );
+            
+            totalTasksElement.textContent = tasks.size;
+            
+            if (completedTasks.length > 0) {
+                const totalTime = completedTasks.reduce((sum, task) => sum + task.duration, 0);
+                const avgTime = Math.round(totalTime / completedTasks.length);
+                const minutes = Math.floor(avgTime / 60);
+                const seconds = avgTime % 60;
+                
+                const avgText = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                averageTimeElement.textContent = `${avgText} (${completedTasks.length}/${tasks.size})`;
+            } else {
+                averageTimeElement.textContent = '-';
+            }
+        }
+
+        // 測試連接功能
+        async function testConnection() {
+            console.log('testConnection 函數被調用');
+            
+            const apiKey = document.getElementById('apiKey').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+
+            console.log('API Key:', apiKey ? `已設置 (${apiKey.length} 字符)` : '未設置');
+            console.log('Base URL:', baseUrl);
+
+            if (!apiKey) {
+                showError('請先輸入 API Key');
+                return;
+            }
+
+            clearMessages();
+            showSuccess('正在測試連接...');
+
+            try {
+                console.log('準備發送測試請求...');
+                
+                // 先嘗試一個更簡單的請求
+                const testUrl = `${baseUrl}/generate/v0/image-to-video`;
+                console.log('測試 URL:', testUrl);
+
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: {
+                        'X-API-KEY': apiKey,
+                        'Accept': 'application/json'
+                    }
+                });
+
+                console.log('收到響應:', response.status, response.statusText);
+                console.log('響應頭:', [...response.headers.entries()]);
+
+                if (response.status === 405) {
+                    showSuccess('✅ API 端點可訪問！(Method Not Allowed 是正常的，說明端點存在)');
+                } else if (response.status === 200 || response.status === 204) {
+                    showSuccess('✅ 連接測試成功！');
+                } else if (response.status === 401) {
+                    showError('❌ 認證失敗：API Key 可能無效');
+                } else if (response.status === 403) {
+                    showError('❌ 權限不足：API Key 可能沒有訪問權限');
+                } else if (response.status === 404) {
+                    showError('❌ API 端點不存在：請檢查 URL 是否正確');
+                } else {
+                    showError(`⚠️ 收到響應狀態: ${response.status} ${response.statusText}`);
+                }
+
+                // 嘗試讀取響應內容
+                try {
+                    const text = await response.text();
+                    console.log('響應內容:', text);
+                } catch (e) {
+                    console.log('無法讀取響應內容:', e);
+                }
+
+            } catch (error) {
+                console.error('連接測試錯誤:', error);
+                
+                if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                    showError('❌ 網絡錯誤：無法連接到服務器，請檢查 URL 和網絡連接');
+                } else if (error.message.includes('CORS')) {
+                    showError('❌ CORS 錯誤：瀏覽器阻止了跨域請求');
+                } else {
+                    showError(`❌ 連接失敗: ${error.message}`);
+                }
+            }
+        }
+
+        // 添加調試檢查功能
+        async function debugCheck() {
+            const apiKey = document.getElementById('apiKey').value;
+            const baseUrl = document.getElementById('baseUrl').value;
+
+            if (!apiKey) {
+                showError('請先輸入 API Key');
+                return;
+            }
+
+            clearMessages();
+            showSuccess('正在進行調試檢查...');
+
+            try {
+                // 嘗試一個簡單的請求來進行調試檢查
+                const response = await fetch(`${baseUrl}/generate/v0/image-to-video`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'X-API-KEY': apiKey,
+                    }
+                });
+
+                console.log('調試檢查響應:', response.status, response.statusText);
+
+                if (response.status === 405) {
+                    showSuccess('✅ 調試檢查成功！');
+                } else if (response.status === 200 || response.status === 204) {
+                    showError('❌ 調試檢查失敗：收到非 405 狀態碼');
+                } else {
+                    showError(`⚠️ 收到響應狀態: ${response.status} ${response.statusText}`);
+                }
+
+            } catch (error) {
+                console.error('調試檢查錯誤:', error);
+                if (error.message.includes('CORS')) {
+                    showError('❌ CORS 錯誤：可能需要在支持 CORS 的環境中運行');
+                } else if (error.message.includes('network')) {
+                    showError('❌ 網絡錯誤：請檢查網絡連接和 URL 是否正確');
+                } else {
+                    showError(`❌ 調試檢查失敗: ${error.message}`);
+                }
+            }
+        }
+
+        // 頁面載入時的初始化
+        window.addEventListener('load', () => {
+            console.log('🚀 Pika API 多任務前端已載入');
+        });
+
+        // 頁面卸載時清理
+        window.addEventListener('beforeunload', () => {
+            stopStatusCheck();
+        });
+    </script>
+</body>
+</html> 

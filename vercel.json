@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "functions": {
+    "api/generate.py": {
+      "runtime": "python3.9"
+    },
+    "api/videos.py": {
+      "runtime": "python3.9"
+    }
+  },
+  "routes": [
+    {
+      "src": "/",
+      "dest": "/index.html"
+    },
+    {
+      "src": "/generate/v0/image-to-video",
+      "dest": "/api/generate.py"
+    },
+    {
+      "src": "/videos/(.*)",
+      "dest": "/api/videos.py?id=$1"
+    },
+    {
+      "src": "/test",
+      "dest": "/api/test.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-API-KEY, Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
+} 

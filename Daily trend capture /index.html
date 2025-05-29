@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google趋势数据分析 - PixVerse</title>
+    <link rel="stylesheet" href="src/css/style.css">
+    <!-- 引入Chart.js库用于数据可视化 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Google趋势数据分析</h1>
+            <div class="search-container">
+                <input type="text" id="keyword-input" placeholder="输入关键词" value="PixVerse">
+                <button id="search-btn">搜索</button>
+            </div>
+            <div id="data-source-indicator" class="loading-data">
+                <span class="indicator-dot"></span>
+                <span class="indicator-text">正在获取数据...</span>
+            </div>
+        </header>
+
+        <main>
+            <section class="trend-section">
+                <h2>过去7天全球趋势变化</h2>
+                <div class="chart-container">
+                    <canvas id="trend-chart"></canvas>
+                </div>
+            </section>
+
+            <div class="data-grid">
+                <section class="hot-keywords">
+                    <h2>热门相关关键词</h2>
+                    <ul id="hot-keywords-list"></ul>
+                </section>
+
+                <section class="top-countries">
+                    <h2>搜索量最高国家</h2>
+                    <div class="chart-container">
+                        <canvas id="country-chart"></canvas>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <p>数据来源：Google Trends</p>
+        </footer>
+    </div>
+
+    <script src="src/js/app.js"></script>
+</body>
+</html> 

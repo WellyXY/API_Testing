@@ -2,10 +2,10 @@
   "version": 2,
   "functions": {
     "api/generate.py": {
-      "runtime": "python3.9"
+      "runtime": "@vercel/python"
     },
     "api/videos.py": {
-      "runtime": "python3.9"
+      "runtime": "@vercel/python"
     }
   },
   "rewrites": [

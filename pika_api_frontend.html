@@ -529,10 +529,10 @@
                     formData.append('promptText', promptText.trim());
                 }
 
-                console.log('發送請求到:', `${baseUrl}/generate/v0/image-to-video`);
+                console.log('發送請求到:', `${baseUrl}generate/v0/image-to-video`);
 
                 // 發送請求
-                const response = await fetch(`${baseUrl}/generate/v0/image-to-video`, {
+                const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
                     method: 'POST',
                     headers: {
                         'X-API-KEY': apiKey,
@@ -596,7 +596,7 @@
             // 檢查所有活躍任務
             for (const task of activeTasks) {
                 try {
-                    const response = await fetch(`${baseUrl}/videos/${task.id}`, {
+                    const response = await fetch(`${baseUrl}videos/${task.id}`, {
                         headers: {
                             'X-API-KEY': apiKey,
                             'Accept': 'application/json'
@@ -865,7 +865,7 @@
                 console.log('準備發送測試請求...');
                 
                 // 先嘗試一個更簡單的請求
-                const testUrl = `${baseUrl}/generate/v0/image-to-video`;
+                const testUrl = `${baseUrl}generate/v0/image-to-video`;
                 console.log('測試 URL:', testUrl);
 
                 const response = await fetch(testUrl, {
@@ -930,7 +930,7 @@
 
             try {
                 // 嘗試一個簡單的請求來進行調試檢查
-                const response = await fetch(`${baseUrl}/generate/v0/image-to-video`, {
+                const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
                     method: 'OPTIONS',
                     headers: {
                         'X-API-KEY': apiKey,

@@ -1,0 +1,31 @@
+🚀 快速部署指南
+
+📋 準備工作已完成：
+✅ 代碼已提交到本地 Git 倉庫
+✅ API Key 已硬編碼：pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM
+✅ Vercel 配置文件已準備
+
+🔧 接下來的步驟：
+
+1. 創建 GitHub 倉庫：
+   - 訪問 https://github.com
+   - 點擊 "New repository"
+   - 倉庫名稱：pika-api-frontend
+   - 設置為 Public
+   - 不要添加 README（我們已經有了）
+
+2. 推送代碼（在終端中執行）：
+   git remote add origin https://github.com/YOUR_USERNAME/pika-api-frontend.git
+   git branch -M main
+   git push -u origin main
+
+3. 部署到 Vercel：
+   - 訪問 https://vercel.com
+   - 用 GitHub 賬戶登錄
+   - 點擊 "New Project"
+   - 選擇 pika-api-frontend 倉庫
+   - 點擊 "Deploy"
+
+🎉 完成！您將獲得一個 https://your-project.vercel.app 的網址
+
+⚠️ 安全提醒：API Key 暴露在前端代碼中，任何人都可以查看使用 

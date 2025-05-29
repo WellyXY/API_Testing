@@ -8,22 +8,18 @@
       "runtime": "python3.9"
     }
   },
-  "routes": [
+  "rewrites": [
     {
-      "src": "/",
-      "dest": "/index.html"
+      "source": "/",
+      "destination": "/index.html"
     },
     {
-      "src": "/generate/v0/image-to-video",
-      "dest": "/api/generate.py"
+      "source": "/generate/v0/image-to-video",
+      "destination": "/api/generate.py"
     },
     {
-      "src": "/videos/(.*)",
-      "dest": "/api/videos.py?id=$1"
-    },
-    {
-      "src": "/test",
-      "dest": "/api/test.py"
+      "source": "/videos/:id",
+      "destination": "/api/videos.py"
     }
   ],
   "headers": [

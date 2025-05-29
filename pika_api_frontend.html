@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pika API - 圖片轉視頻生成器</title>
+    <title>Pika API - Image to Video Generator</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <style>
         * {
             margin: 0;
@@ -345,39 +346,39 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎬 Pika API 圖片轉視頻</h1>
-            <p>上傳圖片，添加提示詞，生成精美視頻</p>
+            <h1>🎬 Pika API Image to Video</h1>
+            <p>Upload an image, add a prompt, and generate beautiful videos</p>
         </div>
 
         <div class="content">
             <!-- API 配置區域 -->
             <div class="api-config">
-                <h3>🔧 API 配置</h3>
+                <h3>🔧 API Configuration</h3>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="請輸入您的 API Key">
+                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 提示：API Key 通常以 "pk-" 或類似前綴開頭
+                        💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
                 </div>
                 <div class="form-group">
                     <button type="button" class="btn" onclick="testConnection()" style="background: #28a745; margin-bottom: 10px;">
-                        🔍 測試連接
+                        🔍 Test Connection
                     </button>
                     <button type="button" class="btn" onclick="debugCheck()" style="background: #6c757d; margin-bottom: 10px;">
-                        🐛 調試檢查
+                        🐛 Debug Check
                     </button>
                 </div>
             </div>
 
             <!-- 圖片上傳區域 -->
             <div class="form-group">
-                <label>📸 選擇圖片</label>
+                <label>📸 Select Image</label>
                 <div class="file-upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
-                        <strong>點擊選擇圖片</strong> 或拖拽圖片到這裡<br>
-                        <small>支持 JPG, PNG, GIF 格式</small>
+                        <strong>Click to select an image</strong> or drag and drop it here<br>
+                        <small>Supports JPG, PNG, GIF formats</small>
                     </div>
                     <input type="file" id="imageFile" accept="image/*">
                     <div id="imagePreview"></div>
@@ -386,22 +387,22 @@
 
             <!-- 提示詞輸入 -->
             <div class="form-group">
-                <label for="promptText">✨ 提示詞 (可選)</label>
-                <textarea id="promptText" class="form-control" placeholder="描述您希望生成的視頻效果...&#10;例如：a beautiful sunset scene with gentle waves"></textarea>
+                <label for="promptText">✨ Prompt (Optional)</label>
+                <textarea id="promptText" class="form-control" placeholder="Describe the video effect you want to generate...&#10;e.g., a beautiful sunset scene with gentle waves"></textarea>
             </div>
 
             <!-- 生成按鈕 -->
             <button class="btn" id="generateBtn" onclick="generateVideo()">
-                🚀 開始生成視頻
+                🚀 Start Generating Video
             </button>
 
             <!-- 多任務管理區域 -->
             <div class="tasks-area" id="tasksArea" style="display: none;">
-                <h3>📊 生成任務管理</h3>
+                <h3>📊 Task Management</h3>
                 <div class="task-summary" id="taskSummary" style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span>📈 任務統計：共 <span id="totalTasks">0</span> 個任務</span>
-                        <span>⏱️ 平均用時：<span id="averageTime">-</span></span>
+                        <span>📈 Task Stats: <span id="totalTasks">0</span> total tasks</span>
+                        <span>⏱️ Average Time: <span id="averageTime">-</span></span>
                     </div>
                 </div>
                 <div id="tasksList"></div>
@@ -473,16 +474,16 @@
 
         function handleFileSelect(file) {
             if (!file.type.startsWith('image/')) {
-                showError('請選擇圖片文件');
+                showError('Please select an image file');
                 return;
             }
 
             // 顯示預覽
             const reader = new FileReader();
             reader.onload = function(e) {
-                imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="預覽圖片">`;
+                imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Preview Image">`;
                 uploadArea.classList.add('has-file');
-                document.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong><br><small>點擊更換圖片</small>`;
+                document.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong><br><small>Click to change image</small>`;
             };
             reader.readAsDataURL(file);
         }
@@ -495,25 +496,25 @@
             const promptText = document.getElementById('promptText').value;
 
             // 添加調試信息
-            console.log('=== 新任務提交 ===');
-            console.log('API Key:', apiKey ? '已設置' : '未設置');
+            console.log('=== New Task Submission ===');
+            console.log('API Key:', apiKey ? 'Set' : 'Not Set');
             console.log('Base URL:', baseUrl);
-            console.log('文件輸入元素:', document.getElementById('imageFile'));
-            console.log('文件列表:', document.getElementById('imageFile').files);
-            console.log('文件列表長度:', document.getElementById('imageFile').files.length);
-            console.log('選中的文件:', imageFile);
-            console.log('提示詞:', promptText);
+            console.log('File input element:', document.getElementById('imageFile'));
+            console.log('File list:', document.getElementById('imageFile').files);
+            console.log('File list length:', document.getElementById('imageFile').files.length);
+            console.log('Selected file:', imageFile);
+            console.log('Prompt:', promptText);
             console.log('===============');
 
             // 驗證輸入
             if (!apiKey) {
-                showError('請輸入 API Key');
+                showError('Please enter your API Key');
                 return;
             }
 
             if (!imageFile) {
-                showError('請選擇圖片文件');
-                console.error('文件驗證失敗: imageFile 為空');
+                showError('Please select an image file');
+                console.error('File validation failed: imageFile is empty');
                 return;
             }
 
@@ -529,7 +530,7 @@
                     formData.append('promptText', promptText.trim());
                 }
 
-                console.log('發送請求到:', `${baseUrl}generate/v0/image-to-video`);
+                console.log('Sending request to:', `${baseUrl}generate/v0/image-to-video`);
 
                 // 發送請求
                 const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
@@ -563,7 +564,7 @@
                         startStatusCheck();
                     }
                     
-                    showSuccess(`✅ 任務 #${task.taskNumber} 已提交，ID: ${videoId}`);
+                    showSuccess(`✅ Task #${task.taskNumber} submitted, ID: ${videoId}`);
                 } else {
                     const errorMsg = result.detail || result.message || `HTTP ${response.status}: ${response.statusText}`;
                     throw new Error(errorMsg);
@@ -571,7 +572,7 @@
 
             } catch (error) {
                 console.error('Error:', error);
-                showError(`生成失敗: ${error.message}`);
+                showError(`Generation failed: ${error.message}`);
             } finally {
                 setButtonLoading(false);
             }
@@ -617,8 +618,8 @@
         }
 
         function updateTaskFromAPI(task, result) {
-            console.log(`=== 任務 #${task.taskNumber} 狀態更新 ===`);
-            console.log('完整響應數據:', result);
+            console.log(`=== Task #${task.taskNumber} Status Update ===`);
+            console.log('Full API Response:', result);
             
             // 更新任務數據
             task.status = result.status || task.status;
@@ -628,14 +629,14 @@
             // 如果收到第一個 >0 的進度且還沒開始計時，開始計時
             if (task.progress > 0 && !task.startTime) {
                 task.startTime = Date.now();
-                console.log(`⏱️ 任務 #${task.taskNumber} 開始計時`);
+                console.log(`⏱️ Task #${task.taskNumber} timer started`);
             }
             
             // 如果任務完成且還沒記錄結束時間，記錄結束時間
             const isCompleted = ['completed', 'finished', 'done'].includes(task.status);
             if (isCompleted && !task.endTime) {
                 task.endTime = Date.now();
-                console.log(`🎉 任務 #${task.taskNumber} 完成！`);
+                console.log(`🎉 Task #${task.taskNumber} completed!`);
             }
             
             // 更新UI
@@ -659,7 +660,7 @@
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
                 statusCheckInterval = null;
-                console.log('⏹️ 所有任務已完成，停止狀態檢查');
+                console.log('⏹️ All tasks completed, stopping status check');
             }
         }
 
@@ -673,10 +674,10 @@
             const btn = document.getElementById('generateBtn');
             if (loading) {
                 btn.disabled = true;
-                btn.textContent = '🔄 提交中...';
+                btn.textContent = '🔄 Submitting...';
             } else {
                 btn.disabled = false;
-                btn.textContent = '🚀 開始生成視頻';
+                btn.textContent = '🚀 Start Generating Video';
             }
         }
 
@@ -711,25 +712,25 @@
             
             taskCard.innerHTML = `
                 <div class="task-header">
-                    <div class="task-title">📋 任務 #${task.taskNumber}</div>
-                    <div class="task-status processing" id="status-${task.id}">處理中</div>
+                    <div class="task-title">📋 Task #${task.taskNumber}</div>
+                    <div class="task-status processing" id="status-${task.id}">Processing</div>
                 </div>
                 <div class="task-details">
                     <div class="task-detail-item">
-                        <div class="task-detail-label">視頻ID</div>
+                        <div class="task-detail-label">Video ID</div>
                         <div class="task-detail-value" style="font-size: 11px;">${task.id}</div>
                     </div>
                     <div class="task-detail-item">
-                        <div class="task-detail-label">進度</div>
+                        <div class="task-detail-label">Progress</div>
                         <div class="task-detail-value" id="progress-${task.id}">0%</div>
                     </div>
                     <div class="task-detail-item">
-                        <div class="task-detail-label">⏱️ 用時</div>
-                        <div class="task-detail-value" id="time-${task.id}">等待開始...</div>
+                        <div class="task-detail-label">⏱️ Time</div>
+                        <div class="task-detail-value" id="time-${task.id}">Waiting to start...</div>
                     </div>
                 </div>
                 <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
-                    🖼️ 圖片：${task.imageName} | 💬 提示詞：${task.promptText || '無'}
+                    🖼️ Image: ${task.imageName} | 💬 Prompt: ${task.promptText || 'None'}
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill-${task.id}"></div>
@@ -762,7 +763,7 @@
                 
                 const minutes = Math.floor(elapsed / 60);
                 const seconds = elapsed % 60;
-                const timeText = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                const timeText = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
                 
                 timeElement.textContent = task.endTime ? 
                     `✅ ${timeText}` : 
@@ -775,7 +776,7 @@
             statusElement.className = 'task-status';
             if (task.status === 'finished' || task.status === 'completed') {
                 statusElement.classList.add('completed');
-                statusElement.textContent = '✅ 完成';
+                statusElement.textContent = '✅ Completed';
                 taskCard.classList.add('completed');
                 
                 if (task.url) {
@@ -783,11 +784,11 @@
                 }
             } else if (task.status === 'failed' || task.status === 'error') {
                 statusElement.classList.add('failed');
-                statusElement.textContent = '❌ 失敗';
+                statusElement.textContent = '❌ Failed';
                 taskCard.classList.add('failed');
             } else {
                 statusElement.classList.add('processing');
-                statusElement.textContent = '🔄 處理中';
+                statusElement.textContent = '🔄 Processing';
             }
         }
 
@@ -799,11 +800,11 @@
             videoContainer.innerHTML = `
                 <video controls width="60%" preload="metadata" style="display: block; margin: 10px auto;">
                     <source src="${task.url}" type="video/mp4">
-                    您的瀏覽器不支持視頻播放。
+                    Your browser does not support video playback.
                 </video>
                 <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                    🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">打開視頻</a> |
-                    <a href="#" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 下載</a>
+                    🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">Open Video</a> |
+                    <a href="#" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 Download</a>
                 </div>
             `;
         }
@@ -836,7 +837,7 @@
                 const minutes = Math.floor(avgTime / 60);
                 const seconds = avgTime % 60;
                 
-                const avgText = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                const avgText = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
                 averageTimeElement.textContent = `${avgText} (${completedTasks.length}/${tasks.size})`;
             } else {
                 averageTimeElement.textContent = '-';
@@ -845,28 +846,28 @@
 
         // 測試連接功能
         async function testConnection() {
-            console.log('testConnection 函數被調用');
+            console.log('testConnection function called');
             
             const apiKey = document.getElementById('apiKey').value;
             const baseUrl = "/";
 
-            console.log('API Key:', apiKey ? `已設置 (${apiKey.length} 字符)` : '未設置');
+            console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
             console.log('Base URL:', baseUrl);
 
             if (!apiKey) {
-                showError('請先輸入 API Key');
+                showError('Please enter API Key first');
                 return;
             }
 
             clearMessages();
-            showSuccess('正在測試連接...');
+            showSuccess('Testing connection...');
 
             try {
-                console.log('準備發送測試請求...');
+                console.log('Preparing to send test request...');
                 
                 // 先嘗試一個更簡單的請求
                 const testUrl = `${baseUrl}generate/v0/image-to-video`;
-                console.log('測試 URL:', testUrl);
+                console.log('Test URL:', testUrl);
 
                 const response = await fetch(testUrl, {
                     method: 'GET',
@@ -876,57 +877,57 @@
                     }
                 });
 
-                console.log('收到響應:', response.status, response.statusText);
-                console.log('響應頭:', [...response.headers.entries()]);
+                console.log('Received response:', response.status, response.statusText);
+                console.log('Response headers:', [...response.headers.entries()]);
 
                 if (response.status === 405) {
-                    showSuccess('✅ API 端點可訪問！(Method Not Allowed 是正常的，說明端點存在)');
+                    showSuccess('✅ API endpoint is accessible! (Method Not Allowed is normal, indicates endpoint exists)');
                 } else if (response.status === 200 || response.status === 204) {
-                    showSuccess('✅ 連接測試成功！');
+                    showSuccess('✅ Connection test successful!');
                 } else if (response.status === 401) {
-                    showError('❌ 認證失敗：API Key 可能無效');
+                    showError('❌ Authentication failed: API Key might be invalid');
                 } else if (response.status === 403) {
-                    showError('❌ 權限不足：API Key 可能沒有訪問權限');
+                    showError('❌ Forbidden: API Key might not have access');
                 } else if (response.status === 404) {
-                    showError('❌ API 端點不存在：請檢查 URL 是否正確');
+                    showError('❌ API endpoint not found: Please check the URL');
                 } else {
-                    showError(`⚠️ 收到響應狀態: ${response.status} ${response.statusText}`);
+                    showError(`⚠️ Received response status: ${response.status} ${response.statusText}`);
                 }
 
                 // 嘗試讀取響應內容
                 try {
                     const text = await response.text();
-                    console.log('響應內容:', text);
+                    console.log('Response content:', text);
                 } catch (e) {
-                    console.log('無法讀取響應內容:', e);
+                    console.log('Could not read response content:', e);
                 }
 
             } catch (error) {
-                console.error('連接測試錯誤:', error);
+                console.error('Connection test error:', error);
                 
                 if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showError('❌ 網絡錯誤：無法連接到服務器，請檢查 URL 和網絡連接');
+                    showError('❌ Network Error: Could not connect to server. Check URL and network connection.');
                 } else if (error.message.includes('CORS')) {
-                    showError('❌ CORS 錯誤：瀏覽器阻止了跨域請求');
+                    showError('❌ CORS Error: Cross-origin request blocked by browser.');
                 } else {
-                    showError(`❌ 連接失敗: ${error.message}`);
+                    showError(`❌ Connection failed: ${error.message}`);
                 }
             }
         }
 
         // 添加調試檢查功能
         async function debugCheck() {
-            console.log('debugCheck 函數被調用');
+            console.log('debugCheck function called');
             const apiKey = document.getElementById('apiKey').value;
             const baseUrl = "/";
 
             if (!apiKey) {
-                showError('請先輸入 API Key');
+                showError('Please enter API Key first');
                 return;
             }
 
             clearMessages();
-            showSuccess('正在進行調試檢查...');
+            showSuccess('Performing debug check...');
 
             try {
                 // 嘗試一個簡單的請求來進行調試檢查
@@ -937,31 +938,31 @@
                     }
                 });
 
-                console.log('調試檢查響應:', response.status, response.statusText);
+                console.log('Debug check response:', response.status, response.statusText);
 
                 if (response.status === 405) {
-                    showSuccess('✅ 調試檢查成功！');
+                    showSuccess('✅ Debug check successful!');
                 } else if (response.status === 200 || response.status === 204) {
-                    showError('❌ 調試檢查失敗：收到非 405 狀態碼');
+                    showError('❌ Debug check failed: Received non-405 status code');
                 } else {
-                    showError(`⚠️ 收到響應狀態: ${response.status} ${response.statusText}`);
+                    showError(`⚠️ Received response status: ${response.status} ${response.statusText}`);
                 }
 
             } catch (error) {
-                console.error('調試檢查錯誤:', error);
+                console.error('Debug check error:', error);
                 if (error.message.includes('CORS')) {
-                    showError('❌ CORS 錯誤：可能需要在支持 CORS 的環境中運行');
+                    showError('❌ CORS Error: May need to run in a CORS-enabled environment.');
                 } else if (error.message.includes('network')) {
-                    showError('❌ 網絡錯誤：請檢查網絡連接和 URL 是否正確');
+                    showError('❌ Network Error: Check network connection and URL.');
                 } else {
-                    showError(`❌ 調試檢查失敗: ${error.message}`);
+                    showError(`❌ Debug check failed: ${error.message}`);
                 }
             }
         }
 
         // 頁面載入時的初始化
         window.addEventListener('load', () => {
-            console.log('🚀 Pika API 多任務前端已載入');
+            console.log('🚀 Pika API Multi-Task Frontend Loaded');
         });
 
         // 頁面卸載時清理

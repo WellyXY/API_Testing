@@ -995,7 +995,13 @@
             if (task && task.url) {
                 const a = document.createElement('a');
                 a.href = task.url;
-                a.download = `pika_video_task${task.taskNumber}_${task.id}.mp4`;
+                
+                // 使用 prompt + 圖片名稱作為檔名
+                const prompt = task.prompt || 'video';
+                const imageName = task.imageName.replace(/\.[^/.]+$/, '');
+                const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
+                a.download = `${cleanPrompt}_${imageName}.mp4`;
+                
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1066,7 +1072,12 @@
                         // 創建隱藏的下載連結
                         const link = document.createElement('a');
                         link.href = task.url;
-                        link.download = `pika_video_task${task.taskNumber}_${task.imageName.replace(/\.[^/.]+$/, '')}.mp4`;
+                        
+                        // 使用 prompt + 圖片名稱作為檔名
+                        const prompt = task.prompt || 'video';
+                        const imageName = task.imageName.replace(/\.[^/.]+$/, '');
+                        const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
+                        link.download = `${cleanPrompt}_${imageName}.mp4`;
                         link.style.display = 'none';
                         
                         document.body.appendChild(link);

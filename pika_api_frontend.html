@@ -373,14 +373,14 @@
 
             <!-- 圖片上傳區域 -->
             <div class="form-group">
-                <label>📸 Select Image</label>
+                <label>📸 Select Image(s) - Multi-select supported</label>
                 <div class="file-upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
-                        <strong>Click to select an image</strong> or drag and drop it here<br>
-                        <small>Supports JPG, PNG, GIF formats</small>
+                        <strong>Click to select image(s)</strong> or drag and drop them here<br>
+                        <small>Supports JPG, PNG, GIF formats • Multi-select enabled</small>
                     </div>
-                    <input type="file" id="imageFile" accept="image/*">
+                    <input type="file" id="imageFile" accept="image/*" multiple>
                     <div id="imagePreview"></div>
                 </div>
             </div>
@@ -393,7 +393,7 @@
 
             <!-- 生成按鈕 -->
             <button class="btn" id="generateBtn" onclick="generateVideo()">
-                🚀 Start Generating Video
+                🚀 Start Generating Video(s)
             </button>
 
             <!-- 多任務管理區域 -->
@@ -459,50 +459,123 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('drag-over');
-            const files = e.dataTransfer.files;
+            const files = Array.from(e.dataTransfer.files);
             if (files.length > 0) {
-                handleFileSelect(files[0]);
+                handleMultipleFileSelect(files);
             }
         });
 
         // 文件選擇處理
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                handleFileSelect(e.target.files[0]);
+                handleMultipleFileSelect(Array.from(e.target.files));
             }
         });
 
-        function handleFileSelect(file) {
-            if (!file.type.startsWith('image/')) {
-                showError('Please select an image file');
+        let selectedImages = []; // 全局變量存儲選中的圖片
+
+        function handleMultipleFileSelect(files) {
+            // 過濾出圖片文件
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            
+            if (imageFiles.length === 0) {
+                showError('Please select image files');
                 return;
             }
 
+            // 將新圖片添加到選中列表
+            selectedImages = [...selectedImages, ...imageFiles];
+            
+            // 更新 file input 的 files 屬性
+            updateFileInput();
+            
             // 顯示預覽
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imagePreview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Preview Image">`;
-                uploadArea.classList.add('has-file');
-                document.querySelector('.upload-text').innerHTML = `<strong>${file.name}</strong><br><small>Click to change image</small>`;
-            };
-            reader.readAsDataURL(file);
+            displayImagePreviews();
+            
+            // 更新上傳區域狀態
+            uploadArea.classList.add('has-file');
+            updateUploadAreaText();
+        }
+
+        function updateFileInput() {
+            // 創建新的 DataTransfer 對象來更新 file input
+            const dt = new DataTransfer();
+            selectedImages.forEach(file => {
+                dt.items.add(file);
+            });
+            fileInput.files = dt.files;
+        }
+
+        function displayImagePreviews() {
+            if (selectedImages.length === 0) {
+                imagePreview.innerHTML = '';
+                uploadArea.classList.remove('has-file');
+                updateUploadAreaText();
+                return;
+            }
+
+            let previewHTML = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;">';
+            
+            selectedImages.forEach((file, index) => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewItem = document.createElement('div');
+                    previewItem.style.cssText = 'position: relative; text-align: center; background: #f8f9fa; border-radius: 8px; padding: 8px;';
+                    previewItem.innerHTML = `
+                        <img src="${e.target.result}" style="width: 100%; height: 80px; object-fit: cover; border-radius: 6px;" alt="Preview ${index + 1}">
+                        <div style="font-size: 11px; color: #666; margin-top: 4px; word-break: break-all;">${file.name}</div>
+                        <div style="font-size: 10px; color: #999;">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                        <button onclick="removeImage(${index})" style="position: absolute; top: 2px; right: 2px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
+                    `;
+                    
+                    // 更新預覽容器
+                    const container = document.getElementById('imagePreview');
+                    if (!container.querySelector('.preview-grid')) {
+                        container.innerHTML = '<div class="preview-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;"></div>';
+                    }
+                    const grid = container.querySelector('.preview-grid');
+                    grid.appendChild(previewItem);
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function removeImage(index) {
+            selectedImages.splice(index, 1);
+            updateFileInput();
+            
+            // 重新顯示所有預覽
+            imagePreview.innerHTML = '';
+            if (selectedImages.length > 0) {
+                displayImagePreviews();
+            } else {
+                uploadArea.classList.remove('has-file');
+            }
+            updateUploadAreaText();
+        }
+
+        function updateUploadAreaText() {
+            const uploadText = document.querySelector('.upload-text');
+            if (selectedImages.length === 0) {
+                uploadText.innerHTML = '<strong>Click to select image(s)</strong> or drag and drop them here<br><small>Supports JPG, PNG, GIF formats • Multi-select enabled</small>';
+            } else {
+                uploadText.innerHTML = `<strong>${selectedImages.length} image(s) selected</strong><br><small>Click to add more images or drag and drop</small>`;
+            }
         }
 
         // 生成視頻
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
             const baseUrl = "/";
-            const imageFile = document.getElementById('imageFile').files[0];
+            const imageFiles = Array.from(document.getElementById('imageFile').files);
             const promptText = document.getElementById('promptText').value;
 
             // 添加調試信息
-            console.log('=== New Task Submission ===');
+            console.log('=== New Batch Task Submission ===');
             console.log('API Key:', apiKey ? 'Set' : 'Not Set');
             console.log('Base URL:', baseUrl);
-            console.log('File input element:', document.getElementById('imageFile'));
-            console.log('File list:', document.getElementById('imageFile').files);
-            console.log('File list length:', document.getElementById('imageFile').files.length);
-            console.log('Selected file:', imageFile);
+            console.log('Selected images:', imageFiles.length);
+            console.log('File list:', imageFiles);
             console.log('Prompt:', promptText);
             console.log('===============');
 
@@ -512,9 +585,8 @@
                 return;
             }
 
-            if (!imageFile) {
-                showError('Please select an image file');
-                console.error('File validation failed: imageFile is empty');
+            if (imageFiles.length === 0) {
+                showError('Please select at least one image file');
                 return;
             }
 
@@ -523,56 +595,89 @@
             setButtonLoading(true);
 
             try {
-                // 準備 FormData
-                const formData = new FormData();
-                formData.append('image', imageFile);
-                if (promptText.trim()) {
-                    formData.append('promptText', promptText.trim());
-                }
-
-                console.log('Sending request to:', `${baseUrl}generate/v0/image-to-video`);
-
-                // 發送請求
-                const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-KEY': apiKey,
-                    },
-                    body: formData
-                });
-
-                const result = await response.json();
-                console.log('Response result:', result);
-
-                if (response.ok) {
-                    // 創建新任務
-                    const videoId = result.video_id;
-                    const task = createTask(videoId, promptText, imageFile.name);
-                    tasks.set(videoId, task);
+                // 為每個圖片創建任務
+                let successCount = 0;
+                let totalTasks = imageFiles.length;
+                
+                showSuccess(`🚀 Starting generation for ${totalTasks} image(s)...`);
+                
+                for (let i = 0; i < imageFiles.length; i++) {
+                    const imageFile = imageFiles[i];
                     
-                    // 創建任務卡片UI
-                    createTaskCard(task);
-                    
-                    // 顯示任務區域
-                    showTasksArea();
-                    
-                    // 更新統計
-                    updateTasksSummary();
-                    
-                    // 如果這是第一個任務或之前的輪詢已停止，開始輪詢
-                    if (!statusCheckInterval) {
-                        startStatusCheck();
+                    try {
+                        // 準備 FormData
+                        const formData = new FormData();
+                        formData.append('image', imageFile);
+                        if (promptText.trim()) {
+                            formData.append('promptText', promptText.trim());
+                        }
+
+                        console.log(`Sending request ${i + 1}/${totalTasks} for:`, imageFile.name);
+
+                        // 發送請求
+                        const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
+                            method: 'POST',
+                            headers: {
+                                'X-API-KEY': apiKey,
+                            },
+                            body: formData
+                        });
+
+                        const result = await response.json();
+                        console.log(`Response result for ${imageFile.name}:`, result);
+
+                        if (response.ok) {
+                            // 創建新任務
+                            const videoId = result.video_id;
+                            const task = createTask(videoId, promptText, imageFile.name);
+                            tasks.set(videoId, task);
+                            
+                            // 創建任務卡片UI
+                            createTaskCard(task);
+                            
+                            // 顯示任務區域
+                            showTasksArea();
+                            
+                            successCount++;
+                            
+                            console.log(`✅ Task ${i + 1}/${totalTasks} submitted: ${videoId}`);
+                        } else {
+                            const errorMsg = result.detail || result.message || `HTTP ${response.status}: ${response.statusText}`;
+                            console.error(`❌ Task ${i + 1}/${totalTasks} failed for ${imageFile.name}:`, errorMsg);
+                            showError(`Failed to submit ${imageFile.name}: ${errorMsg}`);
+                        }
+                        
+                        // 添加短暫延遲避免 API 限制
+                        if (i < imageFiles.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                        
+                    } catch (error) {
+                        console.error(`Error processing ${imageFile.name}:`, error);
+                        showError(`Error processing ${imageFile.name}: ${error.message}`);
                     }
-                    
-                    showSuccess(`✅ Task #${task.taskNumber} submitted, ID: ${videoId}`);
+                }
+                
+                // 更新統計
+                updateTasksSummary();
+                
+                // 如果有成功提交的任務且輪詢未開始，開始輪詢
+                if (successCount > 0 && !statusCheckInterval) {
+                    startStatusCheck();
+                }
+                
+                // 顯示最終結果
+                if (successCount === totalTasks) {
+                    showSuccess(`✅ All ${totalTasks} task(s) submitted successfully!`);
+                } else if (successCount > 0) {
+                    showSuccess(`⚠️ ${successCount}/${totalTasks} task(s) submitted successfully. Check individual errors above.`);
                 } else {
-                    const errorMsg = result.detail || result.message || `HTTP ${response.status}: ${response.statusText}`;
-                    throw new Error(errorMsg);
+                    showError(`❌ Failed to submit any tasks. Please check your API key and try again.`);
                 }
 
             } catch (error) {
-                console.error('Error:', error);
-                showError(`Generation failed: ${error.message}`);
+                console.error('Batch generation error:', error);
+                showError(`Batch generation failed: ${error.message}`);
             } finally {
                 setButtonLoading(false);
             }
@@ -677,7 +782,7 @@
                 btn.textContent = '🔄 Submitting...';
             } else {
                 btn.disabled = false;
-                btn.textContent = '🚀 Start Generating Video';
+                btn.textContent = '🚀 Start Generating Video(s)';
             }
         }
 

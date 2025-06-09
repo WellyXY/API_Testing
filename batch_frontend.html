@@ -76,11 +76,24 @@
             text-align: center;
             cursor: pointer;
             background: #fafafa;
+            transition: all 0.3s ease;
         }
 
         .file-upload-area:hover {
             border-color: #4facfe;
             background: #f0f9ff;
+            transform: scale(1.02);
+        }
+
+        .file-upload-area.drag-over {
+            border-color: #4facfe;
+            background: #e6f3ff;
+            transform: scale(1.05);
+        }
+
+        .file-upload-area.has-files {
+            border-color: #4caf50;
+            background: #f1f8e9;
         }
 
         .btn {
@@ -180,8 +193,46 @@
             const fileInput = document.getElementById('fileInput');
             const uploadArea = document.getElementById('fileUploadArea');
 
+            // 點擊上傳
             uploadArea.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', handleFileSelect);
+
+            // 拖拽上傳
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                
+                const files = Array.from(e.dataTransfer.files);
+                const imageFiles = files.filter(f => f.type.startsWith('image/'));
+                
+                if (imageFiles.length > 0) {
+                    selectedFiles = [...selectedFiles, ...imageFiles];
+                    updateFileList();
+                    
+                    // 顯示成功提示
+                    const successMsg = document.createElement('div');
+                    successMsg.style.cssText = 'position: fixed; top: 20px; right: 20px; background: #4caf50; color: white; padding: 12px 20px; border-radius: 8px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.2);';
+                    successMsg.textContent = `✅ 已添加 ${imageFiles.length} 張圖片`;
+                    document.body.appendChild(successMsg);
+                    
+                    setTimeout(() => {
+                        document.body.removeChild(successMsg);
+                    }, 3000);
+                } else {
+                    // 顯示錯誤提示
+                    alert('❌ 請上傳圖片文件（JPG, PNG）');
+                }
+            });
         }
 
         function handleFileSelect(e) {
@@ -192,20 +243,37 @@
 
         function updateFileList() {
             const fileList = document.getElementById('fileList');
+            const uploadArea = document.getElementById('fileUploadArea');
+            
             if (selectedFiles.length === 0) {
                 fileList.innerHTML = '';
+                uploadArea.classList.remove('has-files');
+                uploadArea.querySelector('div[style*="font-size: 18px"]').textContent = '點擊或拖拽上傳多張圖片';
                 return;
             }
 
+            // 更新上傳區域狀態和提示文字
+            uploadArea.classList.add('has-files');
+            uploadArea.querySelector('div[style*="font-size: 18px"]').textContent = `已選擇 ${selectedFiles.length} 張圖片，點擊或拖拽添加更多`;
+
             fileList.innerHTML = `
-                <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px;">
-                    <h4>已選擇 ${selectedFiles.length} 張圖片</h4>
+                <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    <h4 style="margin-bottom: 15px; color: #333;">📋 已選擇 ${selectedFiles.length} 張圖片</h4>
                     ${selectedFiles.map((file, i) => `
-                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
-                            <span>${file.name}</span>
-                            <button onclick="removeFile(${i})" style="background: #ff4757; color: white; border: none; padding: 2px 8px; border-radius: 4px;">移除</button>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px; margin-bottom: 8px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <img src="${URL.createObjectURL(file)}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 6px;" alt="預覽">
+                                <div>
+                                    <div style="font-weight: 600; color: #333;">${file.name}</div>
+                                    <div style="font-size: 12px; color: #666;">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                                </div>
+                            </div>
+                            <button onclick="removeFile(${i})" style="background: #ff4757; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;">移除</button>
                         </div>
                     `).join('')}
+                    <div style="margin-top: 10px; padding: 8px; background: #e8f5e8; border-radius: 6px; font-size: 12px; color: #2d5a2d;">
+                        💡 提示：所有圖片將使用相同的 Prompt 進行視頻生成
+                    </div>
                 </div>
             `;
         }

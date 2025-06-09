@@ -405,6 +405,13 @@
                 🚀 Start Generating Video(s)
             </button>
 
+            <!-- 批量下載按鈕 -->
+            <div style="margin: 20px 0; text-align: center;">
+                <button class="btn" id="downloadAllBtn" onclick="downloadAllVideos()" style="background: #28a745; display: none;">
+                    📦 Download All Completed Videos
+                </button>
+            </div>
+
             <!-- 多任務管理區域 -->
             <div class="tasks-area" id="tasksArea" style="display: none;">
                 <h3>📊 Task Management</h3>
@@ -1015,6 +1022,81 @@
                 averageTimeElement.textContent = `${avgText} (${completedTasks.length}/${tasks.size})`;
             } else {
                 averageTimeElement.textContent = '-';
+            }
+            
+            // 顯示/隱藏下載按鈕
+            const downloadBtn = document.getElementById('downloadAllBtn');
+            const completedVideos = Array.from(tasks.values()).filter(task => 
+                (task.status === 'finished' || task.status === 'completed') && task.url
+            );
+            
+            if (downloadBtn) {
+                if (completedVideos.length > 0) {
+                    downloadBtn.style.display = 'block';
+                    downloadBtn.textContent = `📦 Download All Completed Videos (${completedVideos.length})`;
+                } else {
+                    downloadBtn.style.display = 'none';
+                }
+            }
+        }
+
+        // 下載所有完成的視頻
+        async function downloadAllVideos() {
+            const completedVideos = Array.from(tasks.values()).filter(task => 
+                (task.status === 'finished' || task.status === 'completed') && task.url
+            );
+            
+            if (completedVideos.length === 0) {
+                showError('No completed videos to download');
+                return;
+            }
+            
+            const downloadBtn = document.getElementById('downloadAllBtn');
+            const originalText = downloadBtn.textContent;
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '📥 Downloading...';
+            
+            try {
+                let successCount = 0;
+                
+                for (let i = 0; i < completedVideos.length; i++) {
+                    const task = completedVideos[i];
+                    
+                    try {
+                        // 創建隱藏的下載連結
+                        const link = document.createElement('a');
+                        link.href = task.url;
+                        link.download = `pika_video_task${task.taskNumber}_${task.imageName.replace(/\.[^/.]+$/, '')}.mp4`;
+                        link.style.display = 'none';
+                        
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        successCount++;
+                        
+                        // 更新按鈕文字顯示進度
+                        downloadBtn.textContent = `📥 Downloading... (${i + 1}/${completedVideos.length})`;
+                        
+                        // 短暫延遲避免瀏覽器阻止多個下載
+                        if (i < completedVideos.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                        }
+                        
+                    } catch (error) {
+                        console.error(`Failed to download video ${task.taskNumber}:`, error);
+                    }
+                }
+                
+                // 顯示結果
+                showSuccess(`✅ Successfully started download for ${successCount} video(s)!`);
+                
+            } catch (error) {
+                console.error('Batch download error:', error);
+                showError(`Download failed: ${error.message}`);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = originalText;
             }
         }
 

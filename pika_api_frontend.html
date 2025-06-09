@@ -997,7 +997,7 @@
                 a.href = task.url;
                 
                 // 使用 prompt + 圖片名稱作為檔名
-                const prompt = task.prompt || 'video';
+                const prompt = task.promptText || 'video';
                 const imageName = task.imageName.replace(/\.[^/.]+$/, '');
                 const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
                 a.download = `${cleanPrompt}_${imageName}.mp4`;
@@ -1048,9 +1048,18 @@
 
         // 下載所有完成的視頻
         async function downloadAllVideos() {
+            console.log('🔄 Starting batch download...');
+            
             const completedVideos = Array.from(tasks.values()).filter(task => 
                 (task.status === 'finished' || task.status === 'completed') && task.url
             );
+            
+            console.log(`📋 Found ${completedVideos.length} completed videos:`, completedVideos.map(t => ({
+                id: t.id,
+                imageName: t.imageName,
+                promptText: t.promptText,
+                url: t.url
+            })));
             
             if (completedVideos.length === 0) {
                 showError('No completed videos to download');
@@ -1064,21 +1073,31 @@
             
             try {
                 let successCount = 0;
+                let failCount = 0;
                 
                 for (let i = 0; i < completedVideos.length; i++) {
                     const task = completedVideos[i];
                     
                     try {
+                        console.log(`📥 Downloading video ${i + 1}/${completedVideos.length}:`, {
+                            taskId: task.id,
+                            imageName: task.imageName,
+                            url: task.url
+                        });
+                        
                         // 創建隱藏的下載連結
                         const link = document.createElement('a');
                         link.href = task.url;
                         
                         // 使用 prompt + 圖片名稱作為檔名
-                        const prompt = task.prompt || 'video';
+                        const prompt = task.promptText || 'video';
                         const imageName = task.imageName.replace(/\.[^/.]+$/, '');
                         const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
-                        link.download = `${cleanPrompt}_${imageName}.mp4`;
+                        const fileName = `${cleanPrompt}_${imageName}.mp4`;
+                        link.download = fileName;
                         link.style.display = 'none';
+                        
+                        console.log(`💾 Download filename: ${fileName}`);
                         
                         document.body.appendChild(link);
                         link.click();
@@ -1095,19 +1114,32 @@
                         }
                         
                     } catch (error) {
-                        console.error(`Failed to download video ${task.taskNumber}:`, error);
+                        console.error(`❌ Failed to download video ${task.taskNumber}:`, error);
+                        failCount++;
                     }
                 }
                 
                 // 顯示結果
-                showSuccess(`✅ Successfully started download for ${successCount} video(s)!`);
+                if (successCount === completedVideos.length) {
+                    showSuccess(`✅ Successfully started download for all ${successCount} video(s)!`);
+                } else if (successCount > 0) {
+                    showSuccess(`⚠️ Downloaded ${successCount}/${completedVideos.length} video(s). ${failCount} failed.`);
+                } else {
+                    showError(`❌ Failed to download any videos. Please try downloading individually.`);
+                }
+                
+                // 確保任務狀態保持不變
+                console.log(`📊 Tasks status after download:`, Array.from(tasks.values()).length, 'tasks remaining');
                 
             } catch (error) {
-                console.error('Batch download error:', error);
+                console.error('❌ Batch download error:', error);
                 showError(`Download failed: ${error.message}`);
             } finally {
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = originalText;
+                
+                // 強制更新任務摘要以確保UI正確
+                updateTasksSummary();
             }
         }
 

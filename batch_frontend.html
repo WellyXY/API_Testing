@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pika 批量視頻生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .file-upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .file-upload-area:hover {
+            border-color: #4facfe;
+            background: #f0f9ff;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 18px 36px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .task-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e1e5e9;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎬 Pika 批量視頻生成器 ⚡</h1>
+            <p>一次上傳多張圖片，使用相同 Prompt 批量生成視頻，並支持一鍵全部下載</p>
+        </div>
+
+        <div class="content">
+            <div class="form-section">
+                <h2>📝 批量生成設置</h2>
+                
+                <div class="form-group">
+                    <label for="apiKey">🔑 API Key</label>
+                    <input type="password" id="apiKey" class="form-control" 
+                           placeholder="請輸入你的 Pika API Key">
+                </div>
+
+                <div class="form-group">
+                    <label for="promptText">💬 提示詞 (所有圖片共用)</label>
+                    <textarea id="promptText" class="form-control" rows="4"
+                              placeholder="輸入你想要的視頻效果描述"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>🖼️ 上傳圖片 (支持多選)</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div style="font-size: 64px; margin-bottom: 20px;">📁</div>
+                        <div style="font-size: 18px; margin-bottom: 15px;">點擊或拖拽上傳多張圖片</div>
+                        <div style="font-size: 14px; color: #999;">支持 JPG, PNG 格式</div>
+                        <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+                    </div>
+                    <div id="fileList"></div>
+                </div>
+
+                <button class="btn" id="generateBtn" onclick="startBatchGeneration()">
+                    🚀 開始批量生成
+                </button>
+            </div>
+
+            <div id="tasksList"></div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        const API_BASE = window.location.origin;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileUpload();
+            refreshTasks();
+            setInterval(refreshTasks, 5000);
+        });
+
+        function setupFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('fileUploadArea');
+
+            uploadArea.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            selectedFiles = [...selectedFiles, ...files.filter(f => f.type.startsWith('image/'))];
+            updateFileList();
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            fileList.innerHTML = `
+                <div style="margin-top: 20px; padding: 15px; background: white; border-radius: 10px;">
+                    <h4>已選擇 ${selectedFiles.length} 張圖片</h4>
+                    ${selectedFiles.map((file, i) => `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 5px 0;">
+                            <span>${file.name}</span>
+                            <button onclick="removeFile(${i})" style="background: #ff4757; color: white; border: none; padding: 2px 8px; border-radius: 4px;">移除</button>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        async function startBatchGeneration() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const promptText = document.getElementById('promptText').value.trim();
+
+            if (!apiKey || !promptText || selectedFiles.length === 0) {
+                alert('請填寫所有必要信息');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('promptText', promptText);
+            selectedFiles.forEach(file => formData.append('images', file));
+
+            try {
+                const response = await fetch(`${API_BASE}/batch/generate`, {
+                    method: 'POST',
+                    headers: { 'X-API-KEY': apiKey },
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    alert(`✅ 批量生成已啟動！任務 ID: ${result.task_id}`);
+                    selectedFiles = [];
+                    updateFileList();
+                    document.getElementById('promptText').value = '';
+                    refreshTasks();
+                } else {
+                    alert(`❌ 啟動失敗: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 網路錯誤: ${error.message}`);
+            }
+        }
+
+        async function refreshTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/batch/tasks`);
+                const data = await response.json();
+                updateTasksList(data.tasks);
+            } catch (error) {
+                console.error('刷新任務失敗:', error);
+            }
+        }
+
+        function updateTasksList(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">暫無批量任務</p>';
+                return;
+            }
+
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                        <div style="font-size: 12px; color: #666;">ID: ${task.task_id}</div>
+                        <div style="padding: 6px 12px; border-radius: 20px; font-size: 12px; background: ${getStatusColor(task.status)};">
+                            ${getStatusText(task.status)}
+                        </div>
+                    </div>
+                    
+                    <div class="progress-bar" style="margin: 15px 0;">
+                        <div class="progress-fill" style="width: ${task.progress}%"></div>
+                    </div>
+                    <div style="text-align: center; font-size: 14px; color: #666;">
+                        進度: ${task.completed_videos + task.failed_videos}/${task.total_images} 
+                        (成功: ${task.completed_videos}, 失敗: ${task.failed_videos})
+                    </div>
+
+                    <div style="display: flex; gap: 10px; margin-top: 15px;">
+                        ${task.status === 'completed' && task.video_results.length > 0 ? `
+                            <button onclick="downloadBatchVideos('${task.task_id}')" 
+                                    style="background: #28a745; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                                📦 一鍵下載所有視頻
+                            </button>
+                        ` : ''}
+                        <button onclick="deleteTask('${task.task_id}')" 
+                                style="background: #dc3545; color: white; border: none; padding: 8px 16px; border-radius: 5px; cursor: pointer;">
+                            🗑️ 刪除任務
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'processing': '處理中',
+                'completed': '已完成'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getStatusColor(status) {
+            const colorMap = {
+                'pending': '#d1ecf1',
+                'processing': '#fff3cd',
+                'completed': '#d4edda'
+            };
+            return colorMap[status] || '#f8f9fa';
+        }
+
+        async function downloadBatchVideos(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/batch/download/${taskId}`);
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `batch_videos_${taskId}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    alert('✅ 下載已開始！');
+                } else {
+                    const error = await response.json();
+                    alert(`❌ 下載失敗: ${error.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 下載錯誤: ${error.message}`);
+            }
+        }
+
+        async function deleteTask(taskId) {
+            if (!confirm('確定要刪除這個任務嗎？')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/batch/delete/${taskId}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('✅ 任務已刪除');
+                    refreshTasks();
+                } else {
+                    alert(`❌ 刪除失敗: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 刪除錯誤: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 

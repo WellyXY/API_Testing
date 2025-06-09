@@ -373,12 +373,12 @@
 
             <!-- 圖片上傳區域 -->
             <div class="form-group">
-                <label>📸 Select Image(s) - Multi-select supported</label>
+                <label>📸 Select Image(s) - Multi-select supported (Max 10)</label>
                 <div class="file-upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
                         <strong>Click to select image(s)</strong> or drag and drop them here<br>
-                        <small>Supports JPG, PNG, GIF formats • Multi-select enabled</small>
+                        <small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 10 images</small>
                     </div>
                     <input type="file" id="imageFile" accept="image/*" multiple>
                     <div id="imagePreview"></div>
@@ -389,6 +389,15 @@
             <div class="form-group">
                 <label for="promptText">✨ Prompt (Optional)</label>
                 <textarea id="promptText" class="form-control" placeholder="Describe the video effect you want to generate...&#10;e.g., a beautiful sunset scene with gentle waves"></textarea>
+            </div>
+
+            <!-- 圖片管理按鈕 -->
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button class="btn" style="background: #6c757d; width: auto; flex: none; padding: 12px 20px;" onclick="clearAllImages()">
+                    🗑️ Clear All Images
+                </button>
+                <div style="flex: 1;"></div>
+                <div id="imageCount" style="align-self: center; color: #666; font-size: 14px;"></div>
             </div>
 
             <!-- 生成按鈕 -->
@@ -483,8 +492,42 @@
                 return;
             }
 
-            // 將新圖片添加到選中列表
-            selectedImages = [...selectedImages, ...imageFiles];
+            // 檢查是否會超過10張限制
+            const totalAfterAdd = selectedImages.length + imageFiles.length;
+            if (totalAfterAdd > 10) {
+                const canAdd = 10 - selectedImages.length;
+                if (canAdd <= 0) {
+                    showError('Maximum 10 images allowed. Please remove some images first.');
+                    return;
+                } else {
+                    showError(`Only ${canAdd} more image(s) can be added (max 10 total). Only first ${canAdd} will be added.`);
+                    imageFiles.splice(canAdd); // 只保留前canAdd個文件
+                }
+            }
+
+            // 防止重複圖片（根據文件名和大小）
+            const newUniqueImages = [];
+            imageFiles.forEach(newFile => {
+                const isDuplicate = selectedImages.some(existingFile => 
+                    existingFile.name === newFile.name && existingFile.size === newFile.size
+                );
+                if (!isDuplicate) {
+                    newUniqueImages.push(newFile);
+                }
+            });
+
+            if (newUniqueImages.length === 0) {
+                showError('All selected images are already added');
+                return;
+            }
+
+            if (newUniqueImages.length < imageFiles.length) {
+                const duplicateCount = imageFiles.length - newUniqueImages.length;
+                showSuccess(`${newUniqueImages.length} image(s) added. ${duplicateCount} duplicate(s) skipped.`);
+            }
+
+            // 將新的唯一圖片添加到選中列表
+            selectedImages = [...selectedImages, ...newUniqueImages];
             
             // 更新 file input 的 files 屬性
             updateFileInput();
@@ -556,10 +599,36 @@
 
         function updateUploadAreaText() {
             const uploadText = document.querySelector('.upload-text');
+            const imageCountDiv = document.getElementById('imageCount');
+            
             if (selectedImages.length === 0) {
-                uploadText.innerHTML = '<strong>Click to select image(s)</strong> or drag and drop them here<br><small>Supports JPG, PNG, GIF formats • Multi-select enabled</small>';
+                uploadText.innerHTML = '<strong>Click to select image(s)</strong> or drag and drop them here<br><small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 10 images</small>';
+                imageCountDiv.textContent = '';
             } else {
-                uploadText.innerHTML = `<strong>${selectedImages.length} image(s) selected</strong><br><small>Click to add more images or drag and drop</small>`;
+                const remaining = 10 - selectedImages.length;
+                if (remaining > 0) {
+                    uploadText.innerHTML = `<strong>${selectedImages.length}/10 image(s) selected</strong><br><small>Click to add ${remaining} more images or drag and drop</small>`;
+                    imageCountDiv.textContent = `${selectedImages.length}/10 images selected`;
+                } else {
+                    uploadText.innerHTML = `<strong>10/10 images selected (Maximum reached)</strong><br><small>Remove some images to add different ones</small>`;
+                    imageCountDiv.textContent = `10/10 images selected (Max reached)`;
+                }
+            }
+        }
+
+        function clearAllImages() {
+            if (selectedImages.length === 0) {
+                showError('No images to clear');
+                return;
+            }
+            
+            if (confirm(`Are you sure you want to remove all ${selectedImages.length} selected image(s)?`)) {
+                selectedImages = [];
+                updateFileInput();
+                imagePreview.innerHTML = '';
+                uploadArea.classList.remove('has-file');
+                updateUploadAreaText();
+                showSuccess('All images cleared');
             }
         }
 

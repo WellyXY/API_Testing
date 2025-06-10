@@ -351,33 +351,32 @@
         </div>
 
         <div class="content">
-            <!-- API Provider Selection -->
-            <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%); border-radius: 15px; border: 2px solid #4facfe;">
-                <h3 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center; gap: 8px;">
-                    🌐 API Provider Selection
-                </h3>
-                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: white; padding: 12px 20px; border-radius: 25px; border: 2px solid #ff6b6b; transition: all 0.3s ease;">
-                        <input type="radio" name="apiProvider" value="nsfw" checked style="margin: 0; transform: scale(1.2);">
-                        <span style="background: #ff6b6b; color: white; padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
-                            🔞 NSFW
-                        </span>
-                        <small style="color: #666; font-size: 12px;">Original API</small>
-                    </label>
-                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: white; padding: 12px 20px; border-radius: 25px; border: 2px solid #4ecdc4; transition: all 0.3s ease;">
-                        <input type="radio" name="apiProvider" value="staging" style="margin: 0; transform: scale(1.2);">
-                        <span style="background: #4ecdc4; color: white; padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
-                            🧪 Staging
-                        </span>
-                        <small style="color: #666; font-size: 12px;">New API</small>
-                    </label>
-                    <div id="apiProviderStatus" style="margin-left: auto; padding: 8px 15px; background: rgba(255,255,255,0.8); border-radius: 15px; font-size: 12px; color: #666; font-weight: 500;"></div>
-                </div>
-            </div>
+
 
             <!-- API 配置區域 -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
+                <div class="form-group">
+                    <label for="apiProvider">🌐 API Provider:</label>
+                    <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
+                        <option value="original">Original - 穩定版本</option>
+                        <option value="staging">Staging - 新功能支援</option>
+                    </select>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        💡 Original 支援 v0，Staging 支援 v2.2 和 Turbo
+                    </small>
+                </div>
+                <div class="form-group">
+                    <label for="apiVersion">🚀 I2V API Version:</label>
+                    <select id="apiVersion" class="form-control" onchange="updateAPIDescription()">
+                        <option value="v0">v0 - Original (generate/v0/image-to-video)</option>
+                        <!-- 動態更新選項 -->
+                        <!-- <option value="turbo">Turbo - Fast (generate/turbo/i2v)</option> -->
+                    </select>
+                    <small id="apiDescription" style="color: #666; margin-top: 5px; display: block;">
+                        💡 Original version - full compatibility
+                    </small>
+                </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
                     <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
@@ -459,23 +458,80 @@
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
         
-        // API Provider Configuration
+        // API 提供商和版本配置
         const API_PROVIDERS = {
-            nsfw: {
-                name: "NSFW",
-                baseUrl: "/",
-                endpoint: "generate/v0/image-to-video",
-                description: "Original API - Full features"
+            'original': {
+                name: 'Original',
+                description: '穩定版本 - 使用原始 API',
+                versions: {
+                    'v0': {
+                        endpoint: '/generate/v0/image-to-video',
+                        description: '原始版本 - 完整功能兼容',
+                        name: 'Original v0'
+                    }
+                }
             },
-            staging: {
-                name: "Staging", 
-                baseUrl: "https://devapi.pika.art/",
-                endpoint: "generate/turbo/i2v",
-                description: "New API - Turbo mode"
+            'staging': {
+                name: 'Staging',
+                description: '新功能版本 - 支援更多 API',
+                versions: {
+                    'v2.2': {
+                        endpoint: '/generate/2.2/i2v',
+                        description: '標準版本 - 更穩定的生成效果',
+                        name: 'Standard v2.2'
+                    },
+                    'turbo': {
+                        endpoint: '/generate/turbo/i2v',
+                        description: 'Turbo版本 - 更快的生成速度',
+                        name: 'Turbo'
+                    }
+                }
             }
         };
-        
-        let currentProvider = 'nsfw'; // Default to NSFW
+
+        // 更新提供商對應的版本選項
+        function updateProviderVersions() {
+            const provider = document.getElementById('apiProvider').value;
+            const versionSelect = document.getElementById('apiVersion');
+            const providerConfig = API_PROVIDERS[provider];
+            
+            // 清空現有選項
+            versionSelect.innerHTML = '';
+            
+            // 添加該提供商支援的版本
+            Object.keys(providerConfig.versions).forEach(version => {
+                const versionConfig = providerConfig.versions[version];
+                const option = document.createElement('option');
+                option.value = version;
+                option.textContent = `${version} - ${versionConfig.name}`;
+                versionSelect.appendChild(option);
+            });
+            
+            // 更新描述
+            updateAPIDescription();
+        }
+
+        // 更新 API 描述
+        function updateAPIDescription() {
+            const provider = document.getElementById('apiProvider').value;
+            const apiVersion = document.getElementById('apiVersion').value;
+            const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
+            const description = versionConfig?.description || '';
+            document.getElementById('apiDescription').textContent = `💡 ${description}`;
+        }
+
+        // 獲取當前選中的 API 端點和提供商
+        function getCurrentAPIConfig() {
+            const provider = document.getElementById('apiProvider').value;
+            const apiVersion = document.getElementById('apiVersion').value;
+            const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
+            
+            return {
+                provider: provider,
+                version: apiVersion,
+                endpoint: versionConfig?.endpoint || '/generate/v0/image-to-video'
+            };
+        }
         
         // 任務數據結構
         function createTask(videoId, promptText, imageName) {
@@ -684,15 +740,15 @@
         // 生成視頻
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
-            const apiUrl = getCurrentApiUrl();
-            const provider = API_PROVIDERS[currentProvider];
+            const apiConfig = getCurrentAPIConfig();
             const imageFiles = Array.from(document.getElementById('imageFile').files);
             const promptText = document.getElementById('promptText').value;
 
             // 添加調試信息
             console.log('=== New Batch Task Submission ===');
-            console.log('API Provider:', provider.name);
-            console.log('API URL:', apiUrl);
+            console.log('API Provider:', apiConfig.provider);
+            console.log('API Version:', apiConfig.version);
+            console.log('API Endpoint:', apiConfig.endpoint);
             console.log('API Key:', apiKey ? 'Set' : 'Not Set');
             console.log('Selected images:', imageFiles.length);
             console.log('File list:', imageFiles);
@@ -728,18 +784,25 @@
                         // 準備 FormData
                         const formData = new FormData();
                         formData.append('image', imageFile);
+                        formData.append('provider', apiConfig.provider);
+                        formData.append('version', apiConfig.version);
                         if (promptText.trim()) {
                             formData.append('promptText', promptText.trim());
                         }
 
                         console.log(`Sending request ${i + 1}/${totalTasks} for:`, imageFile.name);
 
-                        // 發送請求
-                        const response = await fetch(apiUrl, {
+                        // 準備請求 headers（staging 使用後端配置的 API Key）
+                        const headers = {};
+                        if (apiConfig.provider === 'original') {
+                            headers['X-API-KEY'] = apiKey;
+                        }
+                        // staging 不發送 API Key，讓後端使用默認配置
+
+                        // 發送請求到靈活端點
+                        const response = await fetch('/api/generate', {
                             method: 'POST',
-                            headers: {
-                                'X-API-KEY': apiKey,
-                            },
+                            headers: headers,
                             body: formData
                         });
 
@@ -806,8 +869,8 @@
         // 檢查視頻狀態
         async function checkVideoStatus() {
             const apiKey = document.getElementById('apiKey').value;
-            const provider = API_PROVIDERS[currentProvider];
-            const baseUrl = provider.baseUrl;
+            const apiConfig = getCurrentAPIConfig();
+            const baseUrl = '/';  // 使用本地代理
             
             if (!apiKey) return;
             
@@ -823,11 +886,16 @@
             // 檢查所有活躍任務
             for (const task of activeTasks) {
                 try {
-                    const response = await fetch(`${baseUrl}videos/${task.id}`, {
-                        headers: {
-                            'X-API-KEY': apiKey,
-                            'Accept': 'application/json'
-                        }
+                    // 準備 headers（staging 使用後端配置的 API Key）
+                    const headers = {
+                        'Accept': 'application/json'
+                    };
+                    if (apiConfig.provider === 'original') {
+                        headers['X-API-KEY'] = apiKey;
+                    }
+                    
+                    const response = await fetch(`${baseUrl}videos/${task.id}?provider=${apiConfig.provider}`, {
+                        headers: headers
                     });
 
                     if (response.ok) {
@@ -1253,10 +1321,10 @@
             console.log('testConnection function called');
             
             const apiKey = document.getElementById('apiKey').value;
-            const provider = API_PROVIDERS[currentProvider];
+            const apiVersion = document.getElementById('apiVersion').value;
             const apiUrl = getCurrentApiUrl();
 
-            console.log('API Provider:', provider.name);
+            console.log('API Version:', API_VERSIONS[apiVersion].name);
             console.log('API URL:', apiUrl);
             console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
 
@@ -1365,49 +1433,18 @@
             }
         }
 
-        // API Provider Management
-        function updateApiProvider() {
-            const selected = document.querySelector('input[name="apiProvider"]:checked').value;
-            currentProvider = selected;
-            const provider = API_PROVIDERS[selected];
-            
-            // Update status display
-            const statusElement = document.getElementById('apiProviderStatus');
-            statusElement.textContent = `Active: ${provider.name} - ${provider.description}`;
-            
-            // Update visual feedback
-            document.querySelectorAll('label').forEach(label => {
-                const input = label.querySelector('input[name="apiProvider"]');
-                if (input) {
-                    if (input.checked) {
-                        label.style.boxShadow = '0 4px 15px rgba(79, 172, 254, 0.3)';
-                        label.style.transform = 'translateY(-2px)';
-                    } else {
-                        label.style.boxShadow = 'none';
-                        label.style.transform = 'translateY(0)';
-                    }
-                }
-            });
-            
-            console.log(`🔄 Switched to ${provider.name} API:`, provider);
-        }
+
         
         function getCurrentApiUrl() {
-            const provider = API_PROVIDERS[currentProvider];
-            return provider.baseUrl + provider.endpoint;
+            return getCurrentAPIEndpoint();
         }
 
         // 頁面載入時的初始化
         window.addEventListener('load', () => {
             console.log('🚀 Pika API Multi-Task Frontend Loaded');
             
-            // Initialize API provider
-            updateApiProvider();
-            
-            // Add event listeners for API provider selection
-            document.querySelectorAll('input[name="apiProvider"]').forEach(radio => {
-                radio.addEventListener('change', updateApiProvider);
-            });
+            // Initialize provider and version options
+            updateProviderVersions();
         });
 
         // 頁面卸載時清理

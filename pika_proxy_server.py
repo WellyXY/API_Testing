@@ -13,8 +13,26 @@ import json
 app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
 
-# Pika API 配置
-PIKA_BASE_URL = "https://qazwsxedcrf3g5h.pika.art"
+# API 提供商配置
+API_PROVIDERS = {
+    'original': {
+        'name': 'Original',
+        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
+        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',  # 用戶的 API Key
+        'supported_versions': {
+            'v0': '/generate/v0/image-to-video'
+        }
+    },
+    'staging': {
+        'name': 'Staging',
+        'base_url': 'https://089e99349ace.pikalabs.app',
+        'api_key': 'pk_K7IwcgVkFiQySdmoW4kNfgiR_G8C0nSmsd-sIo8Axn0',  # 新的 API Token
+        'supported_versions': {
+            'v2.2': '/generate/2.2/i2v',
+            'turbo': '/generate/turbo/i2v'
+        }
+    }
+}
 
 @app.route('/')
 def index():
@@ -23,14 +41,48 @@ def index():
 
 @app.route('/generate/v0/image-to-video', methods=['POST'])
 def generate_video():
-    """代理圖片轉視頻請求"""
-    try:
-        # 獲取 API Key
-        api_key = request.headers.get('X-API-KEY')
-        if not api_key:
-            return jsonify({'error': 'Missing API Key'}), 400
+    """代理圖片轉視頻請求 - 保持原有端點兼容性"""
+    return _generate_video_internal('original', 'v0')
 
-        print(f"收到圖片轉視頻請求，API Key: {api_key[:10]}...")
+@app.route('/generate/2.2/i2v', methods=['POST']) 
+def generate_video_v22():
+    """2.2 版本的圖片轉視頻"""
+    return _generate_video_internal('staging', 'v2.2')
+
+@app.route('/generate/turbo/i2v', methods=['POST'])
+def generate_video_turbo():
+    """Turbo 版本的圖片轉視頻"""
+    return _generate_video_internal('staging', 'turbo')
+
+@app.route('/api/generate', methods=['POST'])
+def generate_video_flexible():
+    """靈活的生成端點，支持提供商和版本選擇"""
+    provider = request.form.get('provider', 'original')
+    version = request.form.get('version', 'v0')
+    return _generate_video_internal(provider, version)
+
+def _generate_video_internal(provider='original', api_version='v0'):
+    """內部圖片轉視頻處理函數"""
+    try:
+        # 驗證提供商和版本
+        if provider not in API_PROVIDERS:
+            return jsonify({'error': f'Unsupported provider: {provider}'}), 400
+            
+        provider_config = API_PROVIDERS[provider]
+        
+        if api_version not in provider_config['supported_versions']:
+            return jsonify({'error': f'Version {api_version} not supported by {provider} provider'}), 400
+
+        # 獲取 API Key (優先使用用戶提供的，否則使用配置中的)
+        api_key = request.headers.get('X-API-KEY') or request.form.get('api_key')
+        if not api_key:
+            api_key = provider_config['api_key']  # 使用配置中的默認 API Key
+
+        print(f"收到圖片轉視頻請求 ({provider} - {api_version})，API Key: {api_key[:10]}...")
+
+        # 獲取端點和基礎 URL
+        endpoint = provider_config['supported_versions'][api_version]
+        base_url = provider_config['base_url']
 
         # 準備請求數據
         files = {}
@@ -47,12 +99,19 @@ def generate_video():
                 )
                 print(f"收到圖片文件: {image_file.filename}")
 
-        # 處理提示詞
+        # 處理提示詞和其他參數
         if 'promptText' in request.form:
             prompt_text = request.form['promptText']
             if prompt_text.strip():
                 data['promptText'] = prompt_text
                 print(f"提示詞: {prompt_text}")
+        
+        # 處理可選參數
+        if 'seed' in request.form and request.form['seed'].strip():
+            data['seed'] = int(request.form['seed'])
+            
+        if 'negativePrompt' in request.form and request.form['negativePrompt'].strip():
+            data['negativePrompt'] = request.form['negativePrompt']
 
         # 發送請求到 Pika API
         headers = {
@@ -60,10 +119,11 @@ def generate_video():
             'Accept': 'application/json'
         }
 
-        print(f"轉發請求到: {PIKA_BASE_URL}/generate/v0/image-to-video")
+        full_url = f"{base_url}{endpoint}"
+        print(f"轉發請求到: {full_url}")
         
         response = requests.post(
-            f"{PIKA_BASE_URL}/generate/v0/image-to-video",
+            full_url,
             headers=headers,
             files=files,
             data=data,
@@ -89,12 +149,20 @@ def generate_video():
 def get_video_status(video_id):
     """代理視頻狀態查詢請求"""
     try:
-        # 獲取 API Key
-        api_key = request.headers.get('X-API-KEY')
-        if not api_key:
-            return jsonify({'error': 'Missing API Key'}), 400
+        # 獲取提供商參數，默認為 original
+        provider = request.args.get('provider', 'original')
+        
+        if provider not in API_PROVIDERS:
+            return jsonify({'error': f'Unsupported provider: {provider}'}), 400
+            
+        provider_config = API_PROVIDERS[provider]
 
-        print(f"查詢視頻狀態: {video_id}")
+        # 獲取 API Key (優先使用用戶提供的，否則使用配置中的)
+        api_key = request.headers.get('X-API-KEY') or request.args.get('api_key')
+        if not api_key:
+            api_key = provider_config['api_key']
+
+        print(f"查詢視頻狀態: {video_id} (使用 {provider} 提供商)")
 
         # 轉發請求到 Pika API
         headers = {
@@ -103,7 +171,7 @@ def get_video_status(video_id):
         }
 
         response = requests.get(
-            f"{PIKA_BASE_URL}/videos/{video_id}",
+            f"{provider_config['base_url']}/videos/{video_id}",
             headers=headers,
             timeout=30
         )
@@ -130,12 +198,26 @@ def get_video_status(video_id):
         print(f"服務器錯誤: {e}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
+@app.route('/api/info', methods=['GET'])
+def api_info():
+    """返回支持的 API 提供商和版本信息"""
+    return jsonify({
+        'providers': API_PROVIDERS
+    })
+
 @app.route('/test', methods=['GET', 'OPTIONS'])
 def test_connection():
     """測試連接端點"""
-    api_key = request.headers.get('X-API-KEY')
+    provider = request.args.get('provider', 'original')
+    
+    if provider not in API_PROVIDERS:
+        return jsonify({'error': f'Unsupported provider: {provider}'}), 400
+        
+    provider_config = API_PROVIDERS[provider]
+    
+    api_key = request.headers.get('X-API-KEY') or request.args.get('api_key')
     if not api_key:
-        return jsonify({'error': 'Missing API Key'}), 400
+        api_key = provider_config['api_key']
 
     try:
         headers = {
@@ -143,22 +225,26 @@ def test_connection():
             'Accept': 'application/json'
         }
 
-        # 嘗試訪問 API
+        # 測試基礎 URL 連通性
+        test_url = f"{provider_config['base_url']}/videos/test"
         response = requests.get(
-            f"{PIKA_BASE_URL}/generate/v0/image-to-video",
+            test_url,
             headers=headers,
             timeout=10
         )
 
         return jsonify({
             'status': 'success',
+            'provider': provider,
             'api_status': response.status_code,
-            'message': 'Connection test successful'
+            'message': 'Connection test successful',
+            'base_url': provider_config['base_url']
         }), 200
 
     except Exception as e:
         return jsonify({
             'status': 'error',
+            'provider': provider,
             'message': str(e)
         }), 500
 

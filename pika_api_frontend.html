@@ -351,6 +351,30 @@
         </div>
 
         <div class="content">
+            <!-- API Provider Selection -->
+            <div style="margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #f8f9ff 0%, #e3f2fd 100%); border-radius: 15px; border: 2px solid #4facfe;">
+                <h3 style="margin: 0 0 15px 0; color: #333; display: flex; align-items: center; gap: 8px;">
+                    🌐 API Provider Selection
+                </h3>
+                <div style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: white; padding: 12px 20px; border-radius: 25px; border: 2px solid #ff6b6b; transition: all 0.3s ease;">
+                        <input type="radio" name="apiProvider" value="nsfw" checked style="margin: 0; transform: scale(1.2);">
+                        <span style="background: #ff6b6b; color: white; padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                            🔞 NSFW
+                        </span>
+                        <small style="color: #666; font-size: 12px;">Original API</small>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; background: white; padding: 12px 20px; border-radius: 25px; border: 2px solid #4ecdc4; transition: all 0.3s ease;">
+                        <input type="radio" name="apiProvider" value="staging" style="margin: 0; transform: scale(1.2);">
+                        <span style="background: #4ecdc4; color: white; padding: 6px 15px; border-radius: 20px; font-size: 14px; font-weight: bold; display: flex; align-items: center; gap: 5px;">
+                            🧪 Staging
+                        </span>
+                        <small style="color: #666; font-size: 12px;">New API</small>
+                    </label>
+                    <div id="apiProviderStatus" style="margin-left: auto; padding: 8px 15px; background: rgba(255,255,255,0.8); border-radius: 15px; font-size: 12px; color: #666; font-weight: 500;"></div>
+                </div>
+            </div>
+
             <!-- API 配置區域 -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
@@ -434,6 +458,24 @@
         let tasks = new Map(); // 使用 Map 存儲任務信息
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
+        
+        // API Provider Configuration
+        const API_PROVIDERS = {
+            nsfw: {
+                name: "NSFW",
+                baseUrl: "/",
+                endpoint: "generate/v0/image-to-video",
+                description: "Original API - Full features"
+            },
+            staging: {
+                name: "Staging", 
+                baseUrl: "https://devapi.pika.art/",
+                endpoint: "generate/turbo/i2v",
+                description: "New API - Turbo mode"
+            }
+        };
+        
+        let currentProvider = 'nsfw'; // Default to NSFW
         
         // 任務數據結構
         function createTask(videoId, promptText, imageName) {
@@ -642,14 +684,16 @@
         // 生成視頻
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = "/";
+            const apiUrl = getCurrentApiUrl();
+            const provider = API_PROVIDERS[currentProvider];
             const imageFiles = Array.from(document.getElementById('imageFile').files);
             const promptText = document.getElementById('promptText').value;
 
             // 添加調試信息
             console.log('=== New Batch Task Submission ===');
+            console.log('API Provider:', provider.name);
+            console.log('API URL:', apiUrl);
             console.log('API Key:', apiKey ? 'Set' : 'Not Set');
-            console.log('Base URL:', baseUrl);
             console.log('Selected images:', imageFiles.length);
             console.log('File list:', imageFiles);
             console.log('Prompt:', promptText);
@@ -691,7 +735,7 @@
                         console.log(`Sending request ${i + 1}/${totalTasks} for:`, imageFile.name);
 
                         // 發送請求
-                        const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
+                        const response = await fetch(apiUrl, {
                             method: 'POST',
                             headers: {
                                 'X-API-KEY': apiKey,
@@ -762,7 +806,8 @@
         // 檢查視頻狀態
         async function checkVideoStatus() {
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = "/";
+            const provider = API_PROVIDERS[currentProvider];
+            const baseUrl = provider.baseUrl;
             
             if (!apiKey) return;
             
@@ -1208,10 +1253,12 @@
             console.log('testConnection function called');
             
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = "/";
+            const provider = API_PROVIDERS[currentProvider];
+            const apiUrl = getCurrentApiUrl();
 
+            console.log('API Provider:', provider.name);
+            console.log('API URL:', apiUrl);
             console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
-            console.log('Base URL:', baseUrl);
 
             if (!apiKey) {
                 showError('Please enter API Key first');
@@ -1225,10 +1272,9 @@
                 console.log('Preparing to send test request...');
                 
                 // 先嘗試一個更簡單的請求
-                const testUrl = `${baseUrl}generate/v0/image-to-video`;
-                console.log('Test URL:', testUrl);
+                console.log('Test URL:', apiUrl);
 
-                const response = await fetch(testUrl, {
+                const response = await fetch(apiUrl, {
                     method: 'GET',
                     headers: {
                         'X-API-KEY': apiKey,
@@ -1278,7 +1324,7 @@
         async function debugCheck() {
             console.log('debugCheck function called');
             const apiKey = document.getElementById('apiKey').value;
-            const baseUrl = "/";
+            const apiUrl = getCurrentApiUrl();
 
             if (!apiKey) {
                 showError('Please enter API Key first');
@@ -1290,7 +1336,7 @@
 
             try {
                 // 嘗試一個簡單的請求來進行調試檢查
-                const response = await fetch(`${baseUrl}generate/v0/image-to-video`, {
+                const response = await fetch(apiUrl, {
                     method: 'OPTIONS',
                     headers: {
                         'X-API-KEY': apiKey,
@@ -1319,9 +1365,49 @@
             }
         }
 
+        // API Provider Management
+        function updateApiProvider() {
+            const selected = document.querySelector('input[name="apiProvider"]:checked').value;
+            currentProvider = selected;
+            const provider = API_PROVIDERS[selected];
+            
+            // Update status display
+            const statusElement = document.getElementById('apiProviderStatus');
+            statusElement.textContent = `Active: ${provider.name} - ${provider.description}`;
+            
+            // Update visual feedback
+            document.querySelectorAll('label').forEach(label => {
+                const input = label.querySelector('input[name="apiProvider"]');
+                if (input) {
+                    if (input.checked) {
+                        label.style.boxShadow = '0 4px 15px rgba(79, 172, 254, 0.3)';
+                        label.style.transform = 'translateY(-2px)';
+                    } else {
+                        label.style.boxShadow = 'none';
+                        label.style.transform = 'translateY(0)';
+                    }
+                }
+            });
+            
+            console.log(`🔄 Switched to ${provider.name} API:`, provider);
+        }
+        
+        function getCurrentApiUrl() {
+            const provider = API_PROVIDERS[currentProvider];
+            return provider.baseUrl + provider.endpoint;
+        }
+
         // 頁面載入時的初始化
         window.addEventListener('load', () => {
             console.log('🚀 Pika API Multi-Task Frontend Loaded');
+            
+            // Initialize API provider
+            updateApiProvider();
+            
+            // Add event listeners for API provider selection
+            document.querySelectorAll('input[name="apiProvider"]').forEach(radio => {
+                radio.addEventListener('change', updateApiProvider);
+            });
         });
 
         // 頁面卸載時清理

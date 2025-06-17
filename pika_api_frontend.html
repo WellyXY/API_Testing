@@ -433,6 +433,9 @@
                 <button class="btn" id="downloadAllBtn" onclick="downloadAllVideos()" style="background: #28a745; display: none;">
                     📦 Download All Completed Videos
                 </button>
+                <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                    💡 視頻將以對應圖片名稱命名。支援的瀏覽器可選擇存儲位置
+                </div>
             </div>
 
             <!-- 多任務管理區域 -->
@@ -1111,13 +1114,59 @@
             }
             
             try {
+                // 生成基於圖片名稱的文件名
+                const imageName = task.imageName.replace(/\.[^/.]+$/, '') || 'video';
+                const defaultFileName = `${imageName}.mp4`;
+                
                 console.log('🔄 Downloading single video:', {
                     taskId: task.id,
                     imageName: task.imageName,
-                    url: task.url
+                    url: task.url,
+                    defaultFileName: defaultFileName
                 });
                 
-                // 使用 fetch 來獲取視頻文件
+                // 檢查是否支援 File System Access API (Chrome 86+)
+                if ('showSaveFilePicker' in window) {
+                    try {
+                        // 使用新的 File System Access API 讓用戶選擇存儲位置
+                        const fileHandle = await window.showSaveFilePicker({
+                            suggestedName: defaultFileName,
+                            types: [{
+                                description: 'Video files',
+                                accept: {
+                                    'video/mp4': ['.mp4']
+                                }
+                            }]
+                        });
+                        
+                        showSuccess('開始下載視頻...');
+                        
+                        const response = await fetch(task.url, {
+                            method: 'GET',
+                            headers: {
+                                'Accept': 'video/mp4,video/*,*/*'
+                            }
+                        });
+                        
+                        if (!response.ok) {
+                            throw new Error(`下載失敗: ${response.status} ${response.statusText}`);
+                        }
+                        
+                        const writableStream = await fileHandle.createWritable();
+                        await response.body.pipeTo(writableStream);
+                        
+                        showSuccess('✅ 視頻下載成功！');
+                        return;
+                    } catch (filePickerError) {
+                        if (filePickerError.name === 'AbortError') {
+                            showError('下載已取消');
+                            return;
+                        }
+                        console.log('📝 File picker failed, falling back to regular download:', filePickerError.message);
+                    }
+                }
+                
+                // 降級到傳統下載方式
                 showSuccess('開始下載視頻...');
                 
                 const response = await fetch(task.url, {
@@ -1137,12 +1186,7 @@
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                
-                // 使用 prompt + 圖片名稱作為檔名
-                const prompt = task.promptText || 'video';
-                const imageName = task.imageName.replace(/\.[^/.]+$/, '');
-                const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
-                a.download = `${cleanPrompt}_${imageName}.mp4`;
+                a.download = defaultFileName;
                 
                 document.body.appendChild(a);
                 a.click();
@@ -1151,7 +1195,7 @@
                 // 清理 blob URL
                 window.URL.revokeObjectURL(url);
                 
-                showSuccess('✅ 視頻下載成功！');
+                showSuccess(`✅ 視頻下載成功！檔名：${defaultFileName}`);
                 
             } catch (error) {
                 console.error('❌ Download failed:', error);
@@ -1259,11 +1303,9 @@
                         const link = document.createElement('a');
                         link.href = url;
                         
-                        // 使用 prompt + 圖片名稱作為檔名
-                        const prompt = task.promptText || 'video';
-                        const imageName = task.imageName.replace(/\.[^/.]+$/, '');
-                        const cleanPrompt = prompt.replace(/[^\w\s-]/g, '').trim().substring(0, 50);
-                        const fileName = `${cleanPrompt}_${imageName}.mp4`;
+                        // 使用圖片名稱作為視頻檔名
+                        const imageName = task.imageName.replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
+                        const fileName = `${imageName}.mp4`;
                         link.download = fileName;
                         link.style.display = 'none';
                         

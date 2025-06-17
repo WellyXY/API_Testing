@@ -391,6 +391,9 @@
                     <button type="button" class="btn" onclick="debugCheck()" style="background: #6c757d; margin-bottom: 10px;">
                         🐛 Debug Check
                     </button>
+                    <button type="button" class="btn" onclick="debugTasks()" style="background: #e83e8c; margin-bottom: 10px;">
+                        📊 Debug Tasks
+                    </button>
                 </div>
             </div>
 
@@ -1122,11 +1125,21 @@
                     taskId: task.id,
                     imageName: task.imageName,
                     url: task.url,
-                    defaultFileName: defaultFileName
+                    defaultFileName: defaultFileName,
+                    fullTask: task
                 });
                 
-                // 檢查是否支援 File System Access API (Chrome 86+)
-                if ('showSaveFilePicker' in window) {
+                // 檢查是否支援 File System Access API (Chrome 86+) 且在 HTTPS 環境
+                const isSecureContext = window.isSecureContext || location.protocol === 'https:';
+                const hasFileSystemAPI = 'showSaveFilePicker' in window;
+                
+                console.log('File System API availability:', {
+                    hasFileSystemAPI,
+                    isSecureContext,
+                    protocol: location.protocol
+                });
+                
+                if (hasFileSystemAPI && isSecureContext) {
                     try {
                         // 使用新的 File System Access API 讓用戶選擇存儲位置
                         const fileHandle = await window.showSaveFilePicker({
@@ -1356,6 +1369,26 @@
                 // 強制更新任務摘要以確保UI正確
                 updateTasksSummary();
             }
+        }
+
+        // 調試任務數據
+        function debugTasks() {
+            console.log('=== Debug Tasks Info ===');
+            console.log('Total tasks:', tasks.size);
+            console.log('Tasks Map:', tasks);
+            
+            Array.from(tasks.values()).forEach((task, index) => {
+                console.log(`Task ${index + 1}:`, {
+                    id: task.id,
+                    taskNumber: task.taskNumber,
+                    imageName: task.imageName,
+                    promptText: task.promptText,
+                    status: task.status,
+                    url: task.url
+                });
+            });
+            
+            showSuccess('調試信息已輸出到控制台，請按F12查看');
         }
 
         // 測試連接功能

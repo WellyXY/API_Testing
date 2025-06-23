@@ -9,6 +9,8 @@ from flask_cors import CORS
 import requests
 import os
 import json
+import socket
+from contextlib import closing
 
 app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
@@ -33,6 +35,12 @@ API_PROVIDERS = {
         }
     }
 }
+
+def find_free_port():
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        return s.getsockname()[1]
 
 @app.route('/')
 def index():
@@ -249,12 +257,17 @@ def test_connection():
         }), 500
 
 if __name__ == '__main__':
-    print("🚀 啟動 Pika API 代理服務器...")
-    print("📱 前端頁面: http://localhost:5003")
-    print("🔧 API 代理: http://localhost:5003/generate/v0/image-to-video")
-    
-    app.run(
-        host='0.0.0.0',
-        port=5003,
-        debug=True
-    ) 
+    port = 5003
+    try:
+        app.run(port=port, debug=True)
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"⚠️ Port {port} is in use. Trying to find a free port...")
+            try:
+                free_port = find_free_port()
+                print(f"✅ Found free port: {free_port}. Starting server...")
+                app.run(port=free_port, debug=True)
+            except Exception as e_new:
+                print(f"❌ Could not start server on a free port. Error: {e_new}")
+        else:
+            print(f"❌ An unexpected error occurred: {e}") 

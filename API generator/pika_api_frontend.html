@@ -298,7 +298,7 @@
 
         .task-details {
             display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-columns: repeat(4, 1fr);
             gap: 15px;
             margin-bottom: 15px;
         }
@@ -399,15 +399,31 @@
 
             <!-- 圖片上傳區域 -->
             <div class="form-group">
-                <label>📸 Select Image(s) - Multi-select supported (Max 10)</label>
+                <label>📸 Select Image(s) - Multi-select supported (Max 50)</label>
                 <div class="file-upload-area" id="uploadArea">
                     <div class="upload-icon">📁</div>
                     <div class="upload-text">
                         <strong>Click to select image(s)</strong> or drag and drop them here<br>
-                        <small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 10 images</small>
+                        <small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 50 images</small>
                     </div>
                     <input type="file" id="imageFile" accept="image/*" multiple>
                     <div id="imagePreview"></div>
+                </div>
+            </div>
+
+            <!-- 處理設置 -->
+            <div class="api-config">
+                <h3>⚙️ Processing Settings</h3>
+                <div class="form-group">
+                    <label for="concurrencyLimit">🚀 Max Concurrent Tasks:</label>
+                    <select id="concurrencyLimit" class="form-control">
+                        <option value="5">5 Tasks</option>
+                        <option value="8">8 Tasks</option>
+                        <option value="10" selected>10 Tasks (Recommended Max)</option>
+                    </select>
+                    <small style="color: #666; margin-top: 5px; display: block;">
+                        💡 同時處理的最大任務數。建議不要超過10個以避免API失敗。
+                    </small>
                 </div>
             </div>
 
@@ -430,6 +446,20 @@
             <button class="btn" id="generateBtn" onclick="generateVideo()">
                 🚀 Start Generating Video(s)
             </button>
+
+            <!-- 處理進度條 -->
+            <div id="batchProgressArea" style="display: none; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
+                <h4 style="margin-bottom: 15px;">📊 Processing Progress</h4>
+                <div style="margin-bottom: 10px;">
+                    <span id="batchProgressText">Processing...</span>
+                </div>
+                <div class="progress-bar" style="margin-bottom: 10px;">
+                    <div class="progress-fill" id="batchProgressFill"></div>
+                </div>
+                <div style="font-size: 12px; color: #666;">
+                    <span id="batchProgressDetail">Starting processing...</span>
+                </div>
+            </div>
 
             <!-- 批量下載按鈕 -->
             <div style="margin: 20px 0; text-align: center;">
@@ -461,6 +491,8 @@
     <script>
         // 多任務管理
         let tasks = new Map(); // 使用 Map 存儲任務信息
+        let imageQueue = []; // 等待處理的圖片隊列
+        let processingInterval = null; // 隊列管理器的計時器
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
         
@@ -552,7 +584,8 @@
                 endTime: null,
                 duration: 0,
                 url: null,
-                created: new Date()
+                created: new Date(),
+                retryCount: 0
             };
         }
 
@@ -603,15 +636,15 @@
                 return;
             }
 
-            // 檢查是否會超過10張限制
+            // 檢查是否會超過50張限制
             const totalAfterAdd = selectedImages.length + imageFiles.length;
-            if (totalAfterAdd > 10) {
-                const canAdd = 10 - selectedImages.length;
+            if (totalAfterAdd > 50) {
+                const canAdd = 50 - selectedImages.length;
                 if (canAdd <= 0) {
-                    showError('Maximum 10 images allowed. Please remove some images first.');
+                    showError('Maximum 50 images allowed. Please remove some images first.');
                     return;
                 } else {
-                    showError(`Only ${canAdd} more image(s) can be added (max 10 total). Only first ${canAdd} will be added.`);
+                    showError(`Only ${canAdd} more image(s) can be added (max 50 total). Only first ${canAdd} will be added.`);
                     imageFiles.splice(canAdd); // 只保留前canAdd個文件
                 }
             }
@@ -713,16 +746,16 @@
             const imageCountDiv = document.getElementById('imageCount');
             
             if (selectedImages.length === 0) {
-                uploadText.innerHTML = '<strong>Click to select image(s)</strong> or drag and drop them here<br><small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 10 images</small>';
+                uploadText.innerHTML = '<strong>Click to select image(s)</strong> or drag and drop them here<br><small>Supports JPG, PNG, GIF formats • Multi-select enabled • Max 50 images</small>';
                 imageCountDiv.textContent = '';
             } else {
-                const remaining = 10 - selectedImages.length;
+                const remaining = 50 - selectedImages.length;
                 if (remaining > 0) {
-                    uploadText.innerHTML = `<strong>${selectedImages.length}/10 image(s) selected</strong><br><small>Click to add ${remaining} more images or drag and drop</small>`;
-                    imageCountDiv.textContent = `${selectedImages.length}/10 images selected`;
+                    uploadText.innerHTML = `<strong>${selectedImages.length}/50 image(s) selected</strong><br><small>Click to add ${remaining} more images or drag and drop</small>`;
+                    imageCountDiv.textContent = `${selectedImages.length}/50 images selected`;
                 } else {
-                    uploadText.innerHTML = `<strong>10/10 images selected (Maximum reached)</strong><br><small>Remove some images to add different ones</small>`;
-                    imageCountDiv.textContent = `10/10 images selected (Max reached)`;
+                    uploadText.innerHTML = `<strong>50/50 images selected (Maximum reached)</strong><br><small>Remove some images to add different ones</small>`;
+                    imageCountDiv.textContent = `50/50 images selected (Max reached)`;
                 }
             }
         }
@@ -743,133 +776,203 @@
             }
         }
 
-        // 生成視頻
+        // 生成視頻 - 使用智能隊列和併發控制
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
+            const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
             const imageFiles = Array.from(document.getElementById('imageFile').files);
-            const promptText = document.getElementById('promptText').value;
-
-            // 添加調試信息
-            console.log('=== New Batch Task Submission ===');
-            console.log('API Provider:', apiConfig.provider);
-            console.log('API Version:', apiConfig.version);
-            console.log('API Endpoint:', apiConfig.endpoint);
-            console.log('API Key:', apiKey ? 'Set' : 'Not Set');
-            console.log('Selected images:', imageFiles.length);
-            console.log('File list:', imageFiles);
-            console.log('Prompt:', promptText);
-            console.log('===============');
 
             // 驗證輸入
             if (!apiKey) {
                 showError('Please enter your API Key');
                 return;
             }
-
             if (imageFiles.length === 0) {
                 showError('Please select at least one image file');
                 return;
             }
 
-            // 清除之前的錯誤狀態
+            // 初始化
             clearMessages();
             setButtonLoading(true);
+            showBatchProgress();
+            
+            // 將所有圖片放入隊列
+            imageQueue = [...imageFiles];
+            const totalTasks = imageQueue.length;
+            
+            console.log('=== New Concurrent Task Submission ===');
+            console.log('Selected images:', totalTasks);
+            console.log('Concurrency Limit:', concurrencyLimit);
+            console.log('====================================');
+            
+            showSuccess(`🚀 Queued ${totalTasks} image(s) for generation...`);
+            
+            // 啟動隊列管理器
+            if (processingInterval) clearInterval(processingInterval);
+            processingInterval = setInterval(() => queueManager(concurrencyLimit, totalTasks), 2000); // 每2秒檢查一次
+            
+            // 立即觸發一次以快速啟動
+            queueManager(concurrencyLimit, totalTasks);
 
-            try {
-                // 為每個圖片創建任務
-                let successCount = 0;
-                let totalTasks = imageFiles.length;
+            // 啟動狀態輪詢
+            if (!statusCheckInterval) {
+                startStatusCheck();
+            }
+        }
+        
+        // 輔助函數：更新任務卡片及其所有子元素的ID
+        function updateCardIds(oldId, newId) {
+            const card = document.getElementById(`task-${oldId}`);
+            if (!card) return;
+
+            // 選擇所有帶有舊ID的元素
+            const elementsToUpdate = card.querySelectorAll(`[id$="-${oldId}"]`);
+            
+            elementsToUpdate.forEach(el => {
+                el.id = el.id.replace(oldId, newId);
+            });
+            
+            // 更新主卡片的ID
+            card.id = `task-${newId}`;
+            
+            // 特別處理onclick事件
+            const downloadLink = card.querySelector(`a[onclick*="'${oldId}'"]`);
+            if (downloadLink) {
+                downloadLink.setAttribute('onclick', `downloadTaskVideo('${newId}')`);
+            }
+        }
+
+        // 隊列管理器
+        function queueManager(concurrencyLimit, totalTasks) {
+            const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
+            const canSubmitCount = concurrencyLimit - activeTasks;
+            
+            console.log(`[Queue Manager] Active: ${activeTasks}, Queue: ${imageQueue.length}, Can Submit: ${canSubmitCount}`);
+            
+            if (canSubmitCount > 0 && imageQueue.length > 0) {
+                const itemsToSubmit = imageQueue.splice(0, canSubmitCount);
+                console.log(`[Queue Manager] Submitting ${itemsToSubmit.length} new tasks.`);
                 
-                showSuccess(`🚀 Starting generation for ${totalTasks} image(s)...`);
+                showSuccess(`Submitting ${itemsToSubmit.length} new tasks...`);
+
+                // 帶有交錯延遲地提交任務，以避免請求風暴
+                (async () => {
+                    for (const imageFile of itemsToSubmit) {
+                        submitTask(imageFile);
+                        await new Promise(resolve => setTimeout(resolve, 500)); // 增加到500ms
+                    }
+                })();
+            }
+            
+            const submittedCount = totalTasks - imageQueue.length;
+            const completedCount = submittedCount - activeTasks;
+            updateBatchProgress(completedCount, totalTasks, null, null, `Submitted: ${submittedCount}/${totalTasks} | Active: ${activeTasks}`);
+
+            // 如果隊列為空且沒有活動任務，則停止
+            if (imageQueue.length === 0 && activeTasks === 0) {
+                console.log('[Queue Manager] All tasks completed. Stopping manager.');
+                clearInterval(processingInterval);
+                processingInterval = null;
+                setButtonLoading(false);
                 
-                for (let i = 0; i < imageFiles.length; i++) {
-                    const imageFile = imageFiles[i];
+                const finalCompletedCount = Array.from(tasks.values()).filter(t => ['completed', 'finished'].includes(t.status)).length;
+                showSuccess(`🎉 All ${finalCompletedCount}/${totalTasks} tasks processed!`);
+                updateBatchProgress(finalCompletedCount, totalTasks, null, null, `All tasks processed!`);
+
+                setTimeout(() => {
+                    hideBatchProgress();
+                }, 5000);
+            }
+        }
+
+        // 提交單個任務，包含重試邏輯
+        async function submitTask(imageFile) {
+            const apiKey = document.getElementById('apiKey').value;
+            const apiConfig = getCurrentAPIConfig();
+            const promptText = document.getElementById('promptText').value;
+            const MAX_RETRIES = 10;
+            const RETRY_DELAY = 2000; // 2秒
+
+            let lastError = 'Unknown error';
+
+            // 創建一個臨時任務用於UI展示
+            const tempId = `submitting-${Date.now()}-${Math.random()}`;
+            const task = createTask(tempId, promptText, imageFile.name);
+            task.status = 'submitting';
+            tasks.set(tempId, task);
+            createTaskCard(task);
+            updateTaskCard(task);
+            showTasksArea();
+            
+            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                task.retryCount = attempt;
+                updateTaskCard(task);
+                
+                try {
+                    if (attempt > 0) {
+                        console.log(`[Retry] Attempt ${attempt}/${MAX_RETRIES} for ${imageFile.name}...`);
+                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                    }
+
+                    // 準備 FormData 和 headers
+                    const formData = new FormData();
+                    formData.append('image', imageFile);
+                    formData.append('provider', apiConfig.provider);
+                    formData.append('version', apiConfig.version);
+                    if (promptText.trim()) formData.append('promptText', promptText.trim());
+                    const headers = {};
+                    if (apiConfig.provider === 'original') headers['X-API-KEY'] = apiKey;
                     
-                    try {
-                        // 準備 FormData
-                        const formData = new FormData();
-                        formData.append('image', imageFile);
-                        formData.append('provider', apiConfig.provider);
-                        formData.append('version', apiConfig.version);
-                        if (promptText.trim()) {
-                            formData.append('promptText', promptText.trim());
-                        }
+                    const response = await fetch('/api/generate', { method: 'POST', headers, body: formData });
+                    const result = await response.json().catch(() => ({}));
 
-                        console.log(`Sending request ${i + 1}/${totalTasks} for:`, imageFile.name);
-
-                        // 準備請求 headers（staging 使用後端配置的 API Key）
-                        const headers = {};
-                        if (apiConfig.provider === 'original') {
-                            headers['X-API-KEY'] = apiKey;
-                        }
-                        // staging 不發送 API Key，讓後端使用默認配置
-
-                        // 發送請求到靈活端點
-                        const response = await fetch('/api/generate', {
-                            method: 'POST',
-                            headers: headers,
-                            body: formData
-                        });
-
-                        const result = await response.json();
-                        console.log(`Response result for ${imageFile.name}:`, result);
-
-                        if (response.ok) {
-                            // 創建新任務
-                            const videoId = result.video_id;
-                            const task = createTask(videoId, promptText, imageFile.name);
-                            tasks.set(videoId, task);
-                            
-                            // 創建任務卡片UI
-                            createTaskCard(task);
-                            
-                            // 顯示任務區域
-                            showTasksArea();
-                            
-                            successCount++;
-                            
-                            console.log(`✅ Task ${i + 1}/${totalTasks} submitted: ${videoId}`);
-                        } else {
-                            const errorMsg = result.detail || result.message || `HTTP ${response.status}: ${response.statusText}`;
-                            console.error(`❌ Task ${i + 1}/${totalTasks} failed for ${imageFile.name}:`, errorMsg);
-                            showError(`Failed to submit ${imageFile.name}: ${errorMsg}`);
-                        }
+                    if (response.ok) {
+                        console.log(`✅ Task submitted successfully: ${result.video_id} for ${imageFile.name}`);
                         
-                        // 添加短暫延遲避免 API 限制
-                        if (i < imageFiles.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 500));
-                        }
+                        // 提交成功，用真實ID替換臨時ID
+                        const realId = result.video_id;
+                        tasks.delete(task.id); // 刪除臨時任務
                         
-                    } catch (error) {
-                        console.error(`Error processing ${imageFile.name}:`, error);
-                        showError(`Error processing ${imageFile.name}: ${error.message}`);
+                        updateCardIds(task.id, realId); // 更新DOM中所有相關ID
+                        
+                        task.id = realId; // 更新JS對象的ID
+                        task.status = 'waiting'; // 重置狀態
+                        tasks.set(realId, task); // 用真實ID存儲
+                        
+                        updateTaskCard(task); // 用新ID更新一次UI
+                        return; // 成功，退出循環
+                    }
+                    
+                    lastError = result.detail || result.message || `HTTP ${response.status}`;
+                    // 增加對網絡錯誤的判斷
+                    if (response.status === 0 || !response.status) {
+                        lastError = "Network Error. Is the proxy server running?";
+                    }
+                    const isRetryable = response.status === 429 || response.status >= 500;
+
+                    if (isRetryable && attempt < MAX_RETRIES) {
+                        console.warn(`[Retry] Will retry for ${imageFile.name}. Error: ${lastError}`);
+                        task.status = `retrying (${attempt + 1})`;
+                        updateTaskCard(task);
+                        continue;
+                    } else {
+                        throw new Error(lastError); // 達到最大重試次數或不可重試錯誤
+                    }
+
+                } catch (error) {
+                    lastError = error.message;
+                    if (attempt < MAX_RETRIES) {
+                         task.status = `retrying (${attempt + 1})`;
+                         updateTaskCard(task);
                     }
                 }
-                
-                // 更新統計
-                updateTasksSummary();
-                
-                // 如果有成功提交的任務且輪詢未開始，開始輪詢
-                if (successCount > 0 && !statusCheckInterval) {
-                    startStatusCheck();
-                }
-                
-                // 顯示最終結果
-                if (successCount === totalTasks) {
-                    showSuccess(`✅ All ${totalTasks} task(s) submitted successfully!`);
-                } else if (successCount > 0) {
-                    showSuccess(`⚠️ ${successCount}/${totalTasks} task(s) submitted successfully. Check individual errors above.`);
-                } else {
-                    showError(`❌ Failed to submit any tasks. Please check your API key and try again.`);
-                }
-
-            } catch (error) {
-                console.error('Batch generation error:', error);
-                showError(`Batch generation failed: ${error.message}`);
-            } finally {
-                setButtonLoading(false);
             }
+
+            // 所有重試失敗
+            console.error(`❌ Task failed for ${imageFile.name} after ${MAX_RETRIES} retries. Final error: ${lastError}`);
+            task.status = 'failed';
+            updateTaskCard(task);
         }
 
         // 檢查視頻狀態
@@ -974,11 +1077,31 @@
             const btn = document.getElementById('generateBtn');
             if (loading) {
                 btn.disabled = true;
-                btn.textContent = '🔄 Submitting...';
+                btn.textContent = '🔄 Processing...';
             } else {
                 btn.disabled = false;
                 btn.textContent = '🚀 Start Generating Video(s)';
             }
+        }
+
+        // 批量處理進度條管理
+        function showBatchProgress() {
+            document.getElementById('batchProgressArea').style.display = 'block';
+        }
+
+        function hideBatchProgress() {
+            document.getElementById('batchProgressArea').style.display = 'none';
+        }
+
+        function updateBatchProgress(current, total, batchNumber, totalBatches, detail) {
+            const progressPercent = total > 0 ? Math.round((current / total) * 100) : 0;
+            const progressText = document.getElementById('batchProgressText');
+            const progressFill = document.getElementById('batchProgressFill');
+            const progressDetail = document.getElementById('batchProgressDetail');
+            
+            progressText.textContent = `Progress: ${current}/${total} tasks (${progressPercent}%)`;
+            progressFill.style.width = `${progressPercent}%`;
+            progressDetail.textContent = detail || 'Processing...';
         }
 
         // 顯示錯誤訊息
@@ -1018,7 +1141,7 @@
                 <div class="task-details">
                     <div class="task-detail-item">
                         <div class="task-detail-label">Video ID</div>
-                        <div class="task-detail-value" style="font-size: 11px;">${task.id}</div>
+                        <div class="task-detail-value" style="font-size: 11px;">${task.id.substring(0, 12)}...</div>
                     </div>
                     <div class="task-detail-item">
                         <div class="task-detail-label">Progress</div>
@@ -1026,7 +1149,11 @@
                     </div>
                     <div class="task-detail-item">
                         <div class="task-detail-label">⏱️ Time</div>
-                        <div class="task-detail-value" id="time-${task.id}">Waiting to start...</div>
+                        <div class="task-detail-value" id="time-${task.id}">Waiting...</div>
+                    </div>
+                    <div class="task-detail-item">
+                        <div class="task-detail-label">🔁 Retries</div>
+                        <div class="task-detail-value" id="retries-${task.id}">${task.retryCount}</div>
                     </div>
                 </div>
                 <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
@@ -1048,8 +1175,12 @@
             const timeElement = document.getElementById(`time-${task.id}`);
             const progressFillElement = document.getElementById(`progress-fill-${task.id}`);
             const taskCard = document.getElementById(`task-${task.id}`);
+            const retriesElement = document.getElementById(`retries-${task.id}`);
             
             if (!statusElement) return;
+
+            // 更新重試次數
+            if(retriesElement) retriesElement.textContent = task.retryCount;
             
             // 更新進度
             progressElement.textContent = `${task.progress}%`;
@@ -1086,6 +1217,12 @@
                 statusElement.classList.add('failed');
                 statusElement.textContent = '❌ Failed';
                 taskCard.classList.add('failed');
+            } else if (task.status.startsWith('retrying')) {
+                statusElement.classList.add('processing');
+                statusElement.textContent = `⏳ Retrying...`;
+            } else if (task.status === 'submitting') {
+                statusElement.classList.add('processing');
+                statusElement.textContent = `📤 Submitting...`;
             } else {
                 statusElement.classList.add('processing');
                 statusElement.textContent = '🔄 Processing';
@@ -1396,10 +1533,10 @@
             console.log('testConnection function called');
             
             const apiKey = document.getElementById('apiKey').value;
-            const apiVersion = document.getElementById('apiVersion').value;
-            const apiUrl = getCurrentApiUrl();
+            const apiConfig = getCurrentAPIConfig();
+            const apiUrl = apiConfig.endpoint;
 
-            console.log('API Version:', API_VERSIONS[apiVersion].name);
+            console.log('API Version:', apiConfig.version);
             console.log('API URL:', apiUrl);
             console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
 
@@ -1467,7 +1604,8 @@
         async function debugCheck() {
             console.log('debugCheck function called');
             const apiKey = document.getElementById('apiKey').value;
-            const apiUrl = getCurrentApiUrl();
+            const apiConfig = getCurrentAPIConfig();
+            const apiUrl = apiConfig.endpoint;
 
             if (!apiKey) {
                 showError('Please enter API Key first');
@@ -1511,7 +1649,7 @@
 
         
         function getCurrentApiUrl() {
-            return getCurrentAPIEndpoint();
+            return getCurrentAPIConfig().endpoint;
         }
 
         // 頁面載入時的初始化

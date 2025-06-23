@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "functions": {
+    "api/generate.py": {
+      "runtime": "@vercel/python"
+    },
+    "api/videos.py": {
+      "runtime": "@vercel/python"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/generate/v0/image-to-video",
+      "destination": "/api/generate.py"
+    },
+    {
+      "source": "/videos/:id",
+      "destination": "/api/videos.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, POST, PUT, DELETE, OPTIONS"
+        },
+        {
+          "key": "Access-Control-Allow-Headers",
+          "value": "X-API-KEY, Content-Type, Authorization"
+        }
+      ]
+    }
+  ]
+} 

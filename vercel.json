@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "pika_proxy_server.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "pika_api_frontend.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/pika_proxy_server.py"
+    }
+  ]
+} 

@@ -15,9 +15,6 @@ from contextlib import closing
 app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
 
-# The wsgi_app is used by Vercel
-wsgi_app = app.wsgi_app
-
 # API 提供商配置
 API_PROVIDERS = {
     'original': {
@@ -259,34 +256,18 @@ def test_connection():
             'message': str(e)
         }), 500
 
-# Vercel will not run this block
-if __name__ == "__main__":
+if __name__ == '__main__':
+    port = 5003
     try:
-        # 找到一個可用的端口
-        port = find_free_port()
-        print(f"找到可用端口: {port}")
-        
-        # 獲取本機 IP 地址
-        hostname = socket.gethostname()
-        ip_address = socket.gethostbyname(hostname)
-        
-        print(f"\n🚀 代理服務器已啟動! 🚀")
-        print(f"請在瀏覽器中打開以下任一地址:")
-        print(f"🔗 http://localhost:{port}")
-        print(f"🔗 http://127.0.0.1:{port}")
-        print(f"🔗 http://{ip_address}:{port}")
-        
-        # 啟動服務器
-        from waitress import serve
-        serve(app, host="0.0.0.0", port=port)
-
-    except Exception as e:
-        print(f"啟動服務器失敗: {e}")
-        # 如果 waitress 失敗，回退到 Flask 的開發服務器
-        try:
-            if 'port' not in locals():
-                port = 8000
-            print(f"使用 Flask 開發服務器在端口 {port} 上運行...")
-            app.run(host="0.0.0.0", port=port, debug=True)
-        except Exception as final_e:
-            print(f"無法啟動任何服務器: {final_e}") 
+        app.run(port=port, debug=True)
+    except OSError as e:
+        if "Address already in use" in str(e):
+            print(f"⚠️ Port {port} is in use. Trying to find a free port...")
+            try:
+                free_port = find_free_port()
+                print(f"✅ Found free port: {free_port}. Starting server...")
+                app.run(port=free_port, debug=True)
+            except Exception as e_new:
+                print(f"❌ Could not start server on a free port. Error: {e_new}")
+        else:
+            print(f"❌ An unexpected error occurred: {e}") 

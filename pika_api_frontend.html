@@ -495,6 +495,7 @@
         let processingInterval = null; // 隊列管理器的計時器
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
+        let pendingSubmissions = 0; // 尚未正式加入 tasks Map 的提交數，用於更精確的併發控制
         
         // API 提供商和版本配置
         const API_PROVIDERS = {
@@ -844,11 +845,14 @@
         }
 
         // 隊列管理器
-        function queueManager(concurrencyLimit, totalTasks) {
+        function queueManager(_limit, totalTasks) {
+            // 每次動態取得 select 目前設定的併發上限
+            const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
             const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
-            const canSubmitCount = concurrencyLimit - activeTasks;
+            const effectiveActive = activeTasks + pendingSubmissions; // 把尚未加入 Map 的提交也算進去
+            const canSubmitCount = concurrencyLimit - effectiveActive;
             
-            console.log(`[Queue Manager] Active: ${activeTasks}, Queue: ${imageQueue.length}, Can Submit: ${canSubmitCount}`);
+            console.log(`[Queue Manager] Active (in Map): ${activeTasks}, Pending Submissions: ${pendingSubmissions}, Queue: ${imageQueue.length}, Can Submit: ${canSubmitCount}`);
             
             if (canSubmitCount > 0 && imageQueue.length > 0) {
                 const itemsToSubmit = imageQueue.splice(0, canSubmitCount);
@@ -859,7 +863,10 @@
                 // 帶有交錯延遲地提交任務，以避免請求風暴
                 (async () => {
                     for (const imageFile of itemsToSubmit) {
-                        submitTask(imageFile);
+                        pendingSubmissions++; // 標記為正在提交
+                        submitTask(imageFile).finally(() => {
+                            pendingSubmissions--; // 提交結束（成功或失敗）
+                        });
                         await new Promise(resolve => setTimeout(resolve, 500)); // 增加到500ms
                     }
                 })();
@@ -867,7 +874,7 @@
             
             const submittedCount = totalTasks - imageQueue.length;
             const completedCount = submittedCount - activeTasks;
-            updateBatchProgress(completedCount, totalTasks, null, null, `Submitted: ${submittedCount}/${totalTasks} | Active: ${activeTasks}`);
+            updateBatchProgress(completedCount, totalTasks, null, null, `Submitted: ${submittedCount}/${totalTasks} | Active: ${effectiveActive}`);
 
             // 如果隊列為空且沒有活動任務，則停止
             if (imageQueue.length === 0 && activeTasks === 0) {
@@ -891,8 +898,8 @@
             const apiKey = document.getElementById('apiKey').value;
             const apiConfig = getCurrentAPIConfig();
             const promptText = document.getElementById('promptText').value;
-            const MAX_RETRIES = 10;
-            const RETRY_DELAY = 2000; // 2秒
+            const MAX_RETRIES = 20; // 提高重試上限
+            const RETRY_DELAY = 8000; // 8秒重試間隔
 
             let lastError = 'Unknown error';
 

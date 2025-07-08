@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pika API - Image to Video Generator</title>
+    <title>Image to Video Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <style>
         * {
@@ -346,40 +346,31 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎬 Pika API Image to Video</h1>
+            <h1>🎬 Image to Video Generator</h1>
             <p>Upload an image, add a prompt, and generate beautiful videos</p>
         </div>
 
         <div class="content">
 
 
-            <!-- API 配置區域 -->
+            <!-- API Configuration -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
-                <div class="form-group">
+                <div class="form-group" style="display: none;">
                     <label for="apiProvider">🌐 API Provider:</label>
                     <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                        <option value="original">Original - 穩定版本</option>
-                        <option value="staging">Staging - 新功能支援</option>
+                        <option value="original" selected>Original</option>
                     </select>
-                    <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 Original 支援 v0，Staging 支援 v2.2 和 Turbo
-                    </small>
                 </div>
-                <div class="form-group">
+                <div class="form-group" style="display: none;">
                     <label for="apiVersion">🚀 I2V API Version:</label>
                     <select id="apiVersion" class="form-control" onchange="updateAPIDescription()">
-                        <option value="v0">v0 - Original (generate/v0/image-to-video)</option>
-                        <!-- 動態更新選項 -->
-                        <!-- <option value="turbo">Turbo - Fast (generate/turbo/i2v)</option> -->
+                        <option value="v0" selected>v0 - Original</option>
                     </select>
-                    <small id="apiDescription" style="color: #666; margin-top: 5px; display: block;">
-                        💡 Original version - full compatibility
-                    </small>
                 </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
+                    <input type="password" id="apiKey" class="form-control" value="" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
                         💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
@@ -397,7 +388,7 @@
                 </div>
             </div>
 
-            <!-- 圖片上傳區域 -->
+            <!-- Image Upload Area -->
             <div class="form-group">
                 <label>📸 Select Image(s) - Multi-select supported (Max 50)</label>
                 <div class="file-upload-area" id="uploadArea">
@@ -411,7 +402,7 @@
                 </div>
             </div>
 
-            <!-- 處理設置 -->
+            <!-- Processing Settings -->
             <div class="api-config">
                 <h3>⚙️ Processing Settings</h3>
                 <div class="form-group">
@@ -422,18 +413,18 @@
                         <option value="10" selected>10 Tasks (Recommended Max)</option>
                     </select>
                     <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 同時處理的最大任務數。建議不要超過10個以避免API失敗。
+                        💡 Maximum number of concurrent tasks. It's recommended not to exceed 10 to avoid API failures.
                     </small>
                 </div>
             </div>
 
-            <!-- 提示詞輸入 -->
+            <!-- Prompt Input -->
             <div class="form-group">
                 <label for="promptText">✨ Prompt (Optional)</label>
                 <textarea id="promptText" class="form-control" placeholder="Describe the video effect you want to generate...&#10;e.g., a beautiful sunset scene with gentle waves"></textarea>
             </div>
 
-            <!-- 圖片管理按鈕 -->
+            <!-- Image Management Buttons -->
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <button class="btn" style="background: #6c757d; width: auto; flex: none; padding: 12px 20px;" onclick="clearAllImages()">
                     🗑️ Clear All Images
@@ -442,12 +433,12 @@
                 <div id="imageCount" style="align-self: center; color: #666; font-size: 14px;"></div>
             </div>
 
-            <!-- 生成按鈕 -->
+            <!-- Generate Button -->
             <button class="btn" id="generateBtn" onclick="generateVideo()">
                 🚀 Start Generating Video(s)
             </button>
 
-            <!-- 處理進度條 -->
+            <!-- Processing Progress Bar -->
             <div id="batchProgressArea" style="display: none; margin: 20px 0; padding: 20px; background: #f8f9fa; border-radius: 10px;">
                 <h4 style="margin-bottom: 15px;">📊 Processing Progress</h4>
                 <div style="margin-bottom: 10px;">
@@ -461,17 +452,17 @@
                 </div>
             </div>
 
-            <!-- 批量下載按鈕 -->
+            <!-- Batch Download Button -->
             <div style="margin: 20px 0; text-align: center;">
                 <button class="btn" id="downloadAllBtn" onclick="downloadAllVideos()" style="background: #28a745; display: none;">
                     📦 Download All Completed Videos
                 </button>
                 <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                    💡 視頻將以對應圖片名稱命名。支援的瀏覽器可選擇存儲位置
+                    💡 Videos will be named after the corresponding image. Supported browsers allow choosing a save location.
                 </div>
             </div>
 
-            <!-- 多任務管理區域 -->
+            <!-- Multi-task Management Area -->
             <div class="tasks-area" id="tasksArea" style="display: none;">
                 <h3>📊 Task Management</h3>
                 <div class="task-summary" id="taskSummary" style="margin-bottom: 20px; padding: 15px; background: #f0f9ff; border-radius: 8px;">
@@ -483,61 +474,45 @@
                 <div id="tasksList"></div>
             </div>
 
-            <!-- 錯誤訊息區域 -->
+            <!-- Error Message Area -->
             <div id="errorArea"></div>
         </div>
     </div>
 
     <script>
-        // 多任務管理
-        let tasks = new Map(); // 使用 Map 存儲任務信息
-        let imageQueue = []; // 等待處理的圖片隊列
-        let processingInterval = null; // 隊列管理器的計時器
+        // Multi-task Management
+        let tasks = new Map(); // Use Map to store task information
+        let imageQueue = []; // Image queue waiting for processing
+        let processingInterval = null; // Timer for the queue manager
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
-        let pendingSubmissions = 0; // 尚未正式加入 tasks Map 的提交數，用於更精確的併發控制
+        let pendingSubmissions = 0; // Number of submissions not yet formally added to the tasks Map, for more precise concurrency control
         
-        // API 提供商和版本配置
+        // API Provider and Version Configuration
         const API_PROVIDERS = {
             'original': {
                 name: 'Original',
-                description: '穩定版本 - 使用原始 API',
+                description: 'Stable version - using the original API',
                 versions: {
                     'v0': {
                         endpoint: '/generate/v0/image-to-video',
-                        description: '原始版本 - 完整功能兼容',
+                        description: 'Original version - full compatibility',
                         name: 'Original v0'
-                    }
-                }
-            },
-            'staging': {
-                name: 'Staging',
-                description: '新功能版本 - 支援更多 API',
-                versions: {
-                    'v2.2': {
-                        endpoint: '/generate/2.2/i2v',
-                        description: '標準版本 - 更穩定的生成效果',
-                        name: 'Standard v2.2'
-                    },
-                    'turbo': {
-                        endpoint: '/generate/turbo/i2v',
-                        description: 'Turbo版本 - 更快的生成速度',
-                        name: 'Turbo'
                     }
                 }
             }
         };
 
-        // 更新提供商對應的版本選項
+        // Update version options corresponding to the provider
         function updateProviderVersions() {
             const provider = document.getElementById('apiProvider').value;
             const versionSelect = document.getElementById('apiVersion');
             const providerConfig = API_PROVIDERS[provider];
             
-            // 清空現有選項
+            // Clear existing options
             versionSelect.innerHTML = '';
             
-            // 添加該提供商支援的版本
+            // Add versions supported by this provider
             Object.keys(providerConfig.versions).forEach(version => {
                 const versionConfig = providerConfig.versions[version];
                 const option = document.createElement('option');
@@ -546,11 +521,11 @@
                 versionSelect.appendChild(option);
             });
             
-            // 更新描述
+            // Update description
             updateAPIDescription();
         }
 
-        // 更新 API 描述
+        // Update API description
         function updateAPIDescription() {
             const provider = document.getElementById('apiProvider').value;
             const apiVersion = document.getElementById('apiVersion').value;
@@ -559,7 +534,7 @@
             document.getElementById('apiDescription').textContent = `💡 ${description}`;
         }
 
-        // 獲取當前選中的 API 端點和提供商
+        // Get current selected API endpoint and provider
         function getCurrentAPIConfig() {
             const provider = document.getElementById('apiProvider').value;
             const apiVersion = document.getElementById('apiVersion').value;
@@ -572,7 +547,7 @@
             };
         }
         
-        // 任務數據結構
+        // Task data structure
         function createTask(videoId, promptText, imageName) {
             return {
                 id: videoId,
@@ -590,17 +565,17 @@
             };
         }
 
-        // 文件上傳處理
+        // File upload handling
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('imageFile');
         const imagePreview = document.getElementById('imagePreview');
 
-        // 點擊上傳區域
+        // Click upload area
         uploadArea.addEventListener('click', () => {
             fileInput.click();
         });
 
-        // 拖拽上傳
+        // Drag and drop upload
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('drag-over');
@@ -619,17 +594,17 @@
             }
         });
 
-        // 文件選擇處理
+        // File selection handling
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 handleMultipleFileSelect(Array.from(e.target.files));
             }
         });
 
-        let selectedImages = []; // 全局變量存儲選中的圖片
+        let selectedImages = []; // Global variable to store selected images
 
         function handleMultipleFileSelect(files) {
-            // 過濾出圖片文件
+            // Filter out image files
             const imageFiles = files.filter(file => file.type.startsWith('image/'));
             
             if (imageFiles.length === 0) {
@@ -637,7 +612,7 @@
                 return;
             }
 
-            // 檢查是否會超過50張限制
+            // Check if the 50 images limit will be exceeded
             const totalAfterAdd = selectedImages.length + imageFiles.length;
             if (totalAfterAdd > 50) {
                 const canAdd = 50 - selectedImages.length;
@@ -646,11 +621,11 @@
                     return;
                 } else {
                     showError(`Only ${canAdd} more image(s) can be added (max 50 total). Only first ${canAdd} will be added.`);
-                    imageFiles.splice(canAdd); // 只保留前canAdd個文件
+                    imageFiles.splice(canAdd); // Keep only the first 'canAdd' files
                 }
             }
 
-            // 防止重複圖片（根據文件名和大小）
+            // Prevent duplicate images (based on filename and size)
             const newUniqueImages = [];
             imageFiles.forEach(newFile => {
                 const isDuplicate = selectedImages.some(existingFile => 
@@ -671,22 +646,22 @@
                 showSuccess(`${newUniqueImages.length} image(s) added. ${duplicateCount} duplicate(s) skipped.`);
             }
 
-            // 將新的唯一圖片添加到選中列表
+            // Add new unique images to the selected list
             selectedImages = [...selectedImages, ...newUniqueImages];
             
-            // 更新 file input 的 files 屬性
+            // Update the 'files' attribute of the file input
             updateFileInput();
             
-            // 顯示預覽
+            // Show preview
             displayImagePreviews();
             
-            // 更新上傳區域狀態
+            // Update upload area status
             uploadArea.classList.add('has-file');
             updateUploadAreaText();
         }
 
         function updateFileInput() {
-            // 創建新的 DataTransfer 對象來更新 file input
+            // Create a new DataTransfer object to update the file input
             const dt = new DataTransfer();
             selectedImages.forEach(file => {
                 dt.items.add(file);
@@ -716,7 +691,7 @@
                         <button onclick="removeImage(${index})" style="position: absolute; top: 2px; right: 2px; background: #ff4757; color: white; border: none; border-radius: 50%; width: 20px; height: 20px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center;">×</button>
                     `;
                     
-                    // 更新預覽容器
+                    // Update preview container
                     const container = document.getElementById('imagePreview');
                     if (!container.querySelector('.preview-grid')) {
                         container.innerHTML = '<div class="preview-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px;"></div>';
@@ -732,7 +707,7 @@
             selectedImages.splice(index, 1);
             updateFileInput();
             
-            // 重新顯示所有預覽
+            // Re-display all previews
             imagePreview.innerHTML = '';
             if (selectedImages.length > 0) {
                 displayImagePreviews();
@@ -777,13 +752,13 @@
             }
         }
 
-        // 生成視頻 - 使用智能隊列和併發控制
+        // Generate video - using smart queue and concurrency control
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
             const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
             const imageFiles = Array.from(document.getElementById('imageFile').files);
 
-            // 驗證輸入
+            // Validate input
             if (!apiKey) {
                 showError('Please enter your API Key');
                 return;
@@ -793,12 +768,12 @@
                 return;
             }
 
-            // 初始化
+            // Initialization
             clearMessages();
             setButtonLoading(true);
             showBatchProgress();
             
-            // 將所有圖片放入隊列
+            // Put all images into the queue
             imageQueue = [...imageFiles];
             const totalTasks = imageQueue.length;
             
@@ -809,47 +784,47 @@
             
             showSuccess(`🚀 Queued ${totalTasks} image(s) for generation...`);
             
-            // 啟動隊列管理器
+            // Start queue manager
             if (processingInterval) clearInterval(processingInterval);
-            processingInterval = setInterval(() => queueManager(concurrencyLimit, totalTasks), 2000); // 每2秒檢查一次
+            processingInterval = setInterval(() => queueManager(concurrencyLimit, totalTasks), 2000); // Check every 2 seconds
             
-            // 立即觸發一次以快速啟動
+            // Trigger once immediately for a quick start
             queueManager(concurrencyLimit, totalTasks);
 
-            // 啟動狀態輪詢
+            // Start status polling
             if (!statusCheckInterval) {
                 startStatusCheck();
             }
         }
         
-        // 輔助函數：更新任務卡片及其所有子元素的ID
+        // Helper function: update the task card and all its child element IDs
         function updateCardIds(oldId, newId) {
             const card = document.getElementById(`task-${oldId}`);
             if (!card) return;
 
-            // 選擇所有帶有舊ID的元素
+            // Select all elements with the old ID
             const elementsToUpdate = card.querySelectorAll(`[id$="-${oldId}"]`);
             
             elementsToUpdate.forEach(el => {
                 el.id = el.id.replace(oldId, newId);
             });
             
-            // 更新主卡片的ID
+            // Update the main card's ID
             card.id = `task-${newId}`;
             
-            // 特別處理onclick事件
+            // Special handling for onclick event
             const downloadLink = card.querySelector(`a[onclick*="'${oldId}'"]`);
             if (downloadLink) {
                 downloadLink.setAttribute('onclick', `downloadTaskVideo('${newId}')`);
             }
         }
 
-        // 隊列管理器
+        // Queue manager
         function queueManager(_limit, totalTasks) {
-            // 每次動態取得 select 目前設定的併發上限
+            // Dynamically get the current concurrency limit from the select element
             const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
             const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
-            const effectiveActive = activeTasks + pendingSubmissions; // 把尚未加入 Map 的提交也算進去
+            const effectiveActive = activeTasks + pendingSubmissions; // Also count submissions that are not yet in the Map
             const canSubmitCount = concurrencyLimit - effectiveActive;
             
             console.log(`[Queue Manager] Active (in Map): ${activeTasks}, Pending Submissions: ${pendingSubmissions}, Queue: ${imageQueue.length}, Can Submit: ${canSubmitCount}`);
@@ -860,14 +835,14 @@
                 
                 showSuccess(`Submitting ${itemsToSubmit.length} new tasks...`);
 
-                // 帶有交錯延遲地提交任務，以避免請求風暴
+                // Submit tasks with a staggered delay to avoid request storms
                 (async () => {
                     for (const imageFile of itemsToSubmit) {
-                        pendingSubmissions++; // 標記為正在提交
+                        pendingSubmissions++; // Mark as being submitted
                         submitTask(imageFile).finally(() => {
-                            pendingSubmissions--; // 提交結束（成功或失敗）
+                            pendingSubmissions--; // Submission finished (success or fail)
                         });
-                        await new Promise(resolve => setTimeout(resolve, 500)); // 增加到500ms
+                        await new Promise(resolve => setTimeout(resolve, 500)); // Increase to 500ms
                     }
                 })();
             }
@@ -876,7 +851,7 @@
             const completedCount = submittedCount - activeTasks;
             updateBatchProgress(completedCount, totalTasks, null, null, `Submitted: ${submittedCount}/${totalTasks} | Active: ${effectiveActive}`);
 
-            // 如果隊列為空且沒有活動任務，則停止
+            // If the queue is empty and there are no active tasks, stop
             if (imageQueue.length === 0 && activeTasks === 0) {
                 console.log('[Queue Manager] All tasks completed. Stopping manager.');
                 clearInterval(processingInterval);
@@ -893,17 +868,17 @@
             }
         }
 
-        // 提交單個任務，包含重試邏輯
+        // Submit a single task, including retry logic
         async function submitTask(imageFile) {
             const apiKey = document.getElementById('apiKey').value;
             const apiConfig = getCurrentAPIConfig();
             const promptText = document.getElementById('promptText').value;
-            const MAX_RETRIES = 20; // 提高重試上限
-            const RETRY_DELAY = 8000; // 8秒重試間隔
+            const MAX_RETRIES = 20; // Increase retry limit
+            const RETRY_DELAY = 8000; // 8-second retry interval
 
             let lastError = 'Unknown error';
 
-            // 創建一個臨時任務用於UI展示
+            // Create a temporary task for UI display
             const tempId = `submitting-${Date.now()}-${Math.random()}`;
             const task = createTask(tempId, promptText, imageFile.name);
             task.status = 'submitting';
@@ -922,7 +897,7 @@
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                     }
 
-                    // 準備 FormData 和 headers
+                    // Prepare FormData and headers
                     const formData = new FormData();
                     formData.append('image', imageFile);
                     formData.append('provider', apiConfig.provider);
@@ -937,22 +912,22 @@
                     if (response.ok) {
                         console.log(`✅ Task submitted successfully: ${result.video_id} for ${imageFile.name}`);
                         
-                        // 提交成功，用真實ID替換臨時ID
+                        // Submission successful, replace temporary ID with real ID
                         const realId = result.video_id;
-                        tasks.delete(task.id); // 刪除臨時任務
+                        tasks.delete(task.id); // Delete temporary task
                         
-                        updateCardIds(task.id, realId); // 更新DOM中所有相關ID
+                        updateCardIds(task.id, realId); // Update all related IDs in the DOM
                         
-                        task.id = realId; // 更新JS對象的ID
-                        task.status = 'waiting'; // 重置狀態
-                        tasks.set(realId, task); // 用真實ID存儲
+                        task.id = realId; // Update the ID of the JS object
+                        task.status = 'waiting'; // Reset status
+                        tasks.set(realId, task); // Store with the real ID
                         
-                        updateTaskCard(task); // 用新ID更新一次UI
-                        return; // 成功，退出循環
+                        updateTaskCard(task); // Update UI once with the new ID
+                        return; // Success, exit loop
                     }
                     
                     lastError = result.detail || result.message || `HTTP ${response.status}`;
-                    // 增加對網絡錯誤的判斷
+                    // Add check for network errors
                     if (response.status === 0 || !response.status) {
                         lastError = "Network Error. Is the proxy server running?";
                     }
@@ -964,7 +939,7 @@
                         updateTaskCard(task);
                         continue;
                     } else {
-                        throw new Error(lastError); // 達到最大重試次數或不可重試錯誤
+                        throw new Error(lastError); // Reached max retries or non-retryable error
                     }
 
                 } catch (error) {
@@ -976,17 +951,17 @@
                 }
             }
 
-            // 所有重試失敗
+            // All retries failed
             console.error(`❌ Task failed for ${imageFile.name} after ${MAX_RETRIES} retries. Final error: ${lastError}`);
             task.status = 'failed';
             updateTaskCard(task);
         }
 
-        // 檢查視頻狀態
+        // Check video status
         async function checkVideoStatus() {
             const apiKey = document.getElementById('apiKey').value;
             const apiConfig = getCurrentAPIConfig();
-            const baseUrl = '/';  // 使用本地代理
+            const baseUrl = '/';  // Use local proxy
             
             if (!apiKey) return;
             
@@ -999,10 +974,10 @@
                 return;
             }
 
-            // 檢查所有活躍任務
+            // Check all active tasks
             for (const task of activeTasks) {
                 try {
-                    // 準備 headers（staging 使用後端配置的 API Key）
+                    // Prepare headers
                     const headers = {
                         'Accept': 'application/json'
                     };
@@ -1019,11 +994,11 @@
                         updateTaskFromAPI(task, result);
                     }
                 } catch (error) {
-                    console.error(`檢查任務 ${task.id} 狀態時出錯:`, error);
+                    console.error(`Error checking status for task ${task.id}:`, error);
                 }
             }
             
-            // 更新統計
+            // Update statistics
             updateTasksSummary();
         }
 
@@ -1031,41 +1006,41 @@
             console.log(`=== Task #${task.taskNumber} Status Update ===`);
             console.log('Full API Response:', result);
             
-            // 更新任務數據
+            // Update task data
             task.status = result.status || task.status;
             task.progress = result.progress || task.progress;
             task.url = result.url || task.url;
             
-            // 如果收到第一個 >0 的進度且還沒開始計時，開始計時
+            // If the first progress > 0 is received and the timer hasn't started, start the timer
             if (task.progress > 0 && !task.startTime) {
                 task.startTime = Date.now();
                 console.log(`⏱️ Task #${task.taskNumber} timer started`);
             }
             
-            // 如果任務完成且還沒記錄結束時間，記錄結束時間
+            // If the task is complete and the end time hasn't been recorded, record the end time
             const isCompleted = ['completed', 'finished', 'done'].includes(task.status);
             if (isCompleted && !task.endTime) {
                 task.endTime = Date.now();
                 console.log(`🎉 Task #${task.taskNumber} completed!`);
             }
             
-            // 更新UI
+            // Update UI
             updateTaskCard(task);
             
-            // 更新到 Map 中
+            // Update in the Map
             tasks.set(task.id, task);
         }
 
-        // 開始狀態檢查
+        // Start status check
         function startStatusCheck() {
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
             }
-            statusCheckInterval = setInterval(checkVideoStatus, 3000); // 每3秒檢查一次
-            checkVideoStatus(); // 立即檢查一次
+            statusCheckInterval = setInterval(checkVideoStatus, 3000); // Check every 3 seconds
+            checkVideoStatus(); // Check immediately
         }
 
-        // 停止狀態檢查
+        // Stop status check
         function stopStatusCheck() {
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
@@ -1074,12 +1049,12 @@
             }
         }
 
-        // 顯示狀態區域
+        // Show status area
         function showStatusArea() {
             document.getElementById('statusArea').style.display = 'block';
         }
 
-        // 設置按鈕載入狀態
+        // Set button loading state
         function setButtonLoading(loading) {
             const btn = document.getElementById('generateBtn');
             if (loading) {
@@ -1091,7 +1066,7 @@
             }
         }
 
-        // 批量處理進度條管理
+        // Batch processing progress bar management
         function showBatchProgress() {
             document.getElementById('batchProgressArea').style.display = 'block';
         }
@@ -1111,24 +1086,24 @@
             progressDetail.textContent = detail || 'Processing...';
         }
 
-        // 顯示錯誤訊息
+        // Show error message
         function showError(message) {
             const errorArea = document.getElementById('errorArea');
             errorArea.innerHTML = `<div class="error-message">❌ ${message}</div>`;
         }
 
-        // 顯示成功訊息
+        // Show success message
         function showSuccess(message) {
             const errorArea = document.getElementById('errorArea');
             errorArea.innerHTML = `<div class="success-message">✅ ${message}</div>`;
         }
 
-        // 清除訊息
+        // Clear messages
         function clearMessages() {
             document.getElementById('errorArea').innerHTML = '';
         }
 
-        // 任務UI管理
+        // Task UI management
         function showTasksArea() {
             document.getElementById('tasksArea').style.display = 'block';
         }
@@ -1172,7 +1147,7 @@
                 <div class="task-video" id="video-${task.id}" style="display: none;"></div>
             `;
             
-            // 插入到最前面（最新的任務在上面）
+            // Insert at the top (newest tasks on top)
             tasksList.insertBefore(taskCard, tasksList.firstChild);
         }
 
@@ -1186,14 +1161,14 @@
             
             if (!statusElement) return;
 
-            // 更新重試次數
+            // Update retry count
             if(retriesElement) retriesElement.textContent = task.retryCount;
             
-            // 更新進度
+            // Update progress
             progressElement.textContent = `${task.progress}%`;
             progressFillElement.style.width = `${task.progress}%`;
             
-            // 更新時間
+            // Update time
             if (task.startTime) {
                 const elapsed = task.endTime ? 
                     Math.floor((task.endTime - task.startTime) / 1000) :
@@ -1210,7 +1185,7 @@
                 task.duration = elapsed;
             }
             
-            // 更新狀態
+            // Update status
             statusElement.className = 'task-status';
             if (task.status === 'finished' || task.status === 'completed') {
                 statusElement.classList.add('completed');
@@ -1256,12 +1231,12 @@
         async function downloadTaskVideo(taskId) {
             const task = tasks.get(taskId);
             if (!task || !task.url) {
-                showError('視頻資訊不完整，無法下載');
+                showError('Video information is incomplete, cannot download');
                 return;
             }
             
             try {
-                // 生成基於圖片名稱的文件名
+                // Generate filename based on image name
                 const imageName = task.imageName.replace(/\.[^/.]+$/, '') || 'video';
                 const defaultFileName = `${imageName}.mp4`;
                 
@@ -1273,7 +1248,7 @@
                     fullTask: task
                 });
                 
-                // 檢查是否支援 File System Access API (Chrome 86+) 且在 HTTPS 環境
+                // Check for File System Access API support (Chrome 86+) and HTTPS context
                 const isSecureContext = window.isSecureContext || location.protocol === 'https:';
                 const hasFileSystemAPI = 'showSaveFilePicker' in window;
                 
@@ -1285,7 +1260,7 @@
                 
                 if (hasFileSystemAPI && isSecureContext) {
                     try {
-                        // 使用新的 File System Access API 讓用戶選擇存儲位置
+                        // Use the new File System Access API to let the user choose a save location
                         const fileHandle = await window.showSaveFilePicker({
                             suggestedName: defaultFileName,
                             types: [{
@@ -1296,7 +1271,7 @@
                             }]
                         });
                         
-                        showSuccess('開始下載視頻...');
+                        showSuccess('Starting video download...');
                         
                         const response = await fetch(task.url, {
                             method: 'GET',
@@ -1306,25 +1281,25 @@
                         });
                         
                         if (!response.ok) {
-                            throw new Error(`下載失敗: ${response.status} ${response.statusText}`);
+                            throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                         }
                         
                         const writableStream = await fileHandle.createWritable();
                         await response.body.pipeTo(writableStream);
                         
-                        showSuccess('✅ 視頻下載成功！');
+                        showSuccess('✅ Video downloaded successfully!');
                         return;
                     } catch (filePickerError) {
                         if (filePickerError.name === 'AbortError') {
-                            showError('下載已取消');
+                            showError('Download cancelled');
                             return;
                         }
                         console.log('📝 File picker failed, falling back to regular download:', filePickerError.message);
                     }
                 }
                 
-                // 降級到傳統下載方式
-                showSuccess('開始下載視頻...');
+                // Fallback to traditional download method
+                showSuccess('Starting video download...');
                 
                 const response = await fetch(task.url, {
                     method: 'GET',
@@ -1334,12 +1309,12 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`下載失敗: ${response.status} ${response.statusText}`);
+                    throw new Error(`Download failed: ${response.status} ${response.statusText}`);
                 }
                 
                 const blob = await response.blob();
                 
-                // 創建下載連結
+                // Create download link
                 const url = window.URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
@@ -1349,16 +1324,16 @@
                 a.click();
                 document.body.removeChild(a);
                 
-                // 清理 blob URL
+                // Clean up blob URL
                 window.URL.revokeObjectURL(url);
                 
-                showSuccess(`✅ 視頻下載成功！檔名：${defaultFileName}`);
+                showSuccess(`✅ Video downloaded successfully! Filename: ${defaultFileName}`);
                 
             } catch (error) {
                 console.error('❌ Download failed:', error);
-                showError(`下載失敗: ${error.message}`);
+                showError(`Download failed: ${error.message}`);
                 
-                // 如果 fetch 失敗，嘗試直接打開連結
+                // If fetch fails, try opening the link directly
                 console.log('🔄 Fallback: Opening video URL directly');
                 window.open(task.url, '_blank');
             }
@@ -1386,7 +1361,7 @@
                 averageTimeElement.textContent = '-';
             }
             
-            // 顯示/隱藏下載按鈕
+            // Show/hide download button
             const downloadBtn = document.getElementById('downloadAllBtn');
             const completedVideos = Array.from(tasks.values()).filter(task => 
                 (task.status === 'finished' || task.status === 'completed') && task.url
@@ -1402,7 +1377,7 @@
             }
         }
 
-        // 下載所有完成的視頻
+        // Download all completed videos
         async function downloadAllVideos() {
             console.log('🔄 Starting batch download...');
             
@@ -1441,7 +1416,7 @@
                             url: task.url
                         });
                         
-                        // 使用 fetch 下載視頻文件
+                        // Use fetch to download the video file
                         const response = await fetch(task.url, {
                             method: 'GET',
                             headers: {
@@ -1455,12 +1430,12 @@
                         
                         const blob = await response.blob();
                         
-                        // 創建下載連結
+                        // Create download link
                         const url = window.URL.createObjectURL(blob);
                         const link = document.createElement('a');
                         link.href = url;
                         
-                        // 使用圖片名稱作為視頻檔名
+                        // Use image name as the video filename
                         const imageName = task.imageName.replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
                         const fileName = `${imageName}.mp4`;
                         link.download = fileName;
@@ -1472,15 +1447,15 @@
                         link.click();
                         document.body.removeChild(link);
                         
-                        // 清理 blob URL
+                        // Clean up blob URL
                         window.URL.revokeObjectURL(url);
                         
                         successCount++;
                         
-                        // 更新按鈕文字顯示進度
+                        // Update button text to show progress
                         downloadBtn.textContent = `📥 Downloading... (${i + 1}/${completedVideos.length})`;
                         
-                        // 短暫延遲避免瀏覽器阻止多個下載
+                        // Short delay to prevent the browser from blocking multiple downloads
                         if (i < completedVideos.length - 1) {
                             await new Promise(resolve => setTimeout(resolve, 800));
                         }
@@ -1491,7 +1466,7 @@
                     }
                 }
                 
-                // 顯示結果
+                // Show result
                 if (successCount === completedVideos.length) {
                     showSuccess(`✅ Successfully started download for all ${successCount} video(s)!`);
                 } else if (successCount > 0) {
@@ -1500,7 +1475,7 @@
                     showError(`❌ Failed to download any videos. Please try downloading individually.`);
                 }
                 
-                // 確保任務狀態保持不變
+                // Ensure task status remains unchanged
                 console.log(`📊 Tasks status after download:`, Array.from(tasks.values()).length, 'tasks remaining');
                 
             } catch (error) {
@@ -1510,12 +1485,12 @@
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = originalText;
                 
-                // 強制更新任務摘要以確保UI正確
+                // Force update of task summary to ensure UI is correct
                 updateTasksSummary();
             }
         }
 
-        // 調試任務數據
+        // Debug task data
         function debugTasks() {
             console.log('=== Debug Tasks Info ===');
             console.log('Total tasks:', tasks.size);
@@ -1532,10 +1507,10 @@
                 });
             });
             
-            showSuccess('調試信息已輸出到控制台，請按F12查看');
+            showSuccess('Debug info has been output to the console. Press F12 to view.');
         }
 
-        // 測試連接功能
+        // Test connection function
         async function testConnection() {
             console.log('testConnection function called');
             
@@ -1558,7 +1533,7 @@
             try {
                 console.log('Preparing to send test request...');
                 
-                // 先嘗試一個更簡單的請求
+                // Try a simpler request first
                 console.log('Test URL:', apiUrl);
 
                 const response = await fetch(apiUrl, {
@@ -1586,7 +1561,7 @@
                     showError(`⚠️ Received response status: ${response.status} ${response.statusText}`);
                 }
 
-                // 嘗試讀取響應內容
+                // Try to read response content
                 try {
                     const text = await response.text();
                     console.log('Response content:', text);
@@ -1607,7 +1582,7 @@
             }
         }
 
-        // 添加調試檢查功能
+        // Add debug check function
         async function debugCheck() {
             console.log('debugCheck function called');
             const apiKey = document.getElementById('apiKey').value;
@@ -1623,7 +1598,7 @@
             showSuccess('Performing debug check...');
 
             try {
-                // 嘗試一個簡單的請求來進行調試檢查
+                // Try a simple request for debug checking
                 const response = await fetch(apiUrl, {
                     method: 'OPTIONS',
                     headers: {
@@ -1659,15 +1634,15 @@
             return getCurrentAPIConfig().endpoint;
         }
 
-        // 頁面載入時的初始化
+        // Initialization on page load
         window.addEventListener('load', () => {
-            console.log('🚀 Pika API Multi-Task Frontend Loaded');
+            console.log('🚀 Multi-Task Frontend Loaded');
             
             // Initialize provider and version options
             updateProviderVersions();
         });
 
-        // 頁面卸載時清理
+        // Cleanup on page unload
         window.addEventListener('beforeunload', () => {
             stopStatusCheck();
         });

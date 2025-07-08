@@ -527,7 +527,7 @@
                     if (data.videos && data.videos.length > 0) {
                         await loadCloudVideos(data.videos);
                         controlsDiv.style.display = 'block';
-                        uploadArea.style.display = 'none';
+                        uploadArea.style.display = 'flex';
                     }
                     
                     updateStatus(`Room loaded successfully with ${data.videos.length} videos`);
@@ -651,11 +651,14 @@
 
             if (videoData.length > 0) {
                 controlsDiv.style.display = 'block';
-                uploadArea.style.display = 'none';
+                uploadArea.style.display = 'flex';
             }
 
             updateStatus(`Added ${files.length} videos, total ${videoData.length} videos. Duplicate names are allowed.`);
             renderVideoWall();
+
+            // 允許再次選取相同文件
+            fileInput.value = '';
         }
 
         // 創建視頻項目

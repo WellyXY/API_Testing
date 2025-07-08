@@ -1,0 +1,4 @@
+RealEstate10K 視頻佔位檔案
+原始路徑: RealEstate10K/train/SBwBUxilBWM/607189d95ed54ab6.mp4
+下載說明: 請訪問 https://google.github.io/realestate10k/ 申請權限
+申請通過後，請將視頻檔案放置在: realcam_vid_dataset/RealEstate10K/train/SBwBUxilBWM/607189d95ed54ab6.mp4

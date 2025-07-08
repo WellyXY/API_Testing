@@ -1,0 +1,102 @@
+[
+  {
+    "index": 52226,
+    "dataset_source": "MiraData9K",
+    "video_path": "MiraData9K/000000154/000000154481.0.005.mp4",
+    "short_caption": "Strawberries ripen under a greenhouse, showcasing vibrant reds and lush green foliage.",
+    "long_caption": "A strawberry plant with ripe red fruits and unripe green ones is shown in a white container, indicating an indoor agricultural setting. the plant's leaves are healthy, with small yellow flowers adding to the visual appeal. the scene is associated with a media outlet or platform named 'tingfeng video'. as time progresses, the focus remains on the strawberry plant, now highlighting its lush green leaves and ripe red fruits, some hanging over the edge. the white container's reflective surface and the plant's healthy appearance suggest an efficient hydroponic system for growing strawberries, with small white flowers adding to the visual appeal.",
+    "camera_scale": 0.6075960187075999,
+    "align_factor": 9.928041458129885,
+    "vtss_score": 0.06741772
+  },
+  {
+    "index": 86022,
+    "dataset_source": "RealEstate10K",
+    "video_path": "RealEstate10K/train/5qrGynqASgU/0efe197d25725842.mp4",
+    "short_caption": "A cozy outdoor deck with a glass table, white chairs, and potted plants, surrounded by trees and a邻近的住宅。",
+    "long_caption": "A tranquil outdoor patio with a wooden floor and beige walls, furnished with a glass-top dining table set for six, white cushioned chairs, and a metal bistro table with a blue cup. potted plants and a hanging wind chime enhance the serene atmosphere. a white umbrella and a closed door with a window are visible, suggesting a private setting. the patio is surrounded by lush greenery, with a two-story house in the background, indicating a suburban locale. the scene is peaceful, with no people or animals present, and the overcast sky casts a soft light, creating a calm and inviting ambiance.",
+    "camera_scale": 12.358239371330647,
+    "align_factor": 3.851463360197782,
+    "vtss_score": 0.06349105
+  },
+  {
+    "index": 19919,
+    "dataset_source": "RealEstate10K",
+    "video_path": "RealEstate10K/train/xg1xLiE8J-k/0160f46f6ab85e70.mp4",
+    "short_caption": "A modern kitchen with white cabinets, stainless steel sink, and wooden flooring transitions to a staircase with white railings and wooden steps.",
+    "long_caption": "A modern kitchen with a white countertop and stainless steel sink, complemented by a dining area with a glass-top table and chairs, all under natural light from large windows. a black-framed artwork adds a personal touch. the scene transitions to a modern open-plan living area with a minimalist design, including a dining set, a kitchen island, and a staircase with dark wooden steps and metal balusters, all under natural light. the final scene showcases a staircase with dark wooden steps and metal balusters, leading to an upper floor, with a small black-framed artwork on the wall, maintaining the room's contemporary ambiance.",
+    "camera_scale": 15.627746336240568,
+    "align_factor": 3.324513678366489,
+    "vtss_score": 0.06925731
+  },
+  {
+    "index": 5058,
+    "dataset_source": "DL3DV-10K",
+    "video_path": "DL3DV-10K/8K/29cc7cca94f70d94dfebfce12ee4ea714300dee8738c48017b9f8ffa87a43eca_2.mp4",
+    "short_caption": "A modern bathroom with white tiles, a toilet, sink, mirror, and shelves displaying towels and plants.",
+    "long_caption": "A modern bathroom with a white shelving unit, woven baskets, and a maroon towel, set against a backdrop of light wooden flooring and white subway tiles. as the scenes change, the bathroom is shown with various elements like a white door, a beige rug, and a small plant. the decor includes a white toilet, a metal shelving unit with a red napkin, and a canvas painting. a white vanity with a circular mirror, a black faucet, and a woven basket with towels is highlighted. the bathroom is adorned with a serene atmosphere, a beach scene canvas, and a woven rug, with a focus on cleanliness and simplicity.",
+    "camera_scale": 9.206862449645996,
+    "align_factor": 2.662373721121799,
+    "vtss_score": 0.069376335
+  },
+  {
+    "index": 24994,
+    "dataset_source": "DL3DV-10K",
+    "video_path": "DL3DV-10K/5K/a8b7f8f37869c9d8fd1f7b38dcaae8316b4d12438bc08a48e8a51443d5cc3287_1.mp4",
+    "short_caption": "A modern building with a large, intricate metal sculpture of a wheel and a figure, set against a clear blue sky.",
+    "long_caption": "A series of sculptures in an urban setting, with a focus on a modern, reflective silver bicycle sculpture on a concrete pedestal. the sculpture, with its unique design, stands out against a backdrop of a contemporary building with glass windows and a brown wooden panel. as the frames advance, the sculpture's details, such as the spinning wheel and the interplay of light and shadow, are highlighted. the surrounding area is quiet, with no people or vehicles, and the clear blue sky suggests a sunny day. the video concludes with a large metallic sculpture of a bicycle wheel, emphasizing the city's vibrant artistic scene.",
+    "camera_scale": 5.422449111938477,
+    "align_factor": 1.5685989633164037,
+    "vtss_score": 0.06321839
+  },
+  {
+    "index": 57387,
+    "dataset_source": "RealEstate10K",
+    "video_path": "RealEstate10K/train/nBKX7e00Vd0/6a52cb11f5d3f005.mp4",
+    "short_caption": "Aerial view of a suburban neighborhood with houses, trees, and a large body of water under a partly cloudy sky.",
+    "long_caption": "The video provides an aerial perspective of a peaceful residential area, showcasing a variety of homes with diverse architectural designs, including single-story and multi-story structures with red brick facades. the area is surrounded by mature trees, some with reddish foliage, and a network of roads. a calm river and a bridge connecting to a bustling city skyline are visible in the background. the scene is tranquil, with no people or vehicles, and the natural light suggests it's either early morning or late afternoon. the river's surface mirrors the partly cloudy sky, and the city's skyline is a prominent feature.",
+    "camera_scale": 28.013602869929404,
+    "align_factor": 22.33548899859325,
+    "vtss_score": 0.062128954
+  },
+  {
+    "index": 64224,
+    "dataset_source": "MiraData9K",
+    "video_path": "MiraData9K/000000001/000000001161.29.002.mp4",
+    "short_caption": "A bustling street scene from a historical setting, with people dressed in period attire engaging in various activities under a clear sky.",
+    "long_caption": "A historical european cityscape from the late 18th or early 19th century, with a cobblestone street bustling with life. a figure in a white coat and black trousers strides forward, while others engage in conversation or look towards the camera. the architecture is classical, with tall windows and shutters. a wooden cart and barrels are visible, suggesting commerce. the scene is set under a clear blue sky, casting soft shadows. two seconds later, the atmosphere remains vibrant with people in period attire, including a man in a white shirt and black trousers, and a woman in a long dress, amidst wooden crates and barrels, indicating trade.",
+    "camera_scale": 7.206797005094492,
+    "align_factor": 65.37954711914062,
+    "vtss_score": 0.06479789
+  },
+  {
+    "index": 3789,
+    "dataset_source": "MiraData9K",
+    "video_path": "MiraData9K/000001320/000001320479.7.003.mp4",
+    "short_caption": "A person lifts weights in a gym, focusing on their upper body strength training routine.",
+    "long_caption": "A man in a red tank top and black shorts is intensely focused on lifting a barbell with a red weight plate in a well-equipped gym, surrounded by various fitness apparatuses and a whiteboard with workout routines. his muscular physique is highlighted by the gym's lighting. two seconds later, the same man, now in a red tank top and black shorts, is seen mid-lift with a barbell loaded with weights, his expression concentrated. the gym's background is blurred, emphasizing the action of weightlifting. contrary to the detailed scenes, the overall description inaccurately mentions a man sitting in a car, looking at the camera.",
+    "camera_scale": 18.848135781624336,
+    "align_factor": 54.34397506713867,
+    "vtss_score": 0.06967462
+  },
+  {
+    "index": 22103,
+    "dataset_source": "RealEstate10K",
+    "video_path": "RealEstate10K/train/-cvAfVrYhWw/fffa3bfe25d75dab.mp4",
+    "short_caption": "A professional-grade kitchen with stainless steel appliances, gas stoves, and various cooking equipment, designed for high-volume food preparation.",
+    "long_caption": "A commercial kitchen is initially shown, equipped with a stainless steel gas range and an industrial-sized ventilation system, surrounded by various cooking utensils and ingredients. the space is well-lit by fluorescent lights, with a red tiled floor and white walls. a blue sign with white lettering is visible, likely indicating regulations or information. the kitchen appears clean and orderly, with no staff or food present. two seconds later, the scene shifts slightly to show the same kitchen with a commercial-grade coffee machine, a stainless steel countertop, and a black trash bin. the red tiled flooring and white walls are still prominent, and the blue sign is now more visible, suggesting a focus on safety and regulation.",
+    "camera_scale": 0.1788468813371342,
+    "align_factor": 0.6817803988121461,
+    "vtss_score": 0.04843783
+  },
+  {
+    "index": 34331,
+    "dataset_source": "RealEstate10K",
+    "video_path": "RealEstate10K/train/SBwBUxilBWM/607189d95ed54ab6.mp4",
+    "short_caption": "A cozy two-story house with a large wooden deck and a well-maintained lawn under a clear blue sky.",
+    "long_caption": "A two-story suburban home with a spacious wooden deck and a red umbrella, set against a backdrop of autumnal trees and a clear blue sky. the home, with beige siding and white trim, is elevated on a grassy hillside, surrounded by a well-kept lawn and a basketball hoop, indicating a family-oriented setting. as the video progresses, the home's deck is shown with outdoor furniture, and a black trash bin is visible, suggesting routine maintenance. the scene is peaceful, with no people or activity, and the home's lower level has a covered porch with a red umbrella.",
+    "camera_scale": 15.797153318570398,
+    "align_factor": 5.881881907931506,
+    "vtss_score": 0.044459235
+  }
+]

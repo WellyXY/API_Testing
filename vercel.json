@@ -1,8 +1,1 @@
-{
-  "builds": [
-    {
-      "src": "api/proxy.py",
-      "use": "@vercel/python"
-    }
-  ]
-} 
+{} 

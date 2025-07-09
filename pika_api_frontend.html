@@ -906,7 +906,7 @@
                     const headers = {};
                     if (apiConfig.provider === 'original') headers['X-API-KEY'] = apiKey;
                     
-                    const response = await fetch('/api/proxy?path=/generate', { method: 'POST', headers, body: formData });
+                    const response = await fetch('/api/generate', { method: 'POST', headers, body: formData });
                     const result = await response.json().catch(() => ({}));
 
                     if (response.ok) {
@@ -1536,7 +1536,7 @@
                 // Try a simpler request first
                 console.log('Test URL:', apiUrl);
 
-                const response = await fetch(`/api/proxy?path=${apiUrl.substring(1)}`, {
+                const response = await fetch(apiUrl, {
                     method: 'GET',
                     headers: {
                         'X-API-KEY': apiKey,
@@ -1598,8 +1598,8 @@
             showSuccess('Performing debug check...');
 
             try {
-                // 嘗試一個簡單的請求來進行調試檢查
-                const response = await fetch(`/api/proxy?path=${apiUrl.substring(1)}`, {
+                // Try a simple request for debug checking
+                const response = await fetch(apiUrl, {
                     method: 'OPTIONS',
                     headers: {
                         'X-API-KEY': apiKey,

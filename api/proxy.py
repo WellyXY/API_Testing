@@ -47,7 +47,7 @@ class handler(BaseHTTPRequestHandler):
 
         # Prepare headers for the forwarded request
         forward_headers = {
-            'Authorization': f"Bearer {api_key}",
+            'X-API-KEY': api_key,
             'Accept': self.headers.get('Accept', 'application/json')
         }
         

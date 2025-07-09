@@ -1,4 +1,2 @@
-Flask
-Flask-CORS
-requests
+requests==2.28.1
 zipfile36 

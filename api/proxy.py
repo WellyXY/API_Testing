@@ -1,55 +1,81 @@
-from flask import Flask, request, jsonify, Response
 import requests
+from http.server import BaseHTTPRequestHandler
+from urllib.parse import urlparse, parse_qs
+import json
 
-app = Flask(__name__)
+class handler(BaseHTTPRequestHandler):
 
-# The base URL for the target API
-BASE_URL = "https://api.pika.art/v1"
+    def do_GET(self):
+        self.proxy_request('GET')
 
-@app.route('/api/proxy', methods=['GET', 'POST', 'OPTIONS'])
-def proxy_request():
-    # Handle CORS preflight requests for browser compatibility
-    if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, X-API-KEY',
-        }
-        return ('', 204, headers)
+    def do_POST(self):
+        self.proxy_request('POST')
 
-    # Get the target path from the 'path' query parameter
-    path = request.args.get('path', '')
-    if not path:
-        return jsonify({"error": "Query parameter 'path' is missing"}), 400
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, X-API-KEY')
+        self.end_headers()
+
+    def proxy_request(self, method):
+        # Base URL for the target API
+        BASE_URL = "https://api.pika.art/v1"
         
-    target_url = f"{BASE_URL}/{path.lstrip('/')}"
+        # Parse path from query parameters
+        parsed_path = urlparse(self.path)
+        query_params = parse_qs(parsed_path.query)
+        target_path = query_params.get('path', [''])[0]
 
-    # Get the API key from the client's custom X-API-KEY header
-    api_key = request.headers.get('X-API-KEY')
-    if not api_key:
-        return jsonify({"error": "Header 'X-API-KEY' is missing"}), 401
+        if not target_path:
+            self.send_response(400)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': "Query parameter 'path' is missing"}).encode('utf-8'))
+            return
 
-    # Prepare headers for the forwarded request
-    forward_headers = {
-        'Accept': request.headers.get('Accept', 'application/json'),
-        'Authorization': f"Bearer {api_key}"
-    }
-    if request.method == 'POST' and 'Content-Type' in request.headers:
-        forward_headers['Content-Type'] = request.headers['Content-Type']
+        target_url = f"{BASE_URL}/{target_path.lstrip('/')}"
+        
+        # Get API key from client's header
+        api_key = self.headers.get('X-API-KEY')
+        if not api_key:
+            self.send_response(401)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': "Header 'X-API-KEY' is missing"}).encode('utf-8'))
+            return
 
-    try:
-        # Forward the request to the target API
-        if request.method == 'POST':
-            resp = requests.post(target_url, headers=forward_headers, data=request.get_data(), params=request.args)
-        else: # GET
-            resp = requests.get(target_url, headers=forward_headers, params=request.args)
-
-        # Create a new response to forward back to the client
-        response_headers = {
-            'Content-Type': resp.headers.get('content-type', 'application/json'),
-            'Access-Control-Allow-Origin': '*' # Add CORS header for the actual response
+        # Prepare headers for the forwarded request
+        forward_headers = {
+            'Authorization': f"Bearer {api_key}",
+            'Accept': self.headers.get('Accept', 'application/json')
         }
-        return Response(resp.content, status=resp.status_code, headers=response_headers)
+        
+        body = None
+        if method == 'POST':
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            if 'Content-Type' in self.headers:
+                forward_headers['Content-Type'] = self.headers['Content-Type']
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 502 
+        try:
+            # Forward the request to the target API
+            if method == 'POST':
+                resp = requests.post(target_url, headers=forward_headers, data=body)
+            else: # GET
+                resp = requests.get(target_url, headers=forward_headers)
+
+            # Send response back to the client
+            self.send_response(resp.status_code)
+            for key, value in resp.headers.items():
+                if key.lower() not in ['content-encoding', 'transfer-encoding', 'connection']:
+                    self.send_header(key, value)
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(resp.content)
+
+        except requests.exceptions.RequestException as e:
+            self.send_response(502)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'error': str(e)}).encode('utf-8'))

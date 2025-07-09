@@ -20,7 +20,7 @@ class handler(BaseHTTPRequestHandler):
 
     def proxy_request(self, method):
         # Base URL for the target API
-        BASE_URL = "https://devapi.pika.art"
+        BASE_URL = "https://qazwsxedcrf3g5h.pika.art"
         
         # Parse path from query parameters
         parsed_path = urlparse(self.path)

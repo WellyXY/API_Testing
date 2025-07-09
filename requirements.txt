@@ -1,2 +1,1 @@
-requests==2.28.1
-zipfile36 
+requests==2.28.1 

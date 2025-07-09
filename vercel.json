@@ -1,23 +1,19 @@
 {
-    "version": 2,
-    "builds": [
-        {
-            "src": "api/proxy.py",
-            "use": "@vercel/python"
-        }
-    ],
-    "routes": [
-        {
-            "src": "/api/generate",
-            "dest": "/api/proxy"
-        },
-        {
-            "src": "/videos/(.*)",
-            "dest": "/api/proxy"
-        },
-        {
-            "src": "/(.*)",
-            "dest": "/index.html"
-        }
-    ]
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/proxy.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/proxy",
+      "dest": "/api/proxy.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ]
 } 

@@ -871,10 +871,9 @@
         // Submit a single task, including retry logic
         async function submitTask(imageFile) {
             const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
             const promptText = document.getElementById('promptText').value;
-            const MAX_RETRIES = 20; // Increase retry limit
-            const RETRY_DELAY = 8000; // 8-second retry interval
+            const MAX_RETRIES = 20;
+            const RETRY_DELAY = 8000;
 
             let lastError = 'Unknown error';
 
@@ -897,16 +896,12 @@
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                     }
 
-                    // Prepare FormData and headers
                     const formData = new FormData();
                     formData.append('image', imageFile);
-                    formData.append('provider', apiConfig.provider);
-                    formData.append('version', apiConfig.version);
                     if (promptText.trim()) formData.append('promptText', promptText.trim());
-                    const headers = {};
-                    if (apiConfig.provider === 'original') headers['X-API-KEY'] = apiKey;
+                    const headers = { 'X-API-KEY': apiKey };
                     
-                    const response = await fetch('/api/proxy?path=/generate', { method: 'POST', headers, body: formData });
+                    const response = await fetch('/api/proxy?path=generate/v0/image-to-video', { method: 'POST', headers, body: formData });
                     const result = await response.json().catch(() => ({}));
 
                     if (response.ok) {
@@ -960,8 +955,7 @@
         // Check video status
         async function checkVideoStatus() {
             const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const baseUrl = '/';  // Use local proxy
+            const baseUrl = '/';
             
             if (!apiKey) return;
             
@@ -977,15 +971,12 @@
             // Check all active tasks
             for (const task of activeTasks) {
                 try {
-                    // Prepare headers
                     const headers = {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-API-KEY': apiKey
                     };
-                    if (apiConfig.provider === 'original') {
-                        headers['X-API-KEY'] = apiKey;
-                    }
                     
-                    const response = await fetch(`${baseUrl}videos/${task.id}?provider=${apiConfig.provider}`, {
+                    const response = await fetch(`${baseUrl}api/proxy?path=videos/${task.id}`, {
                         headers: headers
                     });
 
@@ -1515,11 +1506,9 @@
             console.log('testConnection function called');
             
             const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const apiUrl = apiConfig.endpoint;
+            const testPath = 'generate/v0/image-to-video';
 
-            console.log('API Version:', apiConfig.version);
-            console.log('API URL:', apiUrl);
+            console.log('Testing API Path:', testPath);
             console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
 
             if (!apiKey) {
@@ -1531,12 +1520,7 @@
             showSuccess('Testing connection...');
 
             try {
-                console.log('Preparing to send test request...');
-                
-                // Try a simpler request first
-                console.log('Test URL:', apiUrl);
-
-                const response = await fetch(`/api/proxy?path=${apiUrl.substring(1)}`, {
+                const response = await fetch(`/api/proxy?path=${testPath}`, {
                     method: 'GET',
                     headers: {
                         'X-API-KEY': apiKey,
@@ -1586,8 +1570,7 @@
         async function debugCheck() {
             console.log('debugCheck function called');
             const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const apiUrl = apiConfig.endpoint;
+            const testPath = 'generate/v0/image-to-video';
 
             if (!apiKey) {
                 showError('Please enter API Key first');
@@ -1598,8 +1581,8 @@
             showSuccess('Performing debug check...');
 
             try {
-                // 嘗試一個簡單的請求來進行調試檢查
-                const response = await fetch(`/api/proxy?path=${apiUrl.substring(1)}`, {
+                // Try a simple request for debug checking
+                const response = await fetch(`/api/proxy?path=${testPath}`, {
                     method: 'OPTIONS',
                     headers: {
                         'X-API-KEY': apiKey,

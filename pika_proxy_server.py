@@ -27,7 +27,7 @@ API_PROVIDERS = {
     },
     'staging': {
         'name': 'Staging',
-        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
+        'base_url': 'https://089e99349ace.pikalabs.app',
         'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',  # 更新的 API Token
         'supported_versions': {
             'v0': '/generate/v0/image-to-video'

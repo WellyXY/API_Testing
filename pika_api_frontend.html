@@ -1292,9 +1292,10 @@
             }
             
             try {
-                // 生成基於圖片名稱的文件名
+                // 生成基於圖片名稱的文件名，添加任務ID確保唯一性
                 const imageName = task.imageName.replace(/\.[^/.]+$/, '') || 'video';
-                const defaultFileName = `${imageName}.mp4`;
+                const shortTaskId = task.id.substring(0, 8); // 使用任務ID前8位
+                const defaultFileName = `${imageName}_${shortTaskId}.mp4`;
                 
                 console.log('🔄 Downloading single video:', {
                     taskId: task.id,
@@ -1491,9 +1492,10 @@
                         const link = document.createElement('a');
                         link.href = url;
                         
-                        // 使用圖片名稱作為視頻檔名
+                        // 使用圖片名稱作為視頻檔名，添加任務ID確保唯一性
                         const imageName = task.imageName.replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
-                        const fileName = `${imageName}.mp4`;
+                        const shortTaskId = task.id.substring(0, 8); // 使用任務ID前8位
+                        const fileName = `${imageName}_${shortTaskId}.mp4`;
                         link.download = fileName;
                         link.style.display = 'none';
                         

@@ -14,7 +14,7 @@
 
 ### 🌐 代理服務器
 - **`pika_proxy_server.py`** - Pika API 代理服務器
-  - 支援 Original 和 Staging 兩種 API 環境
+  - 使用 Staging API 環境
   - 提供 CORS 支援和錯誤處理
   - 配合 `pika_api_frontend.html` 使用
 
@@ -66,15 +66,11 @@ from new-api import generate_pikascenes_turbo
 
 ## 🔧 API 配置
 
-### Original API
-- 基礎 URL: `https://qazwsxedcrf3g5h.pika.art`
-- 支援版本: v0
-- 需要 API Key
-
-### Staging API  
+### Pika Labs API (Staging)
 - 基礎 URL: `https://089e99349ace.pikalabs.app`
-- 支援版本: v0
-- 使用相同的 API Key（與Original環境相同）
+- 支援版本: v2.2
+- API Key: `pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM`
+- 端點: `/generate/2.2/i2v`
 
 ## 💡 功能特點
 

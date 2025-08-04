@@ -356,30 +356,21 @@
             <!-- API 配置區域 -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
-                <div class="form-group">
-                    <label for="apiProvider">🌐 API Provider:</label>
-                    <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                        <option value="original">Original - 穩定版本</option>
-                        <option value="staging">Staging - 新功能支援</option>
-                    </select>
-                    <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 Original 支援 v0，Staging 支援 v2.2 和 Turbo
-                    </small>
-                </div>
-                <div class="form-group">
-                    <label for="apiVersion">🚀 I2V API Version:</label>
-                    <select id="apiVersion" class="form-control" onchange="updateAPIDescription()">
-                        <option value="v0">v0 - Original (generate/v0/image-to-video)</option>
-                        <!-- 動態更新選項 -->
-                        <!-- <option value="turbo">Turbo - Fast (generate/turbo/i2v)</option> -->
-                    </select>
-                    <small id="apiDescription" style="color: #666; margin-top: 5px; display: block;">
-                        💡 Original version - full compatibility
-                    </small>
+                <div class="api-info-display" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef;">
+                    <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 16px;">📡 Pika Labs API Configuration</h4>
+                    <div style="font-size: 14px; color: #666; line-height: 1.6;">
+                        <div><strong>🌐 Provider:</strong> Staging</div>
+                        <div><strong>🔗 Version:</strong> v2.2</div>
+                        <div><strong>🎯 Endpoint:</strong> /generate/2.2/i2v</div>
+                        <div><strong>🌍 Base URL:</strong> https://089e99349ace.pikalabs.app</div>
+                        <div style="margin-top: 8px; font-style: italic; color: #28a745;">
+                            ✅ Ready for image-to-video generation
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
+                    <input type="password" id="apiKey" class="form-control" value="pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
                         💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
@@ -499,71 +490,32 @@
         
         // API 提供商和版本配置
         const API_PROVIDERS = {
-            'original': {
-                name: 'Original',
-                description: '穩定版本 - 使用原始 API',
-                versions: {
-                    'v0': {
-                        endpoint: '/generate/v0/image-to-video',
-                        description: '原始版本 - 完整功能兼容',
-                        name: 'Original v0'
-                    }
-                }
-            },
             'staging': {
                 name: 'Staging',
-                description: '測試環境 - 與Original相同功能',
+                description: 'Pika Labs API 服務器',
+                baseUrl: 'https://089e99349ace.pikalabs.app',
                 versions: {
-                    'v0': {
-                        endpoint: '/generate/v0/image-to-video',
-                        description: '原始版本 - 完整功能兼容',
-                        name: 'Staging v0'
+                    'v2.2': {
+                        endpoint: '/generate/2.2/i2v',
+                        description: '圖片轉視頻 - v2.2 版本',
+                        name: 'Staging v2.2'
                     }
                 }
             }
         };
 
-        // 更新提供商對應的版本選項
-        function updateProviderVersions() {
-            const provider = document.getElementById('apiProvider').value;
-            const versionSelect = document.getElementById('apiVersion');
-            const providerConfig = API_PROVIDERS[provider];
-            
-            // 清空現有選項
-            versionSelect.innerHTML = '';
-            
-            // 添加該提供商支援的版本
-            Object.keys(providerConfig.versions).forEach(version => {
-                const versionConfig = providerConfig.versions[version];
-                const option = document.createElement('option');
-                option.value = version;
-                option.textContent = `${version} - ${versionConfig.name}`;
-                versionSelect.appendChild(option);
-            });
-            
-            // 更新描述
-            updateAPIDescription();
-        }
+        // API配置现在是固定的，无需动态更新
 
-        // 更新 API 描述
-        function updateAPIDescription() {
-            const provider = document.getElementById('apiProvider').value;
-            const apiVersion = document.getElementById('apiVersion').value;
-            const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
-            const description = versionConfig?.description || '';
-            document.getElementById('apiDescription').textContent = `💡 ${description}`;
-        }
-
-        // 獲取當前選中的 API 端點和提供商
+        // 獲取當前API配置 - 直接使用staging環境
         function getCurrentAPIConfig() {
-            const provider = document.getElementById('apiProvider').value;
-            const apiVersion = document.getElementById('apiVersion').value;
+            const provider = 'staging';
+            const apiVersion = 'v2.2';
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
             return {
                 provider: provider,
                 version: apiVersion,
-                endpoint: versionConfig?.endpoint || '/generate/v0/image-to-video'
+                endpoint: versionConfig?.endpoint || '/generate/2.2/i2v'
             };
         }
         
@@ -902,9 +854,23 @@
             const tempId = `submitting-${Date.now()}-${Math.random()}`;
             const task = createTask(tempId, promptText, imageFile.name);
             task.status = 'submitting';
+            // 存儲API配置信息到任務
+            task.apiProvider = apiConfig.provider;
+            task.apiVersion = apiConfig.version;
+            task.apiKey = apiKey;
             tasks.set(tempId, task);
             createTaskCard(task);
             updateTaskCard(task);
+            
+            // 更新API信息顯示
+            const apiInfoElement = document.getElementById(`api-info-${tempId}`);
+            if (apiInfoElement) {
+                const providerConfig = API_PROVIDERS[apiConfig.provider];
+                const baseUrl = providerConfig.baseUrl;
+                const keyDisplay = apiKey ? `${apiKey.substring(0, 6)}...${apiKey.substring(apiKey.length - 6)}` : 'Server Default';
+                apiInfoElement.innerHTML = `📍 ${apiConfig.provider} | 🌐 ${baseUrl} | 🔗 ${apiConfig.version} | 🔑 ${keyDisplay}`;
+            }
+            
             showTasksArea();
             
             for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -924,25 +890,92 @@
                     formData.append('version', apiConfig.version);
                     if (promptText.trim()) formData.append('promptText', promptText.trim());
                     const headers = {};
-                    if (apiConfig.provider === 'original') headers['X-API-KEY'] = apiKey;
+                    if (apiKey) headers['X-API-KEY'] = apiKey; // 如果用户提供了API Key就使用，否则使用服务器默认的
+                    
+                    // 記錄詳細的API調用信息
+                    const providerConfig = API_PROVIDERS[apiConfig.provider];
+                    const baseUrl = providerConfig.baseUrl;
+                    const fullUrl = baseUrl + apiConfig.endpoint;
+                    
+                    console.log('=== Video Generation API Call ===');
+                    console.log('📍 Provider:', apiConfig.provider);
+                    console.log('🔗 Version:', apiConfig.version);
+                    console.log('🌐 Base URL:', baseUrl);
+                    console.log('🎯 Endpoint:', apiConfig.endpoint);
+                    console.log('🔗 Full URL:', fullUrl);
+                    console.log('🚀 Proxy Endpoint:', '/api/generate');
+                    console.log('🔑 API Key:', apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Using default from server');
+                    console.log('📝 Prompt:', promptText.trim() || 'No prompt');
+                    console.log('📎 Image:', imageFile.name, `(${(imageFile.size / 1024).toFixed(2)} KB)`);
+                    console.log('📋 Headers:', headers);
                     
                     const response = await fetch('/api/generate', { method: 'POST', headers, body: formData });
                     const result = await response.json().catch(() => ({}));
+                    
+                    // 記錄響應信息
+                    console.log('=== API Response ===');
+                    console.log('📊 Status:', response.status, response.statusText);
+                    console.log('📝 Result:', result);
 
                     if (response.ok) {
+                        // 顯示詳細的成功信息
+                        const successDetails = `
+✅ Video Generation Started Successfully!
+
+🆔 Video ID: ${result.video_id}
+📍 Provider: ${apiConfig.provider}
+🌐 Base URL: ${baseUrl}
+🎯 Endpoint: ${apiConfig.endpoint}
+🔗 Full URL: ${fullUrl}
+🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Server Default'}
+📝 Prompt: ${promptText.trim() || 'No prompt provided'}
+📎 Image: ${imageFile.name} (${(imageFile.size / 1024).toFixed(2)} KB)
+🏗️ Worker: ${result.worker || 'Not specified'}
+📊 Status: ${result.status || 'pending'}
+⏰ Time: ${new Date().toLocaleTimeString()}
+                        `;
+                        
+                        console.log('=== Video Generation Success ===');
+                        console.log(successDetails);
                         console.log(`✅ Task submitted successfully: ${result.video_id} for ${imageFile.name}`);
                         
                         // 提交成功，用真實ID替換臨時ID
                         const realId = result.video_id;
+                        const oldApiInfo = document.getElementById(`api-info-${task.id}`);
+                        const apiInfoContent = oldApiInfo ? oldApiInfo.innerHTML : '';
+                        
                         tasks.delete(task.id); // 刪除臨時任務
                         
                         updateCardIds(task.id, realId); // 更新DOM中所有相關ID
                         
                         task.id = realId; // 更新JS對象的ID
                         task.status = 'waiting'; // 重置狀態
+                        // 存儲詳細信息到任務對象
+                        task.submissionDetails = {
+                            videoId: result.video_id,
+                            provider: apiConfig.provider,
+                            baseUrl: baseUrl,
+                            endpoint: apiConfig.endpoint,
+                            fullUrl: fullUrl,
+                            apiKey: apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Server Default',
+                            prompt: promptText.trim() || 'No prompt provided',
+                            imageInfo: `${imageFile.name} (${(imageFile.size / 1024).toFixed(2)} KB)`,
+                            worker: result.worker || 'Not specified',
+                            submittedAt: new Date().toLocaleTimeString()
+                        };
                         tasks.set(realId, task); // 用真實ID存儲
                         
                         updateTaskCard(task); // 用新ID更新一次UI
+                        
+                        // 恢復API信息顯示並添加詳細信息
+                        const newApiInfo = document.getElementById(`api-info-${realId}`);
+                        if (newApiInfo) {
+                            const enhancedApiInfo = `
+📍 ${apiConfig.provider} | 🌐 ${baseUrl} | 🔗 ${apiConfig.version} | 🔑 ${apiKey ? `${apiKey.substring(0, 6)}...${apiKey.substring(apiKey.length - 6)}` : 'Server Default'}
+<br><small>🏗️ Worker: ${result.worker || 'Not specified'} | ⏰ ${new Date().toLocaleTimeString()}</small>
+                            `;
+                            newApiInfo.innerHTML = enhancedApiInfo;
+                        }
                         return; // 成功，退出循環
                     }
                     
@@ -1001,7 +1034,7 @@
                     const headers = {
                         'Accept': 'application/json'
                     };
-                    if (apiConfig.provider === 'original') {
+                    if (apiKey) {
                         headers['X-API-KEY'] = apiKey;
                     }
                     
@@ -1158,8 +1191,11 @@
                         <div class="task-detail-value" id="retries-${task.id}">${task.retryCount}</div>
                     </div>
                 </div>
-                <div style="font-size: 14px; color: #666; margin-bottom: 10px;">
+                <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
                     🖼️ Image: ${task.imageName} | 💬 Prompt: ${task.promptText || 'None'}
+                </div>
+                <div style="font-size: 12px; color: #888; margin-bottom: 10px; padding: 5px; background: #f8f9fa; border-radius: 3px;" id="api-info-${task.id}">
+                    📍 API: Loading... | 🔗 Version: Loading... | 🔑 Key: Loading...
                 </div>
                 <div class="progress-bar">
                     <div class="progress-fill" id="progress-fill-${task.id}"></div>
@@ -1538,21 +1574,40 @@
             const apiConfig = getCurrentAPIConfig();
             const apiUrl = apiConfig.endpoint;
 
-            console.log('API Version:', apiConfig.version);
-            console.log('API URL:', apiUrl);
-            console.log('API Key:', apiKey ? `Set (${apiKey.length} chars)` : 'Not Set');
-
             if (!apiKey) {
                 showError('Please enter API Key first');
                 return;
             }
 
             clearMessages();
-            showSuccess('Testing connection...');
+            
+            // 獲取完整URL信息
+            const providerConfig = API_PROVIDERS[apiConfig.provider];
+            const baseUrl = providerConfig.baseUrl;
+            const fullUrl = baseUrl + apiConfig.endpoint;
+            
+            // 顯示調試信息
+            const debugInfo = `
+🔍 <strong>Test Connection Debug Info:</strong><br>
+📍 <strong>Provider:</strong> ${apiConfig.provider}<br>
+🔗 <strong>API Version:</strong> ${apiConfig.version}<br>
+🌐 <strong>Base URL:</strong> ${baseUrl}<br>
+🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
+🔗 <strong>Full URL:</strong> ${fullUrl}<br>
+🔑 <strong>API Key:</strong> ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}<br>
+⏳ Sending test request...
+            `;
+            showSuccess(debugInfo);
 
             try {
-                console.log('Preparing to send test request...');
-                console.log('Test URL:', apiUrl);
+                console.log('=== Test Connection Debug Info ===');
+                console.log('Provider:', apiConfig.provider);
+                console.log('API Version:', apiConfig.version);
+                console.log('Base URL:', baseUrl);
+                console.log('Endpoint:', apiConfig.endpoint);
+                console.log('Full URL:', fullUrl);
+                console.log('Proxy Endpoint:', apiUrl);
+                console.log('API Key:', `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}`);
 
                 // 創建一個最小的測試請求體
                 const formData = new FormData();
@@ -1580,31 +1635,48 @@
                     body: formData
                 });
 
-                console.log('Received response:', response.status, response.statusText);
-                console.log('Response headers:', [...response.headers.entries()]);
+                console.log('=== Response Info ===');
+                console.log('Status:', response.status, response.statusText);
+                console.log('Headers:', [...response.headers.entries()]);
 
-                if (response.status === 200 || response.status === 201 || response.status === 202) {
-                    showSuccess('✅ Connection test successful! API is responding correctly.');
-                } else if (response.status === 401) {
-                    showError('❌ Authentication failed: API Key might be invalid');
-                } else if (response.status === 403) {
-                    showError('❌ Forbidden: API Key might not have access');
-                } else if (response.status === 404) {
-                    showError('❌ API endpoint not found: Please check the URL');
-                } else if (response.status === 400) {
-                    showError('⚠️ Bad Request: API Key or request format may be incorrect');
-                } else if (response.status === 500) {
-                    showError('⚠️ Server Error: API service may be temporarily unavailable');
-                } else {
-                    showError(`⚠️ Received response status: ${response.status} ${response.statusText}`);
-                }
-
-                // 嘗試讀取響應內容
+                // 讀取響應內容
+                let responseText = '';
                 try {
-                    const text = await response.text();
-                    console.log('Response content:', text);
+                    responseText = await response.text();
+                    console.log('Response content:', responseText);
                 } catch (e) {
                     console.log('Could not read response content:', e);
+                    responseText = 'Could not read response content';
+                }
+
+                // 顯示完整的測試結果
+                const resultInfo = `
+🔍 <strong>Test Connection Results:</strong><br>
+📍 <strong>Provider:</strong> ${apiConfig.provider}<br>
+🔗 <strong>API Version:</strong> ${apiConfig.version}<br>
+🌐 <strong>Base URL:</strong> ${baseUrl}<br>
+🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
+🔗 <strong>Full URL:</strong> ${fullUrl}<br>
+🔑 <strong>API Key:</strong> ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}<br>
+📊 <strong>Response Status:</strong> ${response.status} ${response.statusText}<br>
+📝 <strong>Response Content:</strong><br>
+<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-size: 12px; white-space: pre-wrap;">${responseText}</pre>
+                `;
+
+                if (response.status === 200 || response.status === 201 || response.status === 202) {
+                    showSuccess(resultInfo + '<br>✅ <strong>Connection test successful!</strong>');
+                } else if (response.status === 401) {
+                    showError(resultInfo + '<br>❌ <strong>Authentication failed: API Key might be invalid</strong>');
+                } else if (response.status === 403) {
+                    showError(resultInfo + '<br>❌ <strong>Forbidden: API Key might not have access</strong>');
+                } else if (response.status === 404) {
+                    showError(resultInfo + '<br>❌ <strong>API endpoint not found: Please check the URL</strong>');
+                } else if (response.status === 400) {
+                    showError(resultInfo + '<br>⚠️ <strong>Bad Request: API Key or request format may be incorrect</strong>');
+                } else if (response.status === 500) {
+                    showError(resultInfo + '<br>⚠️ <strong>Server Error: API service may be temporarily unavailable</strong>');
+                } else {
+                    showError(resultInfo + `<br>⚠️ <strong>Received response status: ${response.status} ${response.statusText}</strong>`);
                 }
 
             } catch (error) {
@@ -1676,8 +1748,7 @@
         window.addEventListener('load', () => {
             console.log('🚀 Pika API Multi-Task Frontend Loaded');
             
-            // Initialize provider and version options
-            updateProviderVersions();
+            // API配置已固定為staging環境
         });
 
         // 頁面卸載時清理

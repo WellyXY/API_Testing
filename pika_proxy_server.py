@@ -17,20 +17,12 @@ CORS(app)  # 允許所有跨域請求
 
 # API 提供商配置
 API_PROVIDERS = {
-    'original': {
-        'name': 'Original',
-        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
-        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',  # 用戶的 API Key
-        'supported_versions': {
-            'v0': '/generate/v0/image-to-video'
-        }
-    },
     'staging': {
         'name': 'Staging',
         'base_url': 'https://089e99349ace.pikalabs.app',
-        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',  # 更新的 API Token
+        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',  # 更新的 API Token
         'supported_versions': {
-            'v0': '/generate/v0/image-to-video'
+            'v2.2': '/generate/2.2/i2v'
         }
     }
 }
@@ -46,26 +38,16 @@ def index():
     """提供前端頁面"""
     return send_from_directory('.', 'pika_api_frontend.html')
 
-@app.route('/generate/v0/image-to-video', methods=['POST'])
+@app.route('/generate/2.2/i2v', methods=['POST'])
 def generate_video():
-    """代理圖片轉視頻請求 - 保持原有端點兼容性"""
-    return _generate_video_internal('original', 'v0')
-
-@app.route('/generate/2.2/i2v', methods=['POST']) 
-def generate_video_v22():
-    """2.2 版本的圖片轉視頻"""
+    """代理圖片轉視頻請求 - 使用staging環境"""
     return _generate_video_internal('staging', 'v2.2')
-
-@app.route('/generate/turbo/i2v', methods=['POST'])
-def generate_video_turbo():
-    """Turbo 版本的圖片轉視頻"""
-    return _generate_video_internal('staging', 'turbo')
 
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
-    """靈活的生成端點，支持提供商和版本選擇"""
-    provider = request.form.get('provider', 'original')
-    version = request.form.get('version', 'v0')
+    """靈活的生成端點，使用staging環境"""
+    provider = request.form.get('provider', 'staging')
+    version = request.form.get('version', 'v2.2')
     return _generate_video_internal(provider, version)
 
 def _generate_video_internal(provider='original', api_version='v0'):
@@ -85,11 +67,22 @@ def _generate_video_internal(provider='original', api_version='v0'):
         if not api_key:
             api_key = provider_config['api_key']  # 使用配置中的默認 API Key
 
-        print(f"收到圖片轉視頻請求 ({provider} - {api_version})，API Key: {api_key[:10]}...")
-
+        print("=" * 60)
+        print(f"🚀 收到圖片轉視頻請求")
+        print(f"📍 Provider: {provider}")
+        print(f"🔗 API Version: {api_version}")
+        print(f"🔑 API Key: {api_key[:8]}...{api_key[-8:]}")
+        print(f"📝 Provider Config: {provider_config['name']}")
+        
         # 獲取端點和基礎 URL
         endpoint = provider_config['supported_versions'][api_version]
         base_url = provider_config['base_url']
+        full_url = f"{base_url}{endpoint}"
+        
+        print(f"🌐 Base URL: {base_url}")
+        print(f"🎯 Endpoint: {endpoint}")
+        print(f"🔗 Full URL: {full_url}")
+        print("=" * 60)
 
         # 準備請求數據
         files = {}
@@ -126,8 +119,11 @@ def _generate_video_internal(provider='original', api_version='v0'):
             'Accept': 'application/json'
         }
 
-        full_url = f"{base_url}{endpoint}"
-        print(f"轉發請求到: {full_url}")
+        print(f"📤 發送請求到 Pika API...")
+        print(f"📋 Request Headers: {headers}")
+        print(f"📋 Request Data: {data}")
+        if files:
+            print(f"📎 Files: {list(files.keys())}")
         
         response = requests.post(
             full_url,
@@ -137,13 +133,47 @@ def _generate_video_internal(provider='original', api_version='v0'):
             timeout=30
         )
 
-        print(f"Pika API 響應: {response.status_code}")
+        print("=" * 60)
+        print(f"📥 Pika API 響應收到")
+        print(f"📊 Status Code: {response.status_code}")
+        print(f"📋 Response Headers: {dict(response.headers)}")
+        
+        # 讀取和記錄響應內容
+        response_content = response.text
+        print(f"📝 Response Content: {response_content}")
+        
+        # 如果成功，記錄更多詳細信息
+        if response.status_code == 200:
+            try:
+                json_response = response.json()
+                video_id = json_response.get('video_id', 'N/A')
+                worker = json_response.get('worker', 'Not specified')
+                status = json_response.get('status', 'pending')
+                
+                print("🎉 視頻生成請求成功提交!")
+                print(f"🆔 Video ID: {video_id}")
+                print(f"🏗️ Worker: {worker}")
+                print(f"📊 Initial Status: {status}")
+                print(f"📍 Provider: {provider}")
+                print(f"🔗 API Version: {api_version}")
+                print(f"🌐 Base URL: {base_url}")
+                print(f"🎯 Endpoint: {endpoint}")
+                print(f"📝 Prompt: {data.get('promptText', 'No prompt')}")
+                if files:
+                    print(f"📎 Image Files: {list(files.keys())}")
+            except:
+                print("⚠️ Could not parse JSON response for detailed logging")
+        
+        print("=" * 60)
         
         # 返回響應
         if response.headers.get('content-type', '').startswith('application/json'):
-            return jsonify(response.json()), response.status_code
+            try:
+                return jsonify(response.json()), response.status_code
+            except:
+                return jsonify({"error": "Invalid JSON response", "content": response_content}), response.status_code
         else:
-            return response.text, response.status_code
+            return response_content, response.status_code
 
     except requests.exceptions.RequestException as e:
         print(f"請求錯誤: {e}")

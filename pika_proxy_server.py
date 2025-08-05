@@ -17,10 +17,18 @@ CORS(app)  # 允許所有跨域請求
 
 # API 提供商配置
 API_PROVIDERS = {
+    'original': {
+        'name': 'Original',
+        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
+        'api_key': 'pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPfmU2AlqF',
+        'supported_versions': {
+            'v0': '/generate/v0/image-to-video'
+        }
+    },
     'staging': {
         'name': 'Staging',
         'base_url': 'https://089e99349ace.pikalabs.app',
-        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',  # 更新的 API Token
+        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
         'supported_versions': {
             'v2.2': '/generate/2.2/i2v'
         }
@@ -38,16 +46,21 @@ def index():
     """提供前端頁面"""
     return send_from_directory('.', 'pika_api_frontend.html')
 
+@app.route('/generate/v0/image-to-video', methods=['POST'])
+def generate_video_v0():
+    """代理圖片轉視頻請求 - 使用original環境"""
+    return _generate_video_internal('original', 'v0')
+
 @app.route('/generate/2.2/i2v', methods=['POST'])
-def generate_video():
+def generate_video_v22():
     """代理圖片轉視頻請求 - 使用staging環境"""
     return _generate_video_internal('staging', 'v2.2')
 
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
-    """靈活的生成端點，使用staging環境"""
-    provider = request.form.get('provider', 'staging')
-    version = request.form.get('version', 'v2.2')
+    """靈活的生成端點，支持多提供商"""
+    provider = request.form.get('provider', 'original')
+    version = request.form.get('version', 'v0')
     return _generate_video_internal(provider, version)
 
 def _generate_video_internal(provider='original', api_version='v0'):

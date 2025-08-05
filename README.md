@@ -1,100 +1,97 @@
-# Pika API 工具集
+# Pika API Testing Tool
 
-這個文件夾包含了所有與 Pika API 視頻生成相關的工具和文件。
+一個用於測試 Pika Labs API 的工具，支持圖片轉視頻功能，現在支持多個 API 提供商。
 
-## 📁 文件說明
+## 🌟 功能特點
 
-### 🚀 核心 API 工具
-- **`new-api.py`** - 最新的 Pika API 接口，支援多種生成功能：
-  - Pikadditions（視頻特效添加）
-  - Pikascenes（場景生成）
-  - Pikaswaps（內容替換）
-  - Pikaframes（關鍵幀生成）
-  - Pikatwists（視頻變換）
+- 📸 **圖片轉視頻**: 上傳圖片生成視頻
+- 🎬 **多提供商支持**: 支持 Original 和 Staging API 環境
+- 🔄 **即時狀態查詢**: 自動查詢視頻生成進度
+- ⚡ **批量處理**: 支持批量上傳和處理
+- 🔧 **代理服務器**: 內建 Flask 代理服務器，解決 CORS 問題
+- 💾 **下載功能**: 支援單個和批量視頻下載
 
-### 🌐 代理服務器
-- **`pika_proxy_server.py`** - Pika API 代理服務器
-  - 使用 Staging API 環境
-  - 提供 CORS 支援和錯誤處理
-  - 配合 `pika_api_frontend.html` 使用
+## 🔧 API 提供商配置
 
-### 🎯 批量生成工具
-- **`pika_api_frontend.html`** - 批量圖片轉視頻的前端界面
-  - 支援多種 API 版本（v0, v2.2, Turbo）
-  - 支援最多50張圖片批量上傳
-  - 智能批量處理系統（可調整批次大小和延遲）
-  - 實時進度監控和狀態追蹤
-  - 並行處理和錯誤處理
-  - 一鍵下載所有完成的視頻
+### Original API
+- **基礎 URL**: `https://qazwsxedcrf3g5h.pika.art`
+- **API Key**: `pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPfmU2AlqF`
+- **支援版本**: v0
+- **端點**: `/generate/v0/image-to-video`
 
-### 📦 批量處理系統
-- **`pika_batch_server.py`** - 批量視頻生成後端服務器
-- **`pika_batch_frontend.html`** - 批量處理的前端界面
-- **`batch_frontend.html`** - 簡化版批量處理界面
-- **`start_batch_server.py`** - 批量服務器啟動腳本
+### Staging API  
+- **基礎 URL**: `https://089e99349ace.pikalabs.app`
+- **API Key**: `pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM`
+- **支援版本**: v2.2
+- **端點**: `/generate/2.2/i2v`
 
-### 📋 配置和文檔
-- **`requirements.txt`** - Python 依賴包列表
-- **`vercel.json`** - Vercel 部署配置文件
-- **`README_BATCH.md`** - 批量處理系統的詳細說明
-- **`test_batch_50.html`** - 50張圖片批量處理功能測試說明
-
-## 🛠️ 使用方法
+## 🚀 快速開始
 
 ### 1. 安裝依賴
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
-### 2. 啟動代理服務器（推薦）
+### 2. 啟動代理服務器
 ```bash
-python pika_proxy_server.py
+python3 pika_proxy_server.py
 ```
-然後在瀏覽器中打開 http://localhost:8000
+服務器將在 http://localhost:5003 啟動
 
-### 3. 啟動批量處理服務器
-```bash
-python start_batch_server.py
-```
-然後在瀏覽器中打開 http://localhost:5000
+### 3. 開啟瀏覽器
+訪問 http://localhost:5003 開始使用
 
-### 4. 直接使用 API
-```python
-from new-api import generate_pikascenes_turbo
-# 使用各種 API 功能
-```
+## 📋 使用說明
 
-## 🔧 API 配置
+1. **選擇 API 提供商**: 從下拉菜單選擇 Original 或 Staging 環境
+2. **選擇 API 版本**: 根據選擇的提供商自動顯示可用版本
+3. **輸入 API Key**: 可選，留空將使用配置中的默認 Key
+4. **測試連接**: 點擊 "Test Connection" 驗證 API 可用性
+5. **上傳圖片**: 拖拽或點擊上傳圖片文件
+6. **輸入提示詞**: 可選，描述期望的視頻效果
+7. **開始生成**: 點擊 "Start Generating Video" 開始處理
+8. **查看進度**: 系統會自動查詢並更新視頻狀態
+9. **下載視頻**: 生成完成後可下載視頻文件
 
-### Pika Labs API (Staging)
-- 基礎 URL: `https://089e99349ace.pikalabs.app`
-- 支援版本: v2.2
-- API Key: `pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM`
-- 端點: `/generate/2.2/i2v`
+## 🔍 API 端點
 
-## 💡 功能特點
+### 代理服務器端點
+- `GET /` - 前端頁面
+- `POST /generate/v0/image-to-video` - Original API v0 (直接代理)
+- `POST /generate/2.2/i2v` - Staging API v2.2 (直接代理)  
+- `POST /api/generate` - 靈活端點 (支援多提供商)
+- `GET /videos/{video_id}` - 查詢視頻狀態
+- `GET /api/info` - 獲取支援的 API 提供商信息
 
-- ✅ 支援 Pika API v0 版本
-- ✅ 支援最多50張圖片批量處理
-- ✅ 智能批量處理系統（可調整批次大小和延遲）
-- ✅ 實時進度監控和狀態追蹤
-- ✅ 批次內並行處理，批次間智能延遲
-- ✅ 自動視頻下載和一鍵批量下載
-- ✅ 完善的錯誤處理和重試機制
-- ✅ 跨域請求支援和代理服務器
-- ✅ 響應式網頁界面和進度可視化
+### 請求參數
+- `image` - 圖片文件 (必需)
+- `promptText` - 提示詞 (可選)
+- `provider` - API 提供商 ('original' 或 'staging')
+- `version` - API 版本 ('v0' 或 'v2.2')
 
-## 📝 注意事項
+## 🛠️ 技術棧
 
-1. 確保有有效的 Pika API Key
-2. 批量處理時請注意 API 速率限制，建議使用較小的批次大小（3-5個任務）
-3. 處理大量圖片時請耐心等待，系統會自動管理任務隊列
-4. 如果遇到API限制錯誤，可以增加批次間延遲時間
-5. 大文件上傳可能需要調整服務器超時設置
-6. 建議在 HTTPS 環境下使用以獲得最佳體驗
+- **後端**: Python Flask + Flask-CORS + requests
+- **前端**: HTML + CSS + JavaScript
+- **API**: Pika Labs API (多提供商)
 
-## 🔧 批量處理建議設置
+## 📝 更新日誌
 
-- **小批量（1-10張圖片）**: 批次大小3-5，延遲2-5秒
-- **中批量（11-25張圖片）**: 批次大小3，延遲5-10秒  
-- **大批量（26-50張圖片）**: 批次大小3，延遲10-30秒 
+### 最新版本
+- ✅ 添加多 API 提供商支持
+- ✅ 支援 Original 和 Staging 兩個環境
+- ✅ 動態 API 提供商和版本選擇
+- ✅ 統一的代理端點架構
+- ✅ 改進的錯誤處理和調試信息
+
+### 之前版本
+- ✅ 基礎圖片轉視頻功能
+- ✅ 批量處理支持
+- ✅ 視頻下載功能
+- ✅ 代理服務器解決 CORS
+
+## 🔐 安全說明
+
+- API Keys 存儲在配置文件中，請妥善保管
+- 生產環境建議使用環境變量管理敏感信息
+- 代理服務器僅用於開發測試，生產環境請使用專業的代理方案 

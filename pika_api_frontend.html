@@ -356,21 +356,33 @@
             <!-- API 配置區域 -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
-                <div class="api-info-display" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #e9ecef;">
-                    <h4 style="margin: 0 0 10px 0; color: #495057; font-size: 16px;">📡 Pika Labs API Configuration</h4>
-                    <div style="font-size: 14px; color: #666; line-height: 1.6;">
-                        <div><strong>🌐 Provider:</strong> Staging</div>
-                        <div><strong>🔗 Version:</strong> v2.2</div>
-                        <div><strong>🎯 Endpoint:</strong> /generate/2.2/i2v</div>
-                        <div><strong>🌍 Base URL:</strong> https://089e99349ace.pikalabs.app</div>
-                        <div style="margin-top: 8px; font-style: italic; color: #28a745;">
-                            ✅ Ready for image-to-video generation
-                        </div>
+                
+                <!-- API 提供商選擇 -->
+                <div class="form-group">
+                    <label for="apiProvider">API Provider:</label>
+                    <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
+                        <option value="original">Original - Original Pika API 服務器</option>
+                        <option value="staging">Staging - Pika Labs API 服務器</option>
+                    </select>
+                </div>
+
+                <!-- API 版本選擇 -->
+                <div class="form-group">
+                    <label for="apiVersion">API Version:</label>
+                    <select id="apiVersion" class="form-control" onchange="updateAPIDescription()">
+                        <!-- 版本選項會由 JavaScript 動態填充 -->
+                    </select>
+                </div>
+
+                <!-- API 描述顯示 -->
+                <div class="form-group">
+                    <div id="apiDescription" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef; font-size: 14px; color: #666;">
+                        請選擇 API 提供商和版本
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM" placeholder="Enter your API Key">
+                    <input type="password" id="apiKey" class="form-control" value="pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPfmU2AlqF" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
                         💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
@@ -490,6 +502,18 @@
         
         // API 提供商和版本配置
         const API_PROVIDERS = {
+            'original': {
+                name: 'Original',
+                description: 'Original Pika API 服務器',
+                baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
+                versions: {
+                    'v0': {
+                        endpoint: '/generate/v0/image-to-video',
+                        description: '圖片轉視頻 - v0 版本',
+                        name: 'Original v0'
+                    }
+                }
+            },
             'staging': {
                 name: 'Staging',
                 description: 'Pika Labs API 服務器',
@@ -504,19 +528,60 @@
             }
         };
 
-        // API配置现在是固定的，无需动态更新
-
-        // 獲取當前API配置 - 直接使用staging環境
+        // 獲取當前API配置 - 現在支持動態選擇
         function getCurrentAPIConfig() {
-            const provider = 'staging';
-            const apiVersion = 'v2.2';
+            const provider = document.getElementById('apiProvider')?.value || 'original';
+            const apiVersion = document.getElementById('apiVersion')?.value || 'v0';
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
             return {
                 provider: provider,
                 version: apiVersion,
-                endpoint: versionConfig?.endpoint || '/generate/2.2/i2v'
+                endpoint: versionConfig?.endpoint || '/generate/v0/image-to-video'
             };
+        }
+
+        // 更新提供商版本選項
+        function updateProviderVersions() {
+            const providerSelect = document.getElementById('apiProvider');
+            const versionSelect = document.getElementById('apiVersion');
+            
+            if (!providerSelect || !versionSelect) return;
+            
+            const selectedProvider = providerSelect.value;
+            const providerConfig = API_PROVIDERS[selectedProvider];
+            
+            // 清空版本選項
+            versionSelect.innerHTML = '';
+            
+            // 添加版本選項
+            if (providerConfig && providerConfig.versions) {
+                Object.keys(providerConfig.versions).forEach(versionKey => {
+                    const version = providerConfig.versions[versionKey];
+                    const option = document.createElement('option');
+                    option.value = versionKey;
+                    option.textContent = version.name || versionKey;
+                    versionSelect.appendChild(option);
+                });
+            }
+            
+            updateAPIDescription();
+        }
+
+        // 更新API描述
+        function updateAPIDescription() {
+            const provider = document.getElementById('apiProvider')?.value;
+            const version = document.getElementById('apiVersion')?.value;
+            const descElement = document.getElementById('apiDescription');
+            
+            if (!descElement || !provider || !version) return;
+            
+            const providerConfig = API_PROVIDERS[provider];
+            const versionConfig = providerConfig?.versions[version];
+            
+            if (providerConfig && versionConfig) {
+                descElement.textContent = `${providerConfig.description} - ${versionConfig.description}`;
+            }
         }
         
         // 任務數據結構
@@ -1751,6 +1816,7 @@
             console.log('🚀 Pika API Multi-Task Frontend Loaded');
             
             // API配置已固定為staging環境
+            updateProviderVersions(); // 初始化提供商和版本選擇
         });
 
         // 頁面卸載時清理

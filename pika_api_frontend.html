@@ -361,8 +361,8 @@
                 <div class="form-group">
                     <label for="apiProvider">API Provider:</label>
                     <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
+                        <option value="staging" selected>Staging - Pika Labs API 服務器</option>
                         <option value="original">Original - Original Pika API 服務器</option>
-                        <option value="staging">Staging - Pika Labs API 服務器</option>
                     </select>
                 </div>
 
@@ -382,7 +382,7 @@
                 </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
+                    <input type="password" id="apiKey" class="form-control" value="pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
                         💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
@@ -530,14 +530,14 @@
 
         // 獲取當前API配置 - 現在支持動態選擇
         function getCurrentAPIConfig() {
-            const provider = document.getElementById('apiProvider')?.value || 'original';
-            const apiVersion = document.getElementById('apiVersion')?.value || 'v0';
+            const provider = document.getElementById('apiProvider')?.value || 'staging';
+            const apiVersion = document.getElementById('apiVersion')?.value || 'v2.2';
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
             return {
                 provider: provider,
                 version: apiVersion,
-                endpoint: versionConfig?.endpoint || '/generate/v0/image-to-video'
+                endpoint: versionConfig?.endpoint || '/generate/2.2/i2v'
             };
         }
 

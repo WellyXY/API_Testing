@@ -59,11 +59,11 @@ def generate_video_v22():
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
     """靈活的生成端點，支持多提供商"""
-    provider = request.form.get('provider', 'original')
-    version = request.form.get('version', 'v0')
+    provider = request.form.get('provider', 'staging')
+    version = request.form.get('version', 'v2.2')
     return _generate_video_internal(provider, version)
 
-def _generate_video_internal(provider='original', api_version='v0'):
+def _generate_video_internal(provider='staging', api_version='v2.2'):
     """內部圖片轉視頻處理函數"""
     try:
         # 驗證提供商和版本
@@ -199,8 +199,8 @@ def _generate_video_internal(provider='original', api_version='v0'):
 def get_video_status(video_id):
     """代理視頻狀態查詢請求"""
     try:
-        # 獲取提供商參數，默認為 original
-        provider = request.args.get('provider', 'original')
+        # 獲取提供商參數，默認為 staging
+        provider = request.args.get('provider', 'staging')
         
         if provider not in API_PROVIDERS:
             return jsonify({'error': f'Unsupported provider: {provider}'}), 400
@@ -258,7 +258,7 @@ def api_info():
 @app.route('/test', methods=['GET', 'OPTIONS'])
 def test_connection():
     """測試連接端點"""
-    provider = request.args.get('provider', 'original')
+    provider = request.args.get('provider', 'staging')
     
     if provider not in API_PROVIDERS:
         return jsonify({'error': f'Unsupported provider: {provider}'}), 400

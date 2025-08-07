@@ -17,7 +17,10 @@
 - **基礎 URL**: `https://qazwsxedcrf3g5h.pika.art`
 - **API Key**: `pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM`
 - **支援版本**: v0
-- **端點**: `/generate/v0/image-to-video`
+- **端點選項**:
+  - `/generate/v0/image-to-video` (默認)
+  - `/generate/v0/image-to-video-new`
+  - `/generate/v0/image-to-video-inner`
 
 ### Staging API  
 - **基礎 URL**: `https://089e99349ace.pikalabs.app`
@@ -57,7 +60,9 @@ python3 pika_proxy_server.py
 
 ### 代理服務器端點
 - `GET /` - 前端頁面
-- `POST /generate/v0/image-to-video` - Original API v0 (直接代理)
+- `POST /generate/v0/image-to-video` - Original API v0 (默認端點)
+- `POST /generate/v0/image-to-video-new` - Original API v0 (新端點)
+- `POST /generate/v0/image-to-video-inner` - Original API v0 (內部端點)
 - `POST /generate/2.2/i2v` - Staging API v2.2 (直接代理)  
 - `POST /api/generate` - 靈活端點 (支援多提供商)
 - `GET /videos/{video_id}` - 查詢視頻狀態
@@ -68,6 +73,7 @@ python3 pika_proxy_server.py
 - `promptText` - 提示詞 (可選)
 - `provider` - API 提供商 ('original' 或 'staging')
 - `version` - API 版本 ('v0' 或 'v2.2')
+- `endpoint_type` - 端點類型 (僅 Original API v0: 'image-to-video', 'image-to-video-new', 'image-to-video-inner')
 
 ## 🛠️ 技術棧
 
@@ -83,6 +89,7 @@ python3 pika_proxy_server.py
 - ✅ 動態 API 提供商和版本選擇
 - ✅ 統一的代理端點架構
 - ✅ 改進的錯誤處理和調試信息
+- ✅ 支援 Original API v0 的多個端點選項 (image-to-video, image-to-video-new, image-to-video-inner)
 
 ### 之前版本
 - ✅ 基礎圖片轉視頻功能

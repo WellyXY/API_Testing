@@ -374,6 +374,16 @@
                     </select>
                 </div>
 
+                <!-- 端點類型選擇 (僅 Original API v0) -->
+                <div class="form-group" id="endpointTypeGroup" style="display: none;">
+                    <label for="endpointType">Endpoint Type:</label>
+                    <select id="endpointType" class="form-control" onchange="updateAPIDescription()">
+                        <option value="image-to-video">image-to-video (默認)</option>
+                        <option value="image-to-video-new">image-to-video-new</option>
+                        <option value="image-to-video-inner">image-to-video-inner</option>
+                    </select>
+                </div>
+
                 <!-- API 描述顯示 -->
                 <div class="form-group">
                     <div id="apiDescription" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef; font-size: 14px; color: #666;">
@@ -382,7 +392,7 @@
                 </div>
                 <div class="form-group">
                     <label for="apiKey">API Key:</label>
-                    <input type="password" id="apiKey" class="form-control" value="pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM" placeholder="Enter your API Key">
+                    <input type="password" id="apiKey" class="form-control" value="pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM" placeholder="Enter your API Key">
                     <small style="color: #666; margin-top: 5px; display: block;">
                         💡 Tip: API Keys usually start with "pk-" or a similar prefix
                     </small>
@@ -508,7 +518,24 @@
                 baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
                 versions: {
                     'v0': {
-                        endpoint: '/generate/v0/image-to-video',
+                        endpoints: {
+                            'image-to-video': {
+                                path: '/generate/v0/image-to-video',
+                                description: '圖片轉視頻 - v0 版本 (默認)',
+                                name: 'Original v0 (默認)'
+                            },
+                            'image-to-video-new': {
+                                path: '/generate/v0/image-to-video-new',
+                                description: '圖片轉視頻 - v0 版本 (新端點)',
+                                name: 'Original v0 (新端點)'
+                            },
+                            'image-to-video-inner': {
+                                path: '/generate/v0/image-to-video-inner',
+                                description: '圖片轉視頻 - v0 版本 (內部端點)',
+                                name: 'Original v0 (內部端點)'
+                            }
+                        },
+                        defaultEndpoint: 'image-to-video',
                         description: '圖片轉視頻 - v0 版本',
                         name: 'Original v0'
                     }
@@ -532,12 +559,29 @@
         function getCurrentAPIConfig() {
             const provider = document.getElementById('apiProvider')?.value || 'staging';
             const apiVersion = document.getElementById('apiVersion')?.value || 'v2.2';
+            const endpointType = document.getElementById('endpointType')?.value;
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
+            
+            let endpoint = '/generate/2.2/i2v'; // 默認
+            
+            if (versionConfig) {
+                if (versionConfig.endpoints) {
+                    // Original API v0 支持多個端點
+                    const selectedEndpoint = endpointType && versionConfig.endpoints[endpointType] 
+                        ? versionConfig.endpoints[endpointType] 
+                        : versionConfig.endpoints[versionConfig.defaultEndpoint];
+                    endpoint = selectedEndpoint.path;
+                } else {
+                    // Staging API 使用單一端點
+                    endpoint = versionConfig.endpoint;
+                }
+            }
             
             return {
                 provider: provider,
                 version: apiVersion,
-                endpoint: versionConfig?.endpoint || '/generate/2.2/i2v'
+                endpoint: endpoint,
+                endpointType: endpointType
             };
         }
 
@@ -545,6 +589,7 @@
         function updateProviderVersions() {
             const providerSelect = document.getElementById('apiProvider');
             const versionSelect = document.getElementById('apiVersion');
+            const endpointTypeGroup = document.getElementById('endpointTypeGroup');
             
             if (!providerSelect || !versionSelect) return;
             
@@ -565,6 +610,20 @@
                 });
             }
             
+            // 檢查是否需要顯示端點類型選擇器
+            if (endpointTypeGroup) {
+                const selectedVersion = versionSelect.value;
+                const versionConfig = providerConfig?.versions[selectedVersion];
+                
+                if (versionConfig && versionConfig.endpoints) {
+                    // Original API v0 支持多個端點
+                    endpointTypeGroup.style.display = 'block';
+                } else {
+                    // Staging API 或其他版本使用單一端點
+                    endpointTypeGroup.style.display = 'none';
+                }
+            }
+            
             updateAPIDescription();
         }
 
@@ -572,6 +631,7 @@
         function updateAPIDescription() {
             const provider = document.getElementById('apiProvider')?.value;
             const version = document.getElementById('apiVersion')?.value;
+            const endpointType = document.getElementById('endpointType')?.value;
             const descElement = document.getElementById('apiDescription');
             
             if (!descElement || !provider || !version) return;
@@ -580,7 +640,17 @@
             const versionConfig = providerConfig?.versions[version];
             
             if (providerConfig && versionConfig) {
-                descElement.textContent = `${providerConfig.description} - ${versionConfig.description}`;
+                let description = `${providerConfig.description} - ${versionConfig.description}`;
+                
+                // 如果是 Original API v0，添加端點類型信息
+                if (versionConfig.endpoints && endpointType) {
+                    const endpointConfig = versionConfig.endpoints[endpointType];
+                    if (endpointConfig) {
+                        description += ` (${endpointConfig.description})`;
+                    }
+                }
+                
+                descElement.textContent = description;
             }
         }
         
@@ -933,7 +1003,8 @@
                 const providerConfig = API_PROVIDERS[apiConfig.provider];
                 const baseUrl = providerConfig.baseUrl;
                 const keyDisplay = apiKey ? `${apiKey.substring(0, 6)}...${apiKey.substring(apiKey.length - 6)}` : 'Server Default';
-                apiInfoElement.innerHTML = `📍 ${apiConfig.provider} | 🌐 ${baseUrl} | 🔗 ${apiConfig.version} | 🔑 ${keyDisplay}`;
+                const endpointInfo = apiConfig.endpointType ? ` | 🎯 ${apiConfig.endpointType}` : '';
+                apiInfoElement.innerHTML = `📍 ${apiConfig.provider} | 🌐 ${baseUrl} | 🔗 ${apiConfig.version}${endpointInfo} | 🔑 ${keyDisplay}`;
             }
             
             showTasksArea();
@@ -953,6 +1024,7 @@
                     formData.append('image', imageFile);
                     formData.append('provider', apiConfig.provider);
                     formData.append('version', apiConfig.version);
+                    if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
                     if (promptText.trim()) formData.append('promptText', promptText.trim());
                     const headers = {};
                     if (apiKey) headers['X-API-KEY'] = apiKey; // 如果用户提供了API Key就使用，否则使用服务器默认的
@@ -965,6 +1037,7 @@
                     console.log('=== Video Generation API Call ===');
                     console.log('📍 Provider:', apiConfig.provider);
                     console.log('🔗 Version:', apiConfig.version);
+                    if (apiConfig.endpointType) console.log('🎯 Endpoint Type:', apiConfig.endpointType);
                     console.log('🌐 Base URL:', baseUrl);
                     console.log('🎯 Endpoint:', apiConfig.endpoint);
                     console.log('🔗 Full URL:', fullUrl);
@@ -989,6 +1062,8 @@
 
 🆔 Video ID: ${result.video_id}
 📍 Provider: ${apiConfig.provider}
+🔗 Version: ${apiConfig.version}
+${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 🌐 Base URL: ${baseUrl}
 🎯 Endpoint: ${apiConfig.endpoint}
 🔗 Full URL: ${fullUrl}
@@ -1653,6 +1728,9 @@
             const baseUrl = providerConfig.baseUrl;
             const fullUrl = baseUrl + apiConfig.endpoint;
             
+            // 使用正確的 API Key（如果用戶沒有輸入，使用配置中的默認值）
+            const effectiveApiKey = apiKey || providerConfig.apiKey || 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM';
+            
             // 顯示調試信息
             const debugInfo = `
 🔍 <strong>Test Connection Debug Info:</strong><br>
@@ -1661,7 +1739,7 @@
 🌐 <strong>Base URL:</strong> ${baseUrl}<br>
 🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
 🔗 <strong>Full URL:</strong> ${fullUrl}<br>
-🔑 <strong>API Key:</strong> ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}<br>
+🔑 <strong>API Key:</strong> ${effectiveApiKey.substring(0, 8)}...${effectiveApiKey.substring(effectiveApiKey.length - 8)}<br>
 ⏳ Sending test request...
             `;
             showSuccess(debugInfo);
@@ -1697,7 +1775,7 @@
                 const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
-                        'X-API-KEY': apiKey
+                        'X-API-KEY': effectiveApiKey
                     },
                     body: formData
                 });
@@ -1724,7 +1802,7 @@
 🌐 <strong>Base URL:</strong> ${baseUrl}<br>
 🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
 🔗 <strong>Full URL:</strong> ${fullUrl}<br>
-🔑 <strong>API Key:</strong> ${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}<br>
+🔑 <strong>API Key:</strong> ${effectiveApiKey.substring(0, 8)}...${effectiveApiKey.substring(effectiveApiKey.length - 8)}<br>
 📊 <strong>Response Status:</strong> ${response.status} ${response.statusText}<br>
 📝 <strong>Response Content:</strong><br>
 <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-size: 12px; white-space: pre-wrap;">${responseText}</pre>

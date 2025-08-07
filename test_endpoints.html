@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>端點測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .endpoint { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 3px; }
+        .success { color: green; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <h1>🎯 Original API v0 端點測試</h1>
+    
+    <div class="test-section">
+        <h2>📋 可用的端點</h2>
+        <div class="endpoint">
+            <strong>默認端點:</strong> /generate/v0/image-to-video
+        </div>
+        <div class="endpoint">
+            <strong>新端點:</strong> /generate/v0/image-to-video-new
+        </div>
+        <div class="endpoint">
+            <strong>內部端點:</strong> /generate/v0/image-to-video-inner
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 API 配置</h2>
+        <div id="apiInfo">載入中...</div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 測試結果</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <script>
+        // 測試 API 配置
+        async function testAPIInfo() {
+            try {
+                const response = await fetch('/api/info');
+                const data = await response.json();
+                
+                const apiInfo = document.getElementById('apiInfo');
+                apiInfo.innerHTML = `
+                    <h3>Original API 配置:</h3>
+                    <ul>
+                        <li><strong>基礎 URL:</strong> ${data.providers.original.base_url}</li>
+                        <li><strong>API Key:</strong> ${data.providers.original.api_key.substring(0, 8)}...${data.providers.original.api_key.substring(data.providers.original.api_key.length - 8)}</li>
+                        <li><strong>支援版本:</strong> v0</li>
+                        <li><strong>端點選項:</strong></li>
+                        <ul>
+                            <li>image-to-video (默認)</li>
+                            <li>image-to-video-new</li>
+                            <li>image-to-video-inner</li>
+                        </ul>
+                    </ul>
+                `;
+            } catch (error) {
+                document.getElementById('apiInfo').innerHTML = `<div class="error">❌ 無法獲取 API 信息: ${error.message}</div>`;
+            }
+        }
+
+        // 測試端點
+        async function testEndpoint(endpointName) {
+            const testResults = document.getElementById('testResults');
+            
+            try {
+                const formData = new FormData();
+                formData.append('provider', 'original');
+                formData.append('version', 'v0');
+                formData.append('endpoint_type', endpointName);
+                
+                // 創建一個測試圖片文件
+                const testImage = new File(['test'], 'test.jpg', { type: 'image/jpeg' });
+                formData.append('image', testImage);
+                
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-API-KEY': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    testResults.innerHTML += `<div class="success">✅ ${endpointName}: 成功 - Video ID: ${result.video_id || 'N/A'}</div>`;
+                } else {
+                    testResults.innerHTML += `<div class="error">❌ ${endpointName}: 失敗 - ${result.message || result.error || 'Unknown error'}</div>`;
+                }
+            } catch (error) {
+                testResults.innerHTML += `<div class="error">❌ ${endpointName}: 錯誤 - ${error.message}</div>`;
+            }
+        }
+
+        // 執行測試
+        async function runTests() {
+            const testResults = document.getElementById('testResults');
+            testResults.innerHTML = '<h3>開始測試...</h3>';
+            
+            // 測試所有端點
+            const endpoints = ['image-to-video', 'image-to-video-new', 'image-to-video-inner'];
+            
+            for (const endpoint of endpoints) {
+                await testEndpoint(endpoint);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
+            }
+            
+            testResults.innerHTML += '<h3>✅ 測試完成</h3>';
+        }
+
+        // 頁面載入時執行測試
+        window.onload = function() {
+            testAPIInfo();
+            setTimeout(runTests, 1000);
+        };
+    </script>
+</body>
+</html> 

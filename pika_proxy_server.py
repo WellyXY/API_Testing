@@ -22,7 +22,11 @@ API_PROVIDERS = {
         'base_url': 'https://qazwsxedcrf3g5h.pika.art',
         'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
         'supported_versions': {
-            'v0': '/generate/v0/image-to-video'
+            'v0': {
+                'image-to-video': '/generate/v0/image-to-video',
+                'image-to-video-new': '/generate/v0/image-to-video-new',
+                'image-to-video-inner': '/generate/v0/image-to-video-inner'
+            }
         }
     },
     'staging': {
@@ -46,10 +50,25 @@ def index():
     """提供前端頁面"""
     return send_from_directory('.', 'pika_api_frontend.html')
 
+@app.route('/test_endpoints')
+def test_endpoints():
+    """提供端點測試頁面"""
+    return send_from_directory('.', 'test_endpoints.html')
+
 @app.route('/generate/v0/image-to-video', methods=['POST'])
 def generate_video_v0():
     """代理圖片轉視頻請求 - 使用original環境"""
-    return _generate_video_internal('original', 'v0')
+    return _generate_video_internal('original', 'v0', 'image-to-video')
+
+@app.route('/generate/v0/image-to-video-new', methods=['POST'])
+def generate_video_v0_new():
+    """代理圖片轉視頻請求 - 使用original環境 (new端點)"""
+    return _generate_video_internal('original', 'v0', 'image-to-video-new')
+
+@app.route('/generate/v0/image-to-video-inner', methods=['POST'])
+def generate_video_v0_inner():
+    """代理圖片轉視頻請求 - 使用original環境 (inner端點)"""
+    return _generate_video_internal('original', 'v0', 'image-to-video-inner')
 
 @app.route('/generate/2.2/i2v', methods=['POST'])
 def generate_video_v22():
@@ -61,9 +80,10 @@ def generate_video_flexible():
     """靈活的生成端點，支持多提供商"""
     provider = request.form.get('provider', 'staging')
     version = request.form.get('version', 'v2.2')
-    return _generate_video_internal(provider, version)
+    endpoint_type = request.form.get('endpoint_type')
+    return _generate_video_internal(provider, version, endpoint_type)
 
-def _generate_video_internal(provider='staging', api_version='v2.2'):
+def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None):
     """內部圖片轉視頻處理函數"""
     try:
         # 驗證提供商和版本
@@ -88,7 +108,20 @@ def _generate_video_internal(provider='staging', api_version='v2.2'):
         print(f"📝 Provider Config: {provider_config['name']}")
         
         # 獲取端點和基礎 URL
-        endpoint = provider_config['supported_versions'][api_version]
+        version_config = provider_config['supported_versions'][api_version]
+        
+        # 處理不同的端點類型
+        if isinstance(version_config, dict):
+            # Original API 支持多個端點
+            if endpoint_type and endpoint_type in version_config:
+                endpoint = version_config[endpoint_type]
+            else:
+                # 默認使用第一個端點
+                endpoint = list(version_config.values())[0]
+        else:
+            # Staging API 使用單一端點
+            endpoint = version_config
+            
         base_url = provider_config['base_url']
         full_url = f"{base_url}{endpoint}"
         

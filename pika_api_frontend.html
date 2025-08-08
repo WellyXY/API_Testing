@@ -381,6 +381,7 @@
                         <option value="image-to-video">image-to-video (默認)</option>
                         <option value="image-to-video-new">image-to-video-new</option>
                         <option value="image-to-video-inner">image-to-video-inner</option>
+                        <option value="audio-to-video">audio-to-video</option>
                     </select>
                 </div>
 
@@ -424,21 +425,14 @@
                 </div>
             </div>
 
-            <!-- 處理設置 -->
-            <div class="api-config">
-                <h3>⚙️ Processing Settings</h3>
-                <div class="form-group">
-                    <label for="concurrencyLimit">🚀 Max Concurrent Tasks:</label>
-                    <select id="concurrencyLimit" class="form-control">
-                        <option value="5">5 Tasks</option>
-                        <option value="8">8 Tasks</option>
-                        <option value="10" selected>10 Tasks (Recommended Max)</option>
-                    </select>
-                    <small style="color: #666; margin-top: 5px; display: block;">
-                        💡 同時處理的最大任務數。建議不要超過10個以避免API失敗。
-                    </small>
-                </div>
+            <!-- 音頻上傳（僅 audio-to-video 端點需要） -->
+            <div class="form-group" id="audioGroup" style="display: none;">
+                <label>🎵 Select Audio (Required for audio-to-video)</label>
+                <input type="file" id="audioFile" accept="audio/*">
+                <small style="color:#666; margin-top:6px; display:block;">Accepted: mp3, wav, m4a, etc.</small>
             </div>
+
+            <!-- 處理設置（已隱藏） -->
 
             <!-- 提示詞輸入 -->
             <div class="form-group">
@@ -533,6 +527,11 @@
                                 path: '/generate/v0/image-to-video-inner',
                                 description: '圖片轉視頻 - v0 版本 (內部端點)',
                                 name: 'Original v0 (內部端點)'
+                            },
+                            'audio-to-video': {
+                                path: '/generate/v0/audio-to-video',
+                                description: '圖片+音頻合成視頻 - v0 版本',
+                                name: 'Original v0 (audio-to-video)'
                             }
                         },
                         defaultEndpoint: 'image-to-video',
@@ -627,6 +626,21 @@
             updateAPIDescription();
         }
 
+        // 根據端點類型顯示/隱藏音頻上傳
+        function refreshAudioVisibility() {
+            const endpointType = document.getElementById('endpointType')?.value;
+            const audioGroup = document.getElementById('audioGroup');
+            if (!audioGroup) return;
+            if (endpointType === 'audio-to-video') {
+                audioGroup.style.display = 'block';
+            } else {
+                audioGroup.style.display = 'none';
+            }
+        }
+        document.getElementById('endpointType')?.addEventListener('change', refreshAudioVisibility);
+        // 初次渲染時也刷新一次
+        window.addEventListener('load', refreshAudioVisibility);
+
         // 更新API描述
         function updateAPIDescription() {
             const provider = document.getElementById('apiProvider')?.value;
@@ -666,6 +680,12 @@
                 startTime: null,
                 endTime: null,
                 duration: 0,
+                // 新增計時字段
+                submittedAt: null,
+                startedAt: null,
+                finishedAt: null,
+                waitDurationSec: null,
+                genDurationSec: null,
                 url: null,
                 created: new Date(),
                 retryCount: 0
@@ -677,10 +697,19 @@
         const fileInput = document.getElementById('imageFile');
         const imagePreview = document.getElementById('imagePreview');
 
-        // 點擊上傳區域
-        uploadArea.addEventListener('click', () => {
-            fileInput.click();
-        });
+            // 點擊上傳區域（若選擇 audio-to-video，點擊音頻區域也能觸發）
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // 音頻區域點擊打開文件框
+            const audioGroup = document.getElementById('audioGroup');
+            const audioInput = document.getElementById('audioFile');
+            audioGroup?.addEventListener('click', (e) => {
+                if (e.target?.id !== 'audioFile') {
+                    audioInput?.click();
+                }
+            });
 
         // 拖拽上傳
         uploadArea.addEventListener('dragover', (e) => {
@@ -859,10 +888,18 @@
             }
         }
 
+        // 取得併發上限（若UI已移除，提供安全默認值）
+        function getConcurrencyLimit() {
+            const el = document.getElementById('concurrencyLimit');
+            const n = parseInt(el?.value || '10', 10);
+            if (Number.isNaN(n) || n <= 0) return 10;
+            return Math.min(n, 20);
+        }
+
         // 生成視頻 - 使用智能隊列和併發控制
         async function generateVideo() {
             const apiKey = document.getElementById('apiKey').value;
-            const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
+            const concurrencyLimit = getConcurrencyLimit();
             const imageFiles = Array.from(document.getElementById('imageFile').files);
 
             // 驗證輸入
@@ -928,8 +965,8 @@
 
         // 隊列管理器
         function queueManager(_limit, totalTasks) {
-            // 每次動態取得 select 目前設定的併發上限
-            const concurrencyLimit = parseInt(document.getElementById('concurrencyLimit').value);
+            // 每次動態取得併發上限（UI可能已隱藏）
+            const concurrencyLimit = getConcurrencyLimit();
             const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
             const effectiveActive = activeTasks + pendingSubmissions; // 把尚未加入 Map 的提交也算進去
             const canSubmitCount = concurrencyLimit - effectiveActive;
@@ -989,6 +1026,7 @@
             const tempId = `submitting-${Date.now()}-${Math.random()}`;
             const task = createTask(tempId, promptText, imageFile.name);
             task.status = 'submitting';
+            task.submittedAt = Date.now();
             // 存儲API配置信息到任務
             task.apiProvider = apiConfig.provider;
             task.apiVersion = apiConfig.version;
@@ -1025,6 +1063,16 @@
                     formData.append('provider', apiConfig.provider);
                     formData.append('version', apiConfig.version);
                     if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
+                    // 如果選擇的是 audio-to-video，附帶音頻文件
+                    if (apiConfig.endpointType === 'audio-to-video') {
+                        const audioInput = document.getElementById('audioFile');
+                        const audioFile = audioInput?.files?.[0];
+                        if (!audioFile) {
+                            showError('audio-to-video requires an audio file');
+                            throw new Error('Missing audio file');
+                        }
+                        formData.append('audio', audioFile);
+                    }
                     if (promptText.trim()) formData.append('promptText', promptText.trim());
                     const headers = {};
                     if (apiKey) headers['X-API-KEY'] = apiKey; // 如果用户提供了API Key就使用，否则使用服务器默认的
@@ -1200,11 +1248,26 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             console.log('Full API Response:', result);
             
             // 更新任務數據
+            const prevStatus = task.status;
             task.status = result.status || task.status;
             task.progress = result.progress || task.progress;
             task.url = result.url || task.url;
             
-            // 如果收到第一個 >0 的進度且還沒開始計時，開始計時
+            // 計時：等待時間（submitted -> started）與生成時間（started -> finished）
+            if (!task.startedAt && (task.status === 'started' || task.progress > 0)) {
+                task.startedAt = Date.now();
+                if (task.submittedAt) {
+                    task.waitDurationSec = Math.max(0, Math.round((task.startedAt - task.submittedAt) / 1000));
+                }
+            }
+            if (!task.finishedAt && (task.status === 'finished' || task.status === 'completed')) {
+                task.finishedAt = Date.now();
+                if (task.startedAt) {
+                    task.genDurationSec = Math.max(0, Math.round((task.finishedAt - task.startedAt) / 1000));
+                }
+            }
+            
+            // 舊的通用計時兼容（保留現有UI）
             if (task.progress > 0 && !task.startTime) {
                 task.startTime = Date.now();
                 console.log(`⏱️ Task #${task.taskNumber} timer started`);
@@ -1323,6 +1386,14 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         <div class="task-detail-value" id="progress-${task.id}">0%</div>
                     </div>
                     <div class="task-detail-item">
+                        <div class="task-detail-label">Wait</div>
+                        <div class="task-detail-value" id="wait-${task.id}">-</div>
+                    </div>
+                    <div class="task-detail-item">
+                        <div class="task-detail-label">Gen</div>
+                        <div class="task-detail-value" id="gen-${task.id}">-</div>
+                    </div>
+                    <div class="task-detail-item">
                         <div class="task-detail-label">⏱️ Time</div>
                         <div class="task-detail-value" id="time-${task.id}">Waiting...</div>
                     </div>
@@ -1351,6 +1422,8 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const statusElement = document.getElementById(`status-${task.id}`);
             const progressElement = document.getElementById(`progress-${task.id}`);
             const timeElement = document.getElementById(`time-${task.id}`);
+            const waitElement = document.getElementById(`wait-${task.id}`);
+            const genElement = document.getElementById(`gen-${task.id}`);
             const progressFillElement = document.getElementById(`progress-fill-${task.id}`);
             const taskCard = document.getElementById(`task-${task.id}`);
             const retriesElement = document.getElementById(`retries-${task.id}`);
@@ -1379,6 +1452,36 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     `🔄 ${timeText}`;
                     
                 task.duration = elapsed;
+            }
+
+            // 新增：顯示等待/生成時間（即時更新，參考 time 的動態顯示邏輯）
+            if (waitElement) {
+                let waitSec = null;
+                if (task.submittedAt) {
+                    if (task.startedAt) {
+                        // 已開始，固定為提交到開始的耗時
+                        const fixed = task.waitDurationSec ?? Math.round((task.startedAt - task.submittedAt) / 1000);
+                        waitSec = Math.max(0, fixed);
+                    } else {
+                        // 未開始，動態累加
+                        waitSec = Math.max(0, Math.round((Date.now() - task.submittedAt) / 1000));
+                    }
+                }
+                waitElement.textContent = waitSec != null ? `${waitSec}s` : '-';
+            }
+            if (genElement) {
+                let genSec = null;
+                if (task.startedAt) {
+                    if (task.finishedAt) {
+                        // 已完成，固定為開始到完成的耗時
+                        const fixed = task.genDurationSec ?? Math.round((task.finishedAt - task.startedAt) / 1000);
+                        genSec = Math.max(0, fixed);
+                    } else {
+                        // 生成中，動態累加
+                        genSec = Math.max(0, Math.round((Date.now() - task.startedAt) / 1000));
+                    }
+                }
+                genElement.textContent = genSec != null ? `${genSec}s` : '-';
             }
             
             // 更新狀態

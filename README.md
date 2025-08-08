@@ -21,6 +21,7 @@
   - `/generate/v0/image-to-video` (默認)
   - `/generate/v0/image-to-video-new`
   - `/generate/v0/image-to-video-inner`
+  - `/generate/v0/audio-to-video` (圖片+音頻合成視頻)
 
 ### Staging API  
 - **基礎 URL**: `https://089e99349ace.pikalabs.app`
@@ -63,6 +64,7 @@ python3 pika_proxy_server.py
 - `POST /generate/v0/image-to-video` - Original API v0 (默認端點)
 - `POST /generate/v0/image-to-video-new` - Original API v0 (新端點)
 - `POST /generate/v0/image-to-video-inner` - Original API v0 (內部端點)
+ - `POST /generate/v0/audio-to-video` - Original API v0 (圖片+音頻)
 - `POST /generate/2.2/i2v` - Staging API v2.2 (直接代理)  
 - `POST /api/generate` - 靈活端點 (支援多提供商)
 - `GET /videos/{video_id}` - 查詢視頻狀態
@@ -74,6 +76,7 @@ python3 pika_proxy_server.py
 - `provider` - API 提供商 ('original' 或 'staging')
 - `version` - API 版本 ('v0' 或 'v2.2')
 - `endpoint_type` - 端點類型 (僅 Original API v0: 'image-to-video', 'image-to-video-new', 'image-to-video-inner')
+ - `audio` - 音頻文件 (僅 `audio-to-video` 端點必需)
 
 ## 🛠️ 技術棧
 

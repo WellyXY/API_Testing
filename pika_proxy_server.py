@@ -25,7 +25,8 @@ API_PROVIDERS = {
             'v0': {
                 'image-to-video': '/generate/v0/image-to-video',
                 'image-to-video-new': '/generate/v0/image-to-video-new',
-                'image-to-video-inner': '/generate/v0/image-to-video-inner'
+                'image-to-video-inner': '/generate/v0/image-to-video-inner',
+                'audio-to-video': '/generate/v0/audio-to-video'
             }
         }
     },
@@ -75,6 +76,11 @@ def generate_video_v22():
     """代理圖片轉視頻請求 - 使用staging環境"""
     return _generate_video_internal('staging', 'v2.2')
 
+@app.route('/generate/v0/audio-to-video', methods=['POST'])
+def generate_audio_to_video_v0():
+    """代理圖片+音頻轉視頻請求 - 使用original環境 (v0)"""
+    return _generate_video_internal('original', 'v0', 'audio-to-video', expect_audio=True)
+
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
     """靈活的生成端點，支持多提供商"""
@@ -83,7 +89,7 @@ def generate_video_flexible():
     endpoint_type = request.form.get('endpoint_type')
     return _generate_video_internal(provider, version, endpoint_type)
 
-def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None):
+def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None, expect_audio=False):
     """內部圖片轉視頻處理函數"""
     try:
         # 驗證提供商和版本
@@ -144,6 +150,19 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                     image_file.content_type
                 )
                 print(f"收到圖片文件: {image_file.filename}")
+
+        # 處理音頻文件（僅當端點需要音頻時）
+        if expect_audio:
+            if 'audio' in request.files and request.files['audio'].filename:
+                audio_file = request.files['audio']
+                files['audio'] = (
+                    audio_file.filename,
+                    audio_file.stream,
+                    audio_file.content_type
+                )
+                print(f"收到音頻文件: {audio_file.filename}")
+            else:
+                return jsonify({'error': 'audio file is required for audio-to-video endpoint'}), 400
 
         # 處理提示詞和其他參數
         if 'promptText' in request.form:

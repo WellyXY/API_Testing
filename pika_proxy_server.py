@@ -11,6 +11,9 @@ import os
 import json
 import socket
 from contextlib import closing
+import tempfile
+import subprocess
+import mimetypes
 
 app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
@@ -87,7 +90,8 @@ def generate_video_flexible():
     provider = request.form.get('provider', 'staging')
     version = request.form.get('version', 'v2.2')
     endpoint_type = request.form.get('endpoint_type')
-    return _generate_video_internal(provider, version, endpoint_type)
+    expect_audio = endpoint_type == 'audio-to-video'
+    return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
 
 def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None, expect_audio=False):
     """內部圖片轉視頻處理函數"""
@@ -155,12 +159,64 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         if expect_audio:
             if 'audio' in request.files and request.files['audio'].filename:
                 audio_file = request.files['audio']
-                files['audio'] = (
-                    audio_file.filename,
-                    audio_file.stream,
-                    audio_file.content_type
-                )
-                print(f"收到音頻文件: {audio_file.filename}")
+                audio_ct = audio_file.content_type or mimetypes.guess_type(audio_file.filename)[0] or ''
+                print(f"收到音頻文件: {audio_file.filename} (content-type: {audio_ct})")
+
+                def _convert_mp4_to_audio(file_storage):
+                    """將 video/mp4 抽出音訊為 m4a；失敗則轉 mp3。返回 (path, mime, filename)"""
+                    # 保存臨時輸入
+                    in_fd, in_path = tempfile.mkstemp(suffix=os.path.splitext(file_storage.filename)[1] or '.mp4')
+                    os.close(in_fd)
+                    file_storage.save(in_path)
+
+                    # 優先輸出 m4a（音訊容器，mime audio/mp4）
+                    out_m4a = tempfile.mktemp(suffix='.m4a')
+                    try:
+                        subprocess.run([
+                            'ffmpeg','-y','-i', in_path,
+                            '-vn','-acodec','copy', out_m4a
+                        ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        return out_m4a, 'audio/mp4', os.path.basename(file_storage.filename).rsplit('.',1)[0] + '.m4a'
+                    except Exception:
+                        # 回退轉成 mp3
+                        out_mp3 = tempfile.mktemp(suffix='.mp3')
+                        try:
+                            subprocess.run([
+                                'ffmpeg','-y','-i', in_path,
+                                '-vn','-ac','2','-ar','44100','-b:a','192k', out_mp3
+                            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                            return out_mp3, 'audio/mpeg', os.path.basename(file_storage.filename).rsplit('.',1)[0] + '.mp3'
+                        except Exception as e:
+                            raise RuntimeError(f'ffmpeg conversion failed: {e}')
+                    finally:
+                        try:
+                            os.remove(in_path)
+                        except Exception:
+                            pass
+
+                # 若為 video/mp4，先抽音
+                if audio_ct.startswith('video/') or audio_file.filename.lower().endswith('.mp4'):
+                    try:
+                        converted_path, converted_mime, converted_name = _convert_mp4_to_audio(audio_file)
+                        files['audio'] = (
+                            converted_name,
+                            open(converted_path, 'rb'),
+                            converted_mime
+                        )
+                        # 記錄轉檔路徑，稍後請求完嘗試清理
+                        data['_temp_audio_path'] = converted_path
+                        print(f"已轉換音訊: {converted_name} (mime: {converted_mime})")
+                    except FileNotFoundError:
+                        return jsonify({'error': 'ffmpeg not found. Please install ffmpeg to support mp4 audio extraction.'}), 400
+                    except RuntimeError as e:
+                        return jsonify({'error': f'Could not extract audio from mp4: {str(e)}'}), 400
+                else:
+                    # 已是音訊，直接透傳
+                    files['audio'] = (
+                        audio_file.filename,
+                        audio_file.stream,
+                        audio_ct or 'audio/mpeg'
+                    )
             else:
                 return jsonify({'error': 'audio file is required for audio-to-video endpoint'}), 400
 
@@ -194,8 +250,8 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
             full_url,
             headers=headers,
             files=files,
-            data=data,
-            timeout=30
+            data={k:v for k,v in data.items() if not k.startswith('_temp_')},
+            timeout=60
         )
 
         print("=" * 60)

@@ -428,8 +428,15 @@
             <!-- 音頻上傳（僅 audio-to-video 端點需要） -->
             <div class="form-group" id="audioGroup" style="display: none;">
                 <label>🎵 Select Audio (Required for audio-to-video)</label>
-                <input type="file" id="audioFile" accept="audio/*">
-                <small style="color:#666; margin-top:6px; display:block;">Accepted: mp3, wav, m4a, etc.</small>
+                <div class="file-upload-area" id="audioUploadArea">
+                    <div class="upload-icon">🎵</div>
+                    <div class="upload-text">
+                        <strong>Click to select audio</strong> or drag and drop here<br>
+                        <small>Supports MP3, WAV, M4A, etc.</small>
+                    </div>
+                    <input type="file" id="audioFile" accept="audio/*">
+                    <div id="audioFileName" style="margin-top: 8px; font-size: 12px; color: #666;"></div>
+                </div>
             </div>
 
             <!-- 處理設置（已隱藏） -->
@@ -444,6 +451,9 @@
             <div style="display: flex; gap: 10px; margin-bottom: 15px;">
                 <button class="btn" style="background: #6c757d; width: auto; flex: none; padding: 12px 20px;" onclick="clearAllImages()">
                     🗑️ Clear All Images
+                </button>
+                <button class="btn" style="background: #17a2b8; width: auto; flex: none; padding: 12px 20px;" onclick="downloadLogs()">
+                    📥 Download Logs
                 </button>
                 <div style="flex: 1;"></div>
                 <div id="imageCount" style="align-self: center; color: #666; font-size: 14px;"></div>
@@ -702,12 +712,36 @@
                 fileInput.click();
             });
 
-            // 音頻區域點擊打開文件框
+            // 音頻區域點擊/拖拽
             const audioGroup = document.getElementById('audioGroup');
             const audioInput = document.getElementById('audioFile');
-            audioGroup?.addEventListener('click', (e) => {
-                if (e.target?.id !== 'audioFile') {
-                    audioInput?.click();
+            const audioUploadArea = document.getElementById('audioUploadArea');
+            const audioFileName = document.getElementById('audioFileName');
+            
+            audioUploadArea?.addEventListener('click', () => audioInput?.click());
+            audioUploadArea?.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                audioUploadArea.classList.add('drag-over');
+            });
+            audioUploadArea?.addEventListener('dragleave', () => audioUploadArea.classList.remove('drag-over'));
+            audioUploadArea?.addEventListener('drop', (e) => {
+                e.preventDefault();
+                audioUploadArea.classList.remove('drag-over');
+                if (e.dataTransfer?.files?.length) {
+                    const f = e.dataTransfer.files[0];
+                    audioInput.files = e.dataTransfer.files;
+                    audioUploadArea.classList.add('has-file');
+                    if (audioFileName) audioFileName.textContent = `Selected: ${f.name}`;
+                }
+            });
+            audioInput?.addEventListener('change', () => {
+                const f = audioInput.files?.[0];
+                if (f) {
+                    audioUploadArea?.classList.add('has-file');
+                    if (audioFileName) audioFileName.textContent = `Selected: ${f.name}`;
+                } else {
+                    audioUploadArea?.classList.remove('has-file');
+                    if (audioFileName) audioFileName.textContent = '';
                 }
             });
 
@@ -1030,6 +1064,7 @@
             // 存儲API配置信息到任務
             task.apiProvider = apiConfig.provider;
             task.apiVersion = apiConfig.version;
+            task.apiEndpointType = apiConfig.endpointType;
             task.apiKey = apiKey;
             tasks.set(tempId, task);
             createTaskCard(task);
@@ -1046,6 +1081,20 @@
             }
             
             showTasksArea();
+
+            // audio-to-video 需要音頻文件，無則直接失敗並返回
+            if (apiConfig.endpointType === 'audio-to-video') {
+                const audioInputPre = document.getElementById('audioFile');
+                const audioFilePre = audioInputPre?.files?.[0];
+                if (!audioFilePre) {
+                    const errMsg = 'audio-to-video requires an audio file';
+                    lastError = errMsg;
+                    task.status = 'failed';
+                    updateTaskCard(task);
+                    showError(errMsg);
+                    return;
+                }
+            }
             
             for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
                 task.retryCount = attempt;
@@ -1180,15 +1229,27 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         updateTaskCard(task);
                         continue;
                     } else {
-                        throw new Error(lastError); // 達到最大重試次數或不可重試錯誤
+                        // 非可重試錯誤，直接標記失敗並結束
+                        task.status = 'failed';
+                        updateTaskCard(task);
+                        showError(lastError);
+                        return;
                     }
 
                 } catch (error) {
-                    lastError = error.message;
-                    if (attempt < MAX_RETRIES) {
-                         task.status = `retrying (${attempt + 1})`;
-                         updateTaskCard(task);
+                    lastError = error.message || 'Request error';
+                    // 僅針對網路類錯誤重試
+                    const isNetwork = lastError.toLowerCase().includes('network');
+                    if (isNetwork && attempt < MAX_RETRIES) {
+                        task.status = `retrying (${attempt + 1})`;
+                        updateTaskCard(task);
+                        continue;
                     }
+                    // 非網路錯誤直接失敗
+                    task.status = 'failed';
+                    updateTaskCard(task);
+                    showError(lastError);
+                    return;
                 }
             }
 
@@ -1285,6 +1346,51 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             
             // 更新到 Map 中
             tasks.set(task.id, task);
+        }
+
+        // 下載日誌：輸出 CSV，包含 id, provider, version, endpointType, prompt, submittedAt, startedAt, finishedAt, waitSec, genSec
+        function downloadLogs() {
+            const header = [
+                'taskNumber','id','provider','version','endpointType','prompt','submittedAt','startedAt','finishedAt','waitSec','genSec','status','url'
+            ];
+            const rows = [header.join(',')];
+            for (const task of tasks.values()) {
+                const submittedAt = task.submittedAt ? new Date(task.submittedAt).toLocaleString() : '';
+                const startedAt = task.startedAt ? new Date(task.startedAt).toLocaleString() : '';
+                const finishedAt = task.finishedAt ? new Date(task.finishedAt).toLocaleString() : '';
+                const waitSec = task.waitDurationSec != null ? task.waitDurationSec : (task.submittedAt && task.startedAt ? Math.round((task.startedAt - task.submittedAt)/1000) : '');
+                const genSec = task.genDurationSec != null ? task.genDurationSec : (task.startedAt && task.finishedAt ? Math.round((task.finishedAt - task.startedAt)/1000) : '');
+                const provider = task.apiProvider || '';
+                const version = task.apiVersion || '';
+                const endpointType = task.apiEndpointType || '';
+                const prompt = (task.promptText || '').replaceAll('\n',' ').replaceAll('"','""');
+                const line = [
+                    task.taskNumber,
+                    `"${task.id}"`,
+                    provider,
+                    version,
+                    endpointType,
+                    `"${prompt}"`,
+                    `"${submittedAt}"`,
+                    `"${startedAt}"`,
+                    `"${finishedAt}"`,
+                    waitSec,
+                    genSec,
+                    task.status || '',
+                    task.url || ''
+                ].join(',');
+                rows.push(line);
+            }
+            const csv = rows.join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `pika_logs_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // 開始狀態檢查

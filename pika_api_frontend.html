@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pika API - Image to Video Generator</title>
+    <title>Snax API - Image to Video Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <style>
         * {
@@ -346,7 +346,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎬 Pika API Image to Video</h1>
+            <h1>🎬 Snax API Image to Video</h1>
             <p>Upload an image, add a prompt, and generate beautiful videos</p>
         </div>
 
@@ -361,8 +361,7 @@
                 <div class="form-group">
                     <label for="apiProvider">API Provider:</label>
                     <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                        <option value="staging" selected>Staging - Pika Labs API 服務器</option>
-                        <option value="original">Original - Original Pika API 服務器</option>
+                        <option value="staging" selected>Staging - Snax Labs API Server</option>
                     </select>
                 </div>
 
@@ -370,25 +369,25 @@
                 <div class="form-group">
                     <label for="apiVersion">API Version:</label>
                     <select id="apiVersion" class="form-control" onchange="updateAPIDescription()">
-                        <!-- 版本選項會由 JavaScript 動態填充 -->
+                        <!-- Version options will be populated by JavaScript -->
                     </select>
                 </div>
 
-                <!-- 端點類型選擇 (僅 Original API v0) -->
+                <!-- Endpoint type selector (was for Original API v0; removed) -->
                 <div class="form-group" id="endpointTypeGroup" style="display: none;">
                     <label for="endpointType">Endpoint Type:</label>
                     <select id="endpointType" class="form-control" onchange="updateAPIDescription()">
-                        <option value="image-to-video">image-to-video (默認)</option>
+                        <option value="image-to-video">image-to-video (default)</option>
                         <option value="image-to-video-new">image-to-video-new</option>
                         <option value="image-to-video-inner">image-to-video-inner</option>
                         <option value="audio-to-video">audio-to-video</option>
                     </select>
                 </div>
 
-                <!-- API 描述顯示 -->
+                <!-- API description -->
                 <div class="form-group">
                     <div id="apiDescription" style="background: #f8f9fa; padding: 10px; border-radius: 5px; border: 1px solid #e9ecef; font-size: 14px; color: #666;">
-                        請選擇 API 提供商和版本
+                        Please select API provider and version
                     </div>
                 </div>
                 <div class="form-group">
@@ -411,7 +410,7 @@
                 </div>
             </div>
 
-            <!-- 圖片上傳區域 -->
+            <!-- Image upload area -->
             <div class="form-group">
                 <label>📸 Select Image(s) - Multi-select supported (Max 50)</label>
                 <div class="file-upload-area" id="uploadArea">
@@ -516,43 +515,9 @@
         
         // API 提供商和版本配置
         const API_PROVIDERS = {
-            'original': {
-                name: 'Original',
-                description: 'Original Pika API 服務器',
-                baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
-                versions: {
-                    'v0': {
-                        endpoints: {
-                            'image-to-video': {
-                                path: '/generate/v0/image-to-video',
-                                description: '圖片轉視頻 - v0 版本 (默認)',
-                                name: 'Original v0 (默認)'
-                            },
-                            'image-to-video-new': {
-                                path: '/generate/v0/image-to-video-new',
-                                description: '圖片轉視頻 - v0 版本 (新端點)',
-                                name: 'Original v0 (新端點)'
-                            },
-                            'image-to-video-inner': {
-                                path: '/generate/v0/image-to-video-inner',
-                                description: '圖片轉視頻 - v0 版本 (內部端點)',
-                                name: 'Original v0 (內部端點)'
-                            },
-                            'audio-to-video': {
-                                path: '/generate/v0/audio-to-video',
-                                description: '圖片+音頻合成視頻 - v0 版本',
-                                name: 'Original v0 (audio-to-video)'
-                            }
-                        },
-                        defaultEndpoint: 'image-to-video',
-                        description: '圖片轉視頻 - v0 版本',
-                        name: 'Original v0'
-                    }
-                }
-            },
             'staging': {
                 name: 'Staging',
-                description: 'Pika Labs API 服務器',
+                description: 'Snax Labs API 服務器',
                 baseUrl: 'https://089e99349ace.pikalabs.app',
                 versions: {
                     'v2.2': {
@@ -624,13 +589,8 @@
                 const selectedVersion = versionSelect.value;
                 const versionConfig = providerConfig?.versions[selectedVersion];
                 
-                if (versionConfig && versionConfig.endpoints) {
-                    // Original API v0 支持多個端點
-                    endpointTypeGroup.style.display = 'block';
-                } else {
-                    // Staging API 或其他版本使用單一端點
-                    endpointTypeGroup.style.display = 'none';
-                }
+                // 固定為 Staging 單一端點
+                endpointTypeGroup.style.display = 'none';
             }
             
             updateAPIDescription();
@@ -664,16 +624,7 @@
             const versionConfig = providerConfig?.versions[version];
             
             if (providerConfig && versionConfig) {
-                let description = `${providerConfig.description} - ${versionConfig.description}`;
-                
-                // 如果是 Original API v0，添加端點類型信息
-                if (versionConfig.endpoints && endpointType) {
-                    const endpointConfig = versionConfig.endpoints[endpointType];
-                    if (endpointConfig) {
-                        description += ` (${endpointConfig.description})`;
-                    }
-                }
-                
+                const description = `${providerConfig.description} - ${versionConfig.description}`;
                 descElement.textContent = description;
             }
         }
@@ -1386,7 +1337,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `pika_logs_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
+            a.download = `snax_logs_${new Date().toISOString().replace(/[:.]/g,'-')}.csv`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -2100,7 +2051,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 
         // 頁面載入時的初始化
         window.addEventListener('load', () => {
-            console.log('🚀 Pika API Multi-Task Frontend Loaded');
+            console.log('🚀 Snax API Multi-Task Frontend Loaded');
             
             // API配置已固定為staging環境
             updateProviderVersions(); // 初始化提供商和版本選擇

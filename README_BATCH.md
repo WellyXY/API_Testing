@@ -1,146 +1,140 @@
-# 🎬 Pika 批量視頻生成器
+# 🎬 Snax Batch Video Generator
 
-一個支持多圖批量生成和一鍵全部下載的 Pika 視頻生成工具。
+A batch video generation tool for Snax with multi-image upload and one-click download.
 
-## ✨ 主要功能
+## ✨ Highlights
 
-### 1. 多圖批量生成
-- 一次上傳多張圖片（支持拖拽和多選）
-- 使用統一的 Prompt 對所有圖片進行視頻生成
-- 並行處理，提高生成效率
-- 實時進度監控
+### 1. Batch generation
+- Upload multiple images (drag & drop, multi-select)
+- Apply a single prompt to all images
+- Parallel processing for faster throughput
+- Real-time progress
 
-### 2. 一鍵全部下載
-- 任務完成後自動打包所有生成的視頻
-- 一鍵下載 ZIP 壓縮包
-- 文件名包含原始圖片名稱，便於識別
+### 2. One-click download
+- Auto-zip all videos after completion
+- One-click download
+- Filenames include original image names
 
-### 3. 任務管理
-- 實時狀態監控（等待中、處理中、已完成）
-- 詳細進度顯示（成功/失敗數量）
-- 錯誤日誌記錄
-- 任務刪除和清理功能
+### 3. Task management
+- Live status (pending, processing, completed)
+- Detailed progress (success/failure counts)
+- Error logs
+- Task delete and cleanup
 
-## 🚀 快速開始
+## 🚀 Getting Started
 
-### 方法一：使用啟動腳本（推薦）
+### Option A: Launcher (recommended)
 ```bash
 python start_batch_server.py
 ```
 
-### 方法二：手動啟動
-1. 安裝依賴：
+### Option B: Manual start
+1) Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. 啟動服務器：
+2) Run server:
 ```bash
 python pika_batch_server.py
 ```
 
-3. 打開瀏覽器訪問：
+3) Open in browser:
 ```
 http://localhost:5004
 ```
 
-## 📖 使用說明
+## 📖 Usage
 
-### 步驟 1：配置 API Key
-在網頁界面中輸入你的 Pika API Key
+### Step 1: Configure API Key
+Enter your Snax API Key on the webpage
 
-### 步驟 2：輸入提示詞
-輸入想要的視頻效果描述，這個 Prompt 會應用到所有上傳的圖片
+### Step 2: Enter prompt
+Write the desired video effect; applied to all images
 
-示例提示詞：
-```
-a sexy woman giving a blowjob, realistic, high quality
-```
+### Step 3: Upload images
+- Click or drag to upload multiple images
+- JPG/PNG supported
+- Recommended < 10MB each
 
-### 步驟 3：上傳圖片
-- 點擊上傳區域選擇多張圖片
-- 或直接拖拽圖片到上傳區域
-- 支持 JPG、PNG 格式
-- 建議每張圖片小於 10MB
+### Step 4: Start batch generation
+Click "🚀 Start Batch Generation" — the system will:
+1. Create a batch task
+2. Process all images in parallel (thread pool)
+3. Update progress in real-time
 
-### 步驟 4：開始批量生成
-點擊「🚀 開始批量生成」按鈕，系統會：
-1. 創建批量任務
-2. 並行處理所有圖片
-3. 實時更新進度
+### Step 5: Monitor progress
+- See task list with live progress
+- Track success/failure counts
+- Review error logs (if any)
 
-### 步驟 5：監控進度
-- 查看任務列表中的實時進度
-- 觀察成功/失敗的視頻數量
-- 檢查錯誤日誌（如有）
+### Step 6: Download videos
+After completion, click "📦 Download all videos" to:
+1. Auto-zip all videos
+2. Download the ZIP
+3. Filename format: `batch_videos_{task_id}.zip`
 
-### 步驟 6：下載視頻
-任務完成後點擊「📦 一鍵下載所有視頻」按鈕，系統會：
-1. 自動打包所有生成的視頻
-2. 下載 ZIP 壓縮包到本地
-3. ZIP 文件名格式：`batch_videos_{任務ID}.zip`
+## 🔧 Technical features
 
-## 🔧 技術特性
+### Backend
+- ThreadPoolExecutor parallel processing
+- Full task lifecycle management
+- File management (upload, store, download, cleanup)
+- Robust error handling and logging
+- API proxy
 
-### 後端功能
-- **並行處理**：使用 ThreadPoolExecutor 同時處理多個視頻生成請求
-- **任務管理**：完整的任務生命週期管理
-- **文件管理**：自動處理上傳、存儲、下載和清理
-- **錯誤處理**：完善的錯誤捕獲和日誌記錄
-- **API 代理**：解決跨域問題，提供統一的 API 接口
+### Frontend
+- Drag-and-drop upload
+- Auto-refresh every 5 seconds
+- Visual progress and stats
+- Responsive layout
 
-### 前端功能
-- **拖拽上傳**：支持拖拽多選圖片上傳
-- **實時刷新**：每 5 秒自動刷新任務狀態
-- **進度可視化**：直觀的進度條和統計信息
-- **響應式設計**：適配不同設備屏幕
-
-## 📁 文件結構
+## 📁 Structure
 
 ```
-├── pika_batch_server.py      # 批量處理服務器
-├── batch_frontend.html       # 前端界面
-├── start_batch_server.py     # 啟動腳本
-├── requirements.txt          # 依賴包列表
-├── uploads/                  # 上傳圖片臨時存儲
-├── generated_videos/         # 生成的視頻文件
-└── downloads/               # 下載壓縮包存儲
+├── pika_batch_server.py      # Batch processing server
+├── batch_frontend.html       # Frontend
+├── start_batch_server.py     # Launcher
+├── requirements.txt          # Dependencies
+├── uploads/                  # Temp uploads
+├── generated_videos/         # Output videos
+└── downloads/               # Zipped downloads
 ```
 
-## 🎯 API 端點
+## 🎯 API Endpoints
 
-- `POST /batch/generate` - 開始批量生成
-- `GET /batch/tasks` - 獲取所有任務列表
-- `GET /batch/status/{task_id}` - 獲取特定任務狀態
-- `GET /batch/download/{task_id}` - 下載任務的所有視頻
-- `DELETE /batch/delete/{task_id}` - 刪除任務和相關文件
+- `POST /batch/generate` - Start batch
+- `GET /batch/tasks` - List tasks
+- `GET /batch/status/{task_id}` - Task status
+- `GET /batch/download/{task_id}` - Download all videos
+- `DELETE /batch/delete/{task_id}` - Delete task and files
 
-## ⚠️ 注意事項
+## ⚠️ Notes
 
-1. **API Key**：確保使用有效的 Pika API Key
-2. **網路連接**：穩定的網路連接對視頻生成很重要
-3. **存儲空間**：確保有足夠的磁盤空間存儲視頻文件
-4. **並發限制**：默認最多同時處理 3 個視頻生成請求
-5. **超時設置**：單個視頻最長等待時間為 5 分鐘
+1. **API Key**: Ensure a valid Snax API Key
+2. **Network**: Stable connection recommended
+3. **Storage**: Enough disk space for videos
+4. **Concurrency**: Defaults to max 3 in parallel
+5. **Timeout**: Max wait for a single video is 5 minutes
 
-## 🔄 版本更新
+## 🔄 Changelog
 
 ### v1.0.0
-- ✅ 多圖批量上傳
-- ✅ 並行視頻生成
-- ✅ 實時進度監控
-- ✅ 一鍵下載功能
-- ✅ 任務管理系統
-- ✅ 錯誤處理和日誌
+- ✅ Multi-image upload
+- ✅ Parallel video generation
+- ✅ Real-time progress
+- ✅ One-click download
+- ✅ Task management
+- ✅ Error handling and logs
 
-## 🤝 支持
+## 🤝 Support
 
-如果遇到問題，請檢查：
-1. API Key 是否正確
-2. 網路連接是否穩定
-3. 圖片格式是否支持
-4. 瀏覽器控制台是否有錯誤信息
+If you encounter issues, please check:
+1. API Key validity
+2. Network stability
+3. Supported image formats
+4. Browser console errors
 
 ---
 
-**享受批量視頻生成的便利！** 🎉 
+Enjoy fast batch video generation! 🎉

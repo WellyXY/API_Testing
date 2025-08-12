@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Pika API 代理服務器
-解決瀏覽器 CORS 跨域問題
+Snax API proxy server
+Resolves browser CORS issues
 """
 
 from flask import Flask, request, jsonify, send_from_directory
@@ -16,23 +16,10 @@ import subprocess
 import mimetypes
 
 app = Flask(__name__)
-CORS(app)  # 允許所有跨域請求
+CORS(app)  # allow all CORS requests
 
-# API 提供商配置
+# API providers (Staging only)
 API_PROVIDERS = {
-    'original': {
-        'name': 'Original',
-        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
-        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
-        'supported_versions': {
-            'v0': {
-                'image-to-video': '/generate/v0/image-to-video',
-                'image-to-video-new': '/generate/v0/image-to-video-new',
-                'image-to-video-inner': '/generate/v0/image-to-video-inner',
-                'audio-to-video': '/generate/v0/audio-to-video'
-            }
-        }
-    },
     'staging': {
         'name': 'Staging',
         'base_url': 'https://089e99349ace.pikalabs.app',
@@ -51,52 +38,34 @@ def find_free_port():
 
 @app.route('/')
 def index():
-    """提供前端頁面"""
+    """Serve frontend page"""
     return send_from_directory('.', 'pika_api_frontend.html')
 
 @app.route('/test_endpoints')
 def test_endpoints():
-    """提供端點測試頁面"""
+    """Serve endpoints test page"""
     return send_from_directory('.', 'test_endpoints.html')
 
-@app.route('/generate/v0/image-to-video', methods=['POST'])
-def generate_video_v0():
-    """代理圖片轉視頻請求 - 使用original環境"""
-    return _generate_video_internal('original', 'v0', 'image-to-video')
-
-@app.route('/generate/v0/image-to-video-new', methods=['POST'])
-def generate_video_v0_new():
-    """代理圖片轉視頻請求 - 使用original環境 (new端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-new')
-
-@app.route('/generate/v0/image-to-video-inner', methods=['POST'])
-def generate_video_v0_inner():
-    """代理圖片轉視頻請求 - 使用original環境 (inner端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-inner')
 
 @app.route('/generate/2.2/i2v', methods=['POST'])
 def generate_video_v22():
-    """代理圖片轉視頻請求 - 使用staging環境"""
+    """Proxy image-to-video request - staging environment"""
     return _generate_video_internal('staging', 'v2.2')
 
-@app.route('/generate/v0/audio-to-video', methods=['POST'])
-def generate_audio_to_video_v0():
-    """代理圖片+音頻轉視頻請求 - 使用original環境 (v0)"""
-    return _generate_video_internal('original', 'v0', 'audio-to-video', expect_audio=True)
+## Removed Original v0 endpoints; keep Staging v2.2 only
 
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
-    """靈活的生成端點，支持多提供商"""
-    provider = request.form.get('provider', 'staging')
-    version = request.form.get('version', 'v2.2')
-    endpoint_type = request.form.get('endpoint_type')
-    expect_audio = endpoint_type == 'audio-to-video'
-    return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
+    """Generation endpoint (Staging only)"""
+    # use staging environment only
+    provider = 'staging'
+    version = 'v2.2'
+    return _generate_video_internal(provider, version, None, expect_audio=False)
 
 def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None, expect_audio=False):
-    """內部圖片轉視頻處理函數"""
+    """Internal image-to-video handler"""
     try:
-        # 驗證提供商和版本
+        # Validate provider and version
         if provider not in API_PROVIDERS:
             return jsonify({'error': f'Unsupported provider: {provider}'}), 400
             
@@ -105,31 +74,31 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         if api_version not in provider_config['supported_versions']:
             return jsonify({'error': f'Version {api_version} not supported by {provider} provider'}), 400
 
-        # 獲取 API Key (優先使用用戶提供的，否則使用配置中的)
+        # Get API Key (prefer user-provided; fallback to configured)
         api_key = request.headers.get('X-API-KEY') or request.form.get('api_key')
         if not api_key:
-            api_key = provider_config['api_key']  # 使用配置中的默認 API Key
+            api_key = provider_config['api_key']  # use default API Key from config
 
         print("=" * 60)
-        print(f"🚀 收到圖片轉視頻請求")
+        print(f"🚀 Received image-to-video request")
         print(f"📍 Provider: {provider}")
         print(f"🔗 API Version: {api_version}")
         print(f"🔑 API Key: {api_key[:8]}...{api_key[-8:]}")
         print(f"📝 Provider Config: {provider_config['name']}")
         
-        # 獲取端點和基礎 URL
+        # Resolve endpoint and base URL
         version_config = provider_config['supported_versions'][api_version]
         
-        # 處理不同的端點類型
+        # Handle different endpoint config types
         if isinstance(version_config, dict):
-            # Original API 支持多個端點
+            # Original API supports multiple endpoints (kept for reference)
             if endpoint_type and endpoint_type in version_config:
                 endpoint = version_config[endpoint_type]
             else:
-                # 默認使用第一個端點
+                # Default to the first endpoint
                 endpoint = list(version_config.values())[0]
         else:
-            # Staging API 使用單一端點
+            # Staging API uses a single endpoint
             endpoint = version_config
             
         base_url = provider_config['base_url']
@@ -140,11 +109,11 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         print(f"🔗 Full URL: {full_url}")
         print("=" * 60)
 
-        # 準備請求數據
+        # Prepare request payload
         files = {}
         data = {}
         
-        # 處理圖片文件
+        # Handle image file
         if 'image' in request.files:
             image_file = request.files['image']
             if image_file.filename:
@@ -153,23 +122,23 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                     image_file.stream,
                     image_file.content_type
                 )
-                print(f"收到圖片文件: {image_file.filename}")
+                print(f"Received image file: {image_file.filename}")
 
-        # 處理音頻文件（僅當端點需要音頻時）
+        # Handle audio file (only if endpoint expects audio)
         if expect_audio:
             if 'audio' in request.files and request.files['audio'].filename:
                 audio_file = request.files['audio']
                 audio_ct = audio_file.content_type or mimetypes.guess_type(audio_file.filename)[0] or ''
-                print(f"收到音頻文件: {audio_file.filename} (content-type: {audio_ct})")
+                print(f"Received audio file: {audio_file.filename} (content-type: {audio_ct})")
 
                 def _convert_mp4_to_audio(file_storage):
-                    """將 video/mp4 抽出音訊為 m4a；失敗則轉 mp3。返回 (path, mime, filename)"""
-                    # 保存臨時輸入
+                    """Extract audio from video/mp4 to m4a; fallback to mp3. Returns (path, mime, filename)."""
+                    # Save temp input
                     in_fd, in_path = tempfile.mkstemp(suffix=os.path.splitext(file_storage.filename)[1] or '.mp4')
                     os.close(in_fd)
                     file_storage.save(in_path)
 
-                    # 優先輸出 m4a（音訊容器，mime audio/mp4）
+                    # Prefer m4a output (audio container, mime audio/mp4)
                     out_m4a = tempfile.mktemp(suffix='.m4a')
                     try:
                         subprocess.run([
@@ -178,7 +147,7 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                         ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                         return out_m4a, 'audio/mp4', os.path.basename(file_storage.filename).rsplit('.',1)[0] + '.m4a'
                     except Exception:
-                        # 回退轉成 mp3
+                        # Fallback to mp3
                         out_mp3 = tempfile.mktemp(suffix='.mp3')
                         try:
                             subprocess.run([
@@ -194,7 +163,7 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                         except Exception:
                             pass
 
-                # 若為 video/mp4，先抽音
+                # If video/mp4, extract audio first
                 if audio_ct.startswith('video/') or audio_file.filename.lower().endswith('.mp4'):
                     try:
                         converted_path, converted_mime, converted_name = _convert_mp4_to_audio(audio_file)
@@ -203,15 +172,15 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                             open(converted_path, 'rb'),
                             converted_mime
                         )
-                        # 記錄轉檔路徑，稍後請求完嘗試清理
+                        # Record temp converted file for later cleanup
                         data['_temp_audio_path'] = converted_path
-                        print(f"已轉換音訊: {converted_name} (mime: {converted_mime})")
+                        print(f"Converted audio: {converted_name} (mime: {converted_mime})")
                     except FileNotFoundError:
                         return jsonify({'error': 'ffmpeg not found. Please install ffmpeg to support mp4 audio extraction.'}), 400
                     except RuntimeError as e:
                         return jsonify({'error': f'Could not extract audio from mp4: {str(e)}'}), 400
                 else:
-                    # 已是音訊，直接透傳
+                    # Already audio; forward as-is
                     files['audio'] = (
                         audio_file.filename,
                         audio_file.stream,
@@ -220,27 +189,27 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
             else:
                 return jsonify({'error': 'audio file is required for audio-to-video endpoint'}), 400
 
-        # 處理提示詞和其他參數
+        # Handle prompt and other params
         if 'promptText' in request.form:
             prompt_text = request.form['promptText']
             if prompt_text.strip():
                 data['promptText'] = prompt_text
-                print(f"提示詞: {prompt_text}")
+        print(f"Prompt: {prompt_text}")
         
-        # 處理可選參數
+        # Optional params
         if 'seed' in request.form and request.form['seed'].strip():
             data['seed'] = int(request.form['seed'])
             
         if 'negativePrompt' in request.form and request.form['negativePrompt'].strip():
             data['negativePrompt'] = request.form['negativePrompt']
 
-        # 發送請求到 Pika API
+        # Send request to Snax API
         headers = {
             'X-API-KEY': api_key,
             'Accept': 'application/json'
         }
 
-        print(f"📤 發送請求到 Pika API...")
+        print(f"📤 Sending request to Snax API...")
         print(f"📋 Request Headers: {headers}")
         print(f"📋 Request Data: {data}")
         if files:
@@ -255,15 +224,15 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         )
 
         print("=" * 60)
-        print(f"📥 Pika API 響應收到")
+        print(f"📥 Snax API response received")
         print(f"📊 Status Code: {response.status_code}")
         print(f"📋 Response Headers: {dict(response.headers)}")
         
-        # 讀取和記錄響應內容
+        # Read and log response content
         response_content = response.text
         print(f"📝 Response Content: {response_content}")
         
-        # 如果成功，記錄更多詳細信息
+        # If successful, log more details
         if response.status_code == 200:
             try:
                 json_response = response.json()
@@ -271,7 +240,7 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                 worker = json_response.get('worker', 'Not specified')
                 status = json_response.get('status', 'pending')
                 
-                print("🎉 視頻生成請求成功提交!")
+                print("🎉 Video generation request submitted!")
                 print(f"🆔 Video ID: {video_id}")
                 print(f"🏗️ Worker: {worker}")
                 print(f"📊 Initial Status: {status}")
@@ -287,7 +256,7 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         
         print("=" * 60)
         
-        # 返回響應
+        # Return response
         if response.headers.get('content-type', '').startswith('application/json'):
             try:
                 return jsonify(response.json()), response.status_code
@@ -297,32 +266,32 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
             return response_content, response.status_code
 
     except requests.exceptions.RequestException as e:
-        print(f"請求錯誤: {e}")
+        print(f"Request error: {e}")
         return jsonify({'error': f'Network error: {str(e)}'}), 500
     except Exception as e:
-        print(f"服務器錯誤: {e}")
+        print(f"Server error: {e}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/videos/<video_id>', methods=['GET'])
 def get_video_status(video_id):
-    """代理視頻狀態查詢請求"""
+    """Proxy video status request"""
     try:
-        # 獲取提供商參數，默認為 staging
-        provider = request.args.get('provider', 'staging')
+        # Staging only
+        provider = 'staging'
         
         if provider not in API_PROVIDERS:
             return jsonify({'error': f'Unsupported provider: {provider}'}), 400
             
         provider_config = API_PROVIDERS[provider]
 
-        # 獲取 API Key (優先使用用戶提供的，否則使用配置中的)
+        # Get API Key (prefer user-provided; fallback to configured)
         api_key = request.headers.get('X-API-KEY') or request.args.get('api_key')
         if not api_key:
             api_key = provider_config['api_key']
 
-        print(f"查詢視頻狀態: {video_id} (使用 {provider} 提供商)")
+        print(f"Query video status: {video_id} (provider {provider})")
 
-        # 轉發請求到 Pika API
+        # Forward request to Snax API
         headers = {
             'X-API-KEY': api_key,
             'Accept': 'application/json'
@@ -334,38 +303,38 @@ def get_video_status(video_id):
             timeout=30
         )
 
-        print(f"視頻狀態響應: {response.status_code}")
+        print(f"Video status response: {response.status_code}")
         
-        # 詳細日誌響應內容
+        # Verbose logging for response
         try:
             response_data = response.json()
-            print(f"響應數據: {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+            print(f"Response JSON: {json.dumps(response_data, indent=2, ensure_ascii=False)}")
         except:
-            print(f"響應文本: {response.text}")
+            print(f"Response text: {response.text}")
 
-        # 返回響應
+        # Return response
         if response.headers.get('content-type', '').startswith('application/json'):
             return jsonify(response.json()), response.status_code
         else:
             return response.text, response.status_code
 
     except requests.exceptions.RequestException as e:
-        print(f"請求錯誤: {e}")
+        print(f"Request error: {e}")
         return jsonify({'error': f'Network error: {str(e)}'}), 500
     except Exception as e:
-        print(f"服務器錯誤: {e}")
+        print(f"Server error: {e}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/api/info', methods=['GET'])
 def api_info():
-    """返回支持的 API 提供商和版本信息"""
+    """Return supported API providers and versions"""
     return jsonify({
         'providers': API_PROVIDERS
     })
 
 @app.route('/test', methods=['GET', 'OPTIONS'])
 def test_connection():
-    """測試連接端點"""
+    """Connection test endpoint"""
     provider = request.args.get('provider', 'staging')
     
     if provider not in API_PROVIDERS:
@@ -383,7 +352,7 @@ def test_connection():
             'Accept': 'application/json'
         }
 
-        # 測試基礎 URL 連通性
+        # Test base URL connectivity
         test_url = f"{provider_config['base_url']}/videos/test"
         response = requests.get(
             test_url,

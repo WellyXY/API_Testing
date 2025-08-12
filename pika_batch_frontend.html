@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pika 批量視頻生成器</title>
+    <title>Snax Batch Video Generator</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
     <style>
         * {
@@ -398,59 +398,59 @@
         <div class="header">
             <h1>
                 <span>🎬</span>
-                Pika 批量視頻生成器
+                Snax Batch Video Generator
                 <span>⚡</span>
             </h1>
-            <p>一次上傳多張圖片，使用相同 Prompt 批量生成視頻，並支持一鍵全部下載</p>
+            <p>Upload multiple images, apply the same prompt to generate videos in batch, with one-click download</p>
         </div>
 
         <div class="content">
-            <!-- API 配置和批量生成表單 -->
+            <!-- API config and batch form -->
             <div class="form-section">
-                <h2 style="margin-bottom: 20px; color: #333;">📝 批量生成設置</h2>
+                <h2 style="margin-bottom: 20px; color: #333;">📝 Batch Settings</h2>
                 
                 <div class="form-group">
                     <label for="apiKey">🔑 API Key</label>
                     <input type="password" id="apiKey" class="api-key-input" 
-                           placeholder="請輸入你的 Pika API Key">
+                           placeholder="Enter your Snax API Key">
                 </div>
 
                 <div class="form-group">
-                    <label for="promptText">💬 提示詞 (所有圖片共用)</label>
+                    <label for="promptText">💬 Prompt (applies to all images)</label>
                     <textarea id="promptText" class="prompt-textarea" 
-                              placeholder="輸入你想要的視頻效果描述，例如：a sexy woman giving a blowjob, realistic, high quality"></textarea>
+                              placeholder="Describe the desired video effect"></textarea>
                 </div>
 
                 <div class="form-group">
-                    <label>🖼️ 上傳圖片 (支持多選)</label>
+                    <label>🖼️ Upload Images (multi-select)</label>
                     <div class="file-upload-area" id="fileUploadArea">
                         <div class="upload-icon">📁</div>
-                        <div class="upload-text">點擊或拖拽上傳多張圖片</div>
-                        <div class="upload-hint">支持 JPG, PNG 格式，建議每張圖片小於 10MB</div>
+                        <div class="upload-text">Click or drag to upload multiple images</div>
+                        <div class="upload-hint">Supported formats: JPG, PNG. Recommended each < 10MB</div>
                         <input type="file" id="fileInput" multiple accept="image/*">
                     </div>
                     <div class="file-list" id="fileList"></div>
                 </div>
 
                 <button class="btn" id="generateBtn" onclick="startBatchGeneration()">
-                    🚀 開始批量生成
+                    🚀 Start Batch Generation
                 </button>
             </div>
 
-            <!-- 任務管理區域 -->
+            <!-- Tasks section -->
             <div class="tasks-section">
-                <h2 style="margin-bottom: 20px; color: #333;">📊 批量任務管理</h2>
+                <h2 style="margin-bottom: 20px; color: #333;">📊 Batch Tasks</h2>
                 
                 <div class="stats" id="statsContainer">
-                    <!-- 統計信息將動態載入 -->
+                    <!-- Stats will be loaded dynamically -->
                 </div>
 
                 <button class="btn btn-secondary" onclick="refreshTasks()">
-                    🔄 刷新任務列表
+                    🔄 Refresh Tasks
                 </button>
 
                 <div id="tasksList">
-                    <!-- 任務列表將動態載入 -->
+                    <!-- Tasks will be loaded dynamically -->
                 </div>
             </div>
         </div>
@@ -460,28 +460,28 @@
         let selectedFiles = [];
         const API_BASE = window.location.origin;
 
-        // 初始化頁面
+        // Init page
         document.addEventListener('DOMContentLoaded', function() {
             setupFileUpload();
             refreshTasks();
             
-            // 每 5 秒自動刷新任務狀態
+            // Auto refresh tasks every 5s
             setInterval(refreshTasks, 5000);
         });
 
-        // 設置文件上傳
+        // Setup file upload
         function setupFileUpload() {
             const fileInput = document.getElementById('fileInput');
             const uploadArea = document.getElementById('fileUploadArea');
             const fileList = document.getElementById('fileList');
 
-            // 點擊上傳區域
+            // Click upload area
             uploadArea.addEventListener('click', () => fileInput.click());
 
-            // 文件選擇
+            // File selection
             fileInput.addEventListener('change', handleFileSelect);
 
-            // 拖拽上傳
+            // Drag & drop upload
             uploadArea.addEventListener('dragover', (e) => {
                 e.preventDefault();
                 uploadArea.classList.add('drag-over');
@@ -535,7 +535,7 @@
                             <div style="color: #666; font-size: 12px;">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
                         </div>
                     </div>
-                    <button class="remove-btn" onclick="removeFile(${index})">移除</button>
+                    <button class="remove-btn" onclick="removeFile(${index})">Remove</button>
                 </div>
             `).join('');
         }
@@ -546,36 +546,36 @@
             
             if (selectedFiles.length > 0) {
                 uploadArea.classList.add('has-files');
-                uploadText.textContent = `已選擇 ${selectedFiles.length} 張圖片，點擊或拖拽添加更多`;
+                uploadText.textContent = `${selectedFiles.length} image(s) selected, click or drag to add more`;
             } else {
                 uploadArea.classList.remove('has-files');
-                uploadText.textContent = '點擊或拖拽上傳多張圖片';
+                uploadText.textContent = 'Click or drag to upload multiple images';
             }
         }
 
-        // 開始批量生成
+            // Start batch generation
         async function startBatchGeneration() {
             const apiKey = document.getElementById('apiKey').value.trim();
             const promptText = document.getElementById('promptText').value.trim();
             const generateBtn = document.getElementById('generateBtn');
 
             if (!apiKey) {
-                alert('請輸入 API Key');
+                alert('Please enter API Key');
                 return;
             }
 
             if (!promptText) {
-                alert('請輸入提示詞');
+                alert('Please enter prompt');
                 return;
             }
 
             if (selectedFiles.length === 0) {
-                alert('請上傳至少一張圖片');
+                alert('Please upload at least one image');
                 return;
             }
 
             generateBtn.disabled = true;
-            generateBtn.textContent = '🔄 正在啟動批量生成...';
+            generateBtn.textContent = '🔄 Starting batch generation...';
 
             try {
                 const formData = new FormData();
@@ -596,29 +596,29 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(`✅ 批量生成已啟動！任務 ID: ${result.task_id}\n正在處理 ${selectedFiles.length} 張圖片...`);
+                    alert(`✅ Batch started! Task ID: ${result.task_id}\nProcessing ${selectedFiles.length} image(s)...`);
                     
-                    // 清空表單
+                    // Reset form
                     selectedFiles = [];
                     updateFileList();
                     updateUploadArea();
                     document.getElementById('promptText').value = '';
                     
-                    // 刷新任務列表
+                    // Refresh tasks list
                     refreshTasks();
                 } else {
-                    alert(`❌ 啟動失敗: ${result.error}`);
+                    alert(`❌ Start failed: ${result.error}`);
                 }
 
             } catch (error) {
-                alert(`❌ 網路錯誤: ${error.message}`);
+                alert(`❌ Network error: ${error.message}`);
             } finally {
                 generateBtn.disabled = false;
-                generateBtn.textContent = '🚀 開始批量生成';
+                generateBtn.textContent = '🚀 Start Batch Generation';
             }
         }
 
-        // 刷新任務列表
+        // Refresh task list
         async function refreshTasks() {
             try {
                 const response = await fetch(`${API_BASE}/batch/tasks`);
@@ -628,7 +628,7 @@
                 updateTasksList(data.tasks);
                 
             } catch (error) {
-                console.error('刷新任務失敗:', error);
+                console.error('Refresh tasks failed:', error);
             }
         }
 
@@ -643,19 +643,19 @@
             statsContainer.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-number">${totalTasks}</div>
-                    <div class="stat-label">總任務數</div>
+                    <div class="stat-label">Total tasks</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${processingTasks}</div>
-                    <div class="stat-label">處理中</div>
+                    <div class="stat-label">Processing</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${completedTasks}</div>
-                    <div class="stat-label">已完成</div>
+                    <div class="stat-label">Completed</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-number">${totalVideos}</div>
-                    <div class="stat-label">生成視頻</div>
+                    <div class="stat-label">Videos generated</div>
                 </div>
             `;
         }
@@ -664,7 +664,7 @@
             const tasksList = document.getElementById('tasksList');
             
             if (tasks.length === 0) {
-                tasksList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">暫無批量任務</p>';
+                tasksList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No batch tasks</p>';
                 return;
             }
 
@@ -680,8 +680,8 @@
                             <div class="progress-fill" style="width: ${task.progress}%"></div>
                         </div>
                         <div class="progress-text">
-                            進度: ${task.completed_videos + task.failed_videos}/${task.total_images} 
-                            (成功: ${task.completed_videos}, 失敗: ${task.failed_videos})
+                            Progress: ${task.completed_videos + task.failed_videos}/${task.total_images} 
+                            (Success: ${task.completed_videos}, Failed: ${task.failed_videos})
                         </div>
                     </div>
 
@@ -690,7 +690,7 @@
                             ${task.video_results.map(video => `
                                 <div class="video-item">
                                     <div style="font-size: 12px; margin-bottom: 5px;">${video.image_filename}</div>
-                                    <div style="color: #4caf50; font-size: 10px;">✅ 已完成</div>
+                                    <div style="color: #4caf50; font-size: 10px;">✅ Completed</div>
                                 </div>
                             `).join('')}
                         </div>
@@ -698,7 +698,7 @@
 
                     ${task.error_log.length > 0 ? `
                         <div class="error-log">
-                            <strong>錯誤日誌:</strong><br>
+                            <strong>Error log:</strong><br>
                             ${task.error_log.join('<br>')}
                         </div>
                     ` : ''}
@@ -706,11 +706,11 @@
                     <div class="task-actions">
                         ${task.status === 'completed' && task.video_results.length > 0 ? `
                             <button class="btn btn-small btn-download" onclick="downloadBatchVideos('${task.task_id}')">
-                                📦 一鍵下載所有視頻
+                                📦 Download all videos
                             </button>
                         ` : ''}
                         <button class="btn btn-small btn-delete" onclick="deleteTask('${task.task_id}')">
-                            🗑️ 刪除任務
+                            🗑️ Delete task
                         </button>
                     </div>
                 </div>
@@ -719,14 +719,14 @@
 
         function getStatusText(status) {
             const statusMap = {
-                'pending': '等待中',
-                'processing': '處理中',
-                'completed': '已完成'
+                'pending': 'Pending',
+                'processing': 'Processing',
+                'completed': 'Completed'
             };
             return statusMap[status] || status;
         }
 
-        // 下載批量視頻
+        // Download all videos
         async function downloadBatchVideos(taskId) {
             try {
                 const response = await fetch(`${API_BASE}/batch/download/${taskId}`);
@@ -742,19 +742,19 @@
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
                     
-                    alert('✅ 下載已開始！');
+                    alert('✅ Download started!');
                 } else {
                     const error = await response.json();
-                    alert(`❌ 下載失敗: ${error.error}`);
+                    alert(`❌ Download failed: ${error.error}`);
                 }
             } catch (error) {
-                alert(`❌ 下載錯誤: ${error.message}`);
+                alert(`❌ Download error: ${error.message}`);
             }
         }
 
-        // 刪除任務
+        // Delete task
         async function deleteTask(taskId) {
-            if (!confirm('確定要刪除這個任務嗎？相關的視頻文件也會被刪除。')) {
+            if (!confirm('Are you sure to delete this task? Related video files will also be removed.')) {
                 return;
             }
 
@@ -766,13 +766,13 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert('✅ 任務已刪除');
+                    alert('✅ Task deleted');
                     refreshTasks();
                 } else {
-                    alert(`❌ 刪除失敗: ${result.error}`);
+                    alert(`❌ Delete failed: ${result.error}`);
                 }
             } catch (error) {
-                alert(`❌ 刪除錯誤: ${error.message}`);
+                alert(`❌ Delete error: ${error.message}`);
             }
         }
     </script>

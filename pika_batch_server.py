@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Pika 批量視頻生成服務器
-支持多圖批量生成和一鍵全部下載
+Snax batch video generation server
+Supports multi-image batch generation and one-click download
 """
 
 from flask import Flask, request, jsonify, send_from_directory, send_file
@@ -17,21 +17,21 @@ import zipfile
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # 允許所有跨域請求
+CORS(app)  # allow all CORS requests
 
-# Pika API 配置
-PIKA_BASE_URL = "https://qazwsxedcrf3g5h.pika.art"
+# Snax API config (Staging)
+PIKA_BASE_URL = "https://089e99349ace.pikalabs.app"
 
-# 存儲配置
+# Storage config
 UPLOAD_FOLDER = 'uploads'
 VIDEOS_FOLDER = 'generated_videos'
 DOWNLOADS_FOLDER = 'downloads'
 
-# 確保資料夾存在
+# Ensure folders exist
 for folder in [UPLOAD_FOLDER, VIDEOS_FOLDER, DOWNLOADS_FOLDER]:
     os.makedirs(folder, exist_ok=True)
 
-# 全局變量存儲批量任務狀態
+# In-memory batch tasks storage
 batch_tasks = {}
 
 class BatchTask:
@@ -60,38 +60,38 @@ class BatchTask:
 
 @app.route('/')
 def index():
-    """提供批量處理前端頁面"""
+    """Serve batch frontend page"""
     return send_from_directory('.', 'batch_frontend.html')
 
 @app.route('/batch/generate', methods=['POST'])
 def batch_generate():
-    """批量生成視頻"""
+    """Start batch video generation"""
     try:
-        # 獲取 API Key
+        # Get API Key
         api_key = request.headers.get('X-API-KEY')
         if not api_key:
             return jsonify({'error': 'Missing API Key'}), 400
 
-        # 獲取提示詞
+        # Get prompt
         prompt_text = request.form.get('promptText', '').strip()
         if not prompt_text:
             return jsonify({'error': 'Missing prompt text'}), 400
 
-        # 獲取上傳的圖片
+        # Get uploaded images
         images = request.files.getlist('images')
         if not images or len(images) == 0:
             return jsonify({'error': 'No images uploaded'}), 400
 
-        print(f"收到批量生成請求: {len(images)} 個圖片, 提示詞: {prompt_text}")
+        print(f"Received batch request: {len(images)} images, prompt: {prompt_text}")
 
-        # 創建批量任務
+        # Create batch task
         task_id = str(uuid.uuid4())
         task = BatchTask(task_id)
         task.total_images = len(images)
         task.status = 'processing'
         batch_tasks[task_id] = task
 
-        # 保存上傳的圖片
+        # Save uploaded images
         image_paths = []
         for i, image in enumerate(images):
             if image.filename:
@@ -100,7 +100,7 @@ def batch_generate():
                 image.save(filepath)
                 image_paths.append((filepath, image.filename))
 
-        # 啟動後台處理線程
+        # Start background worker thread
         thread = threading.Thread(
             target=process_batch_generation,
             args=(task_id, image_paths, prompt_text, api_key)
@@ -108,25 +108,21 @@ def batch_generate():
         thread.daemon = True
         thread.start()
 
-        return jsonify({
-            'success': True,
-            'task_id': task_id,
-            'message': f'Started batch generation for {len(images)} images'
-        })
+        return jsonify({'success': True, 'task_id': task_id, 'message': f'Started batch generation for {len(images)} images'})
 
     except Exception as e:
-        print(f"批量生成錯誤: {e}")
+        print(f"Batch error: {e}")
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 def process_batch_generation(task_id, image_paths, prompt_text, api_key):
-    """後台處理批量生成"""
+    """Background: process batch generation"""
     task = batch_tasks[task_id]
     
     def generate_single_video(image_info):
-        """生成單個視頻"""
+        """Generate a single video"""
         image_path, original_filename = image_info
         try:
-            # 準備請求
+            # Prepare request
             headers = {
                 'X-API-KEY': api_key,
                 'Accept': 'application/json'
@@ -140,9 +136,9 @@ def process_batch_generation(task_id, image_paths, prompt_text, api_key):
                     'promptText': prompt_text
                 }
                 
-                # 發送生成請求
+                # Send generation request
                 response = requests.post(
-                    f"{PIKA_BASE_URL}/generate/v0/image-to-video",
+                    f"{PIKA_BASE_URL}/generate/2.2/i2v",
                     headers=headers,
                     files=files,
                     data=data,
@@ -154,11 +150,11 @@ def process_batch_generation(task_id, image_paths, prompt_text, api_key):
                     video_id = result.get('id')
                     
                     if video_id:
-                        # 等待視頻生成完成
+                        # Wait for video to finish
                         video_url = wait_for_video_completion(video_id, api_key)
                         
                         if video_url:
-                            # 下載視頻
+                            # Download video
                             video_filename = f"{task_id}_{original_filename}_{video_id}.mp4"
                             video_path = download_video(video_url, video_filename)
                             
@@ -172,23 +168,23 @@ def process_batch_generation(task_id, image_paths, prompt_text, api_key):
                             }
                     
         except Exception as e:
-            print(f"生成視頻失敗 {original_filename}: {e}")
+            print(f"Failed to generate video for {original_filename}: {e}")
             task.error_log.append(f"{original_filename}: {str(e)}")
             
         task.failed_videos += 1
         return None
     
-    # 使用線程池並行處理
+    # Parallel processing
     with ThreadPoolExecutor(max_workers=3) as executor:
         results = list(executor.map(generate_single_video, image_paths))
     
-    # 處理結果
+    # Collect results
     for result in results:
         if result:
             task.video_results.append(result)
             task.completed_videos += 1
     
-    # 清理上傳的圖片
+    # Cleanup uploads
     for image_path, _ in image_paths:
         try:
             os.remove(image_path)
@@ -196,10 +192,10 @@ def process_batch_generation(task_id, image_paths, prompt_text, api_key):
             pass
     
     task.status = 'completed'
-    print(f"批量任務 {task_id} 完成: {task.completed_videos}/{task.total_images} 成功")
+    print(f"Batch task {task_id} completed: {task.completed_videos}/{task.total_images} succeeded")
 
 def wait_for_video_completion(video_id, api_key, max_wait=300):
-    """等待視頻生成完成"""
+    """Wait for video to finish"""
     headers = {
         'X-API-KEY': api_key,
         'Accept': 'application/json'
@@ -224,14 +220,14 @@ def wait_for_video_completion(video_id, api_key, max_wait=300):
                     return None
                     
         except Exception as e:
-            print(f"查詢視頻狀態錯誤: {e}")
+            print(f"Error checking video status: {e}")
         
-        time.sleep(5)  # 等待5秒後重試
+    time.sleep(5)  # wait 5 seconds before retrying
     
     return None
 
 def download_video(video_url, filename):
-    """下載視頻文件"""
+    """Download video file"""
     try:
         response = requests.get(video_url, stream=True)
         if response.status_code == 200:
@@ -241,12 +237,12 @@ def download_video(video_url, filename):
                     f.write(chunk)
             return filepath
     except Exception as e:
-        print(f"下載視頻失敗: {e}")
+        print(f"Download video failed: {e}")
     return None
 
 @app.route('/batch/status/<task_id>', methods=['GET'])
 def get_batch_status(task_id):
-    """獲取批量任務狀態"""
+    """Get batch task status"""
     if task_id not in batch_tasks:
         return jsonify({'error': 'Task not found'}), 404
     
@@ -255,7 +251,7 @@ def get_batch_status(task_id):
 
 @app.route('/batch/download/<task_id>', methods=['GET'])
 def download_batch_videos(task_id):
-    """一鍵下載所有生成的視頻"""
+    """Download all generated videos"""
     if task_id not in batch_tasks:
         return jsonify({'error': 'Task not found'}), 404
     
@@ -265,7 +261,7 @@ def download_batch_videos(task_id):
         return jsonify({'error': 'No videos to download'}), 404
     
     try:
-        # 創建 ZIP 文件
+        # Create ZIP file
         zip_filename = f"batch_videos_{task_id}.zip"
         zip_path = os.path.join(DOWNLOADS_FOLDER, zip_filename)
         
@@ -273,7 +269,7 @@ def download_batch_videos(task_id):
             for video_result in task.video_results:
                 video_path = video_result.get('video_path')
                 if video_path and os.path.exists(video_path):
-                    # 添加到 ZIP，使用原始圖片名稱作為前綴
+                    # Add to ZIP using original image name as prefix
                     arc_name = f"{video_result['image_filename']}_{video_result['video_filename']}"
                     zipf.write(video_path, arc_name)
         
@@ -285,55 +281,55 @@ def download_batch_videos(task_id):
         )
         
     except Exception as e:
-        print(f"創建下載包錯誤: {e}")
+        print(f"Error creating download package: {e}")
         return jsonify({'error': f'Download error: {str(e)}'}), 500
 
 @app.route('/batch/tasks', methods=['GET'])
 def list_batch_tasks():
-    """列出所有批量任務"""
+    """List all batch tasks"""
     tasks = []
     for task_id, task in batch_tasks.items():
         tasks.append(task.to_dict())
     
-    # 按創建時間排序
+    # Sort by creation time
     tasks.sort(key=lambda x: x['created_at'], reverse=True)
     
     return jsonify({'tasks': tasks})
 
 @app.route('/batch/delete/<task_id>', methods=['DELETE'])
 def delete_batch_task(task_id):
-    """刪除批量任務和相關文件"""
+    """Delete batch task and related files"""
     if task_id not in batch_tasks:
         return jsonify({'error': 'Task not found'}), 404
     
     try:
         task = batch_tasks[task_id]
         
-        # 刪除視頻文件
+        # Delete video files
         for video_result in task.video_results:
             video_path = video_result.get('video_path')
             if video_path and os.path.exists(video_path):
                 os.remove(video_path)
         
-        # 刪除 ZIP 文件
+        # Delete ZIP file
         zip_filename = f"batch_videos_{task_id}.zip"
         zip_path = os.path.join(DOWNLOADS_FOLDER, zip_filename)
         if os.path.exists(zip_path):
             os.remove(zip_path)
         
-        # 從記憶體中刪除任務
+        # Remove task from memory
         del batch_tasks[task_id]
         
         return jsonify({'success': True, 'message': 'Task deleted'})
         
     except Exception as e:
-        print(f"刪除任務錯誤: {e}")
+        print(f"Error deleting task: {e}")
         return jsonify({'error': f'Delete error: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    print("🚀 啟動 Pika 批量視頻生成服務器...")
-    print("📱 前端頁面: http://localhost:5004")
-    print("🔧 批量 API: http://localhost:5004/batch/generate")
+    print("🚀 Starting Snax batch video server...")
+    print("📱 Frontend: http://localhost:5004")
+    print("🔧 Batch API: http://localhost:5004/batch/generate")
     
     app.run(
         host='0.0.0.0',

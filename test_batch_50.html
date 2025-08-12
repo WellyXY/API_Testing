@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pika API 批量處理測試 - 支援50張圖片</title>
+    <title>Snax API Batch Test - Up to 50 Images</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -80,99 +80,99 @@
 </head>
 <body>
     <div class="container">
-        <h1>🎬 Pika API 批量處理測試</h1>
-        <p>支援最多 50 張圖片的批量視頻生成</p>
+        <h1>🎬 Snax API Batch Test</h1>
+        <p>Generate videos in batch for up to 50 images</p>
 
         <div class="feature-list">
-            <h3>🚀 新功能特點</h3>
+            <h3>🚀 Features</h3>
             <ul>
-                <li><strong>支援50張圖片</strong> - 從原本的10張提升到50張</li>
-                <li><strong>智能批量處理</strong> - 可設定每批處理的任務數量</li>
-                <li><strong>可調整延遲</strong> - 批次間延遲避免API限制</li>
-                <li><strong>實時進度監控</strong> - 顯示當前批次和整體進度</li>
-                <li><strong>並行處理</strong> - 批次內的任務並行執行</li>
-                <li><strong>錯誤處理</strong> - 單個任務失敗不影響其他任務</li>
+                <li><strong>Up to 50 images</strong> - Increased from 10 to 50</li>
+                <li><strong>Smart batching</strong> - Configure tasks per batch</li>
+                <li><strong>Adjustable delay</strong> - Avoid API limits between batches</li>
+                <li><strong>Real-time progress</strong> - See batch and overall progress</li>
+                <li><strong>Parallel processing</strong> - Run tasks in parallel per batch</li>
+                <li><strong>Error handling</strong> - One task failing won't block others</li>
             </ul>
         </div>
 
         <div class="test-section">
-            <h3>📦 批量處理設置選項</h3>
-            <p><strong>批次大小選項：</strong></p>
+            <h3>📦 Batch Options</h3>
+            <p><strong>Batch size options:</strong></p>
             <ul>
-                <li>3 tasks per batch (推薦) - 適合穩定處理</li>
-                <li>5 tasks per batch - 平衡速度和穩定性</li>
-                <li>10 tasks per batch - 較快處理</li>
-                <li>Process all at once - 一次性處理所有任務</li>
+                <li>3 tasks per batch (recommended) - stable</li>
+                <li>5 tasks per batch - balanced</li>
+                <li>10 tasks per batch - faster</li>
+                <li>Process all at once - handle all tasks simultaneously</li>
             </ul>
             
-            <p><strong>批次間延遲選項：</strong></p>
+            <p><strong>Delay between batches:</strong></p>
             <ul>
-                <li>2 seconds - 快速處理</li>
-                <li>5 seconds (推薦) - 避免API限制</li>
-                <li>10 seconds - 保守處理</li>
-                <li>30 seconds - 最安全的選項</li>
+                <li>2 seconds - fast</li>
+                <li>5 seconds (recommended) - avoid rate limits</li>
+                <li>10 seconds - conservative</li>
+                <li>30 seconds - safest</li>
             </ul>
         </div>
 
         <div class="warning">
-            <strong>⚠️ 注意事項：</strong>
+            <strong>⚠️ Notes:</strong>
             <ul>
-                <li>建議使用較小的批次大小（3-5個任務）以避免API限制</li>
-                <li>處理大量圖片時請耐心等待，系統會自動管理任務隊列</li>
-                <li>如果遇到錯誤，可以嘗試增加批次間延遲時間</li>
-                <li>確保有足夠的API配額來處理所有任務</li>
+                <li>Prefer smaller batches (3-5 tasks) to avoid limits</li>
+                <li>Be patient with large uploads; the queue is managed automatically</li>
+                <li>If errors occur, increase the delay between batches</li>
+                <li>Ensure sufficient API quota</li>
             </ul>
         </div>
 
         <div class="test-section">
-            <h3>🔧 使用步驟</h3>
+            <h3>🔧 How to use</h3>
             <ol>
-                <li>啟動代理服務器：<div class="code">python pika_proxy_server.py</div></li>
-                <li>在瀏覽器中打開：<div class="code">http://localhost:8000</div></li>
-                <li>配置API設置（Provider、Version、API Key）</li>
-                <li>選擇最多50張圖片</li>
-                <li>設定批量處理參數（批次大小、延遲時間）</li>
-                <li>輸入提示詞（可選）</li>
-                <li>點擊開始生成</li>
-                <li>觀察進度條和任務狀態</li>
-                <li>等待所有任務完成</li>
-                <li>使用一鍵下載功能獲取所有視頻</li>
+                <li>Start proxy server: <div class="code">python pika_proxy_server.py</div></li>
+                <li>Open in browser: <div class="code">http://localhost:8000</div></li>
+                <li>Configure API (Provider, Version, API Key)</li>
+                <li>Select up to 50 images</li>
+                <li>Set batch parameters (size, delay)</li>
+                <li>Enter prompt (optional)</li>
+                <li>Click Start</li>
+                <li>Monitor progress</li>
+                <li>Wait until all tasks complete</li>
+                <li>Use One-click Download</li>
             </ol>
         </div>
 
         <div class="test-section">
-            <h3>📊 處理邏輯示例</h3>
-            <p>假設上傳了20張圖片，批次大小設為3，延遲5秒：</p>
+            <h3>📊 Example processing logic</h3>
+            <p>Assume 20 images uploaded, batch size 3, 5-second delay:</p>
             <div class="code">
-批次1: 處理圖片 1-3 (並行)
-等待 5 秒
-批次2: 處理圖片 4-6 (並行)  
-等待 5 秒
-批次3: 處理圖片 7-9 (並行)
-等待 5 秒
-批次4: 處理圖片 10-12 (並行)
-等待 5 秒
-批次5: 處理圖片 13-15 (並行)
-等待 5 秒
-批次6: 處理圖片 16-18 (並行)
-等待 5 秒
-批次7: 處理圖片 19-20 (並行)
+Batch 1: images 1-3 (parallel)
+wait 5s
+Batch 2: images 4-6 (parallel)
+wait 5s
+Batch 3: images 7-9 (parallel)
+wait 5s
+Batch 4: images 10-12 (parallel)
+wait 5s
+Batch 5: images 13-15 (parallel)
+wait 5s
+Batch 6: images 16-18 (parallel)
+wait 5s
+Batch 7: images 19-20 (parallel)
             </div>
         </div>
 
-        <h3>🚀 開始使用</h3>
-        <a href="pika_api_frontend.html" class="btn">打開 Pika API 工具</a>
-        <a href="pika_proxy_server.py" class="btn" style="background: #28a745;">查看服務器代碼</a>
+        <h3>🚀 Get Started</h3>
+        <a href="pika_api_frontend.html" class="btn">Open Snax API Tool</a>
+        <a href="pika_proxy_server.py" class="btn" style="background: #28a745;">View server code</a>
 
         <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; color: #666; font-size: 14px;">
-            <p>📝 更新日誌：</p>
+            <p>📝 Changelog:</p>
             <ul>
-                <li>✅ 支援最多50張圖片上傳</li>
-                <li>✅ 智能批量處理系統</li>
-                <li>✅ 可調整的批次大小和延遲</li>
-                <li>✅ 實時進度監控</li>
-                <li>✅ 批次內並行處理</li>
-                <li>✅ 改進的錯誤處理</li>
+                <li>✅ Up to 50 images</li>
+                <li>✅ Smart batching</li>
+                <li>✅ Adjustable batch size and delay</li>
+                <li>✅ Real-time progress</li>
+                <li>✅ Parallel processing per batch</li>
+                <li>✅ Improved error handling</li>
             </ul>
         </div>
     </div>

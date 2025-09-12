@@ -25,7 +25,7 @@ API_PROVIDERS = {
     'original': {
         'name': 'Original',
         'base_url': 'https://qazwsxedcrf3g5h.pika.art',
-        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
+        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
         'supported_versions': {
             'v0': {
                 'image-to-video': '/generate/v0/image-to-video',

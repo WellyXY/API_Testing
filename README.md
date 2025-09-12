@@ -15,7 +15,7 @@
 
 ### Original API
 - **基礎 URL**: `https://qazwsxedcrf3g5h.pika.art`
-- **API Key**: `pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM`
+- **API Key**: `pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM`
 - **支援版本**: v0
 - **端點選項**:
   - `/generate/v0/image-to-video` (默認)

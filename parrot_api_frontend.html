@@ -1493,13 +1493,10 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
         // 設置按鈕載入狀態
         function setButtonLoading(loading) {
             const btn = document.getElementById('generateBtn');
-            if (loading) {
-                btn.disabled = true;
-                btn.textContent = '🔄 Processing...';
-            } else {
-                btn.disabled = false;
-                btn.textContent = '🚀 Start Generating Video(s)';
-            }
+            if (!btn) return;
+            // 始終保持可點擊，並維持啟動文案，允許持續提交
+            btn.disabled = false;
+            btn.textContent = '🚀 Start Generating Video(s)';
         }
 
         // 批量處理進度條管理

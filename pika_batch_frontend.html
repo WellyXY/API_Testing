@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parrot 批量視頻生成器</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎬</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 18px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .form-section {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .api-key-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        .api-key-input:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .prompt-textarea {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 16px;
+            min-height: 120px;
+            resize: vertical;
+            transition: border-color 0.3s ease;
+        }
+
+        .prompt-textarea:focus {
+            outline: none;
+            border-color: #4facfe;
+        }
+
+        .file-upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #fafafa;
+            position: relative;
+        }
+
+        .file-upload-area:hover {
+            border-color: #4facfe;
+            background: #f0f9ff;
+        }
+
+        .file-upload-area.drag-over {
+            border-color: #4facfe;
+            background: #e6f3ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 64px;
+            color: #ddd;
+            margin-bottom: 20px;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: #999;
+        }
+
+        .file-upload-area.has-files {
+            border-color: #4caf50;
+            background: #f1f8e9;
+        }
+
+        .file-upload-area.has-files .upload-icon {
+            color: #4caf50;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-list {
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 15px;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .file-preview {
+            width: 40px;
+            height: 40px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .remove-btn {
+            background: #ff4757;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .remove-btn:hover {
+            background: #ff3742;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            border: none;
+            padding: 18px 36px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 172, 254, 0.3);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #45b7d1 0%, #96c93d 100%);
+        }
+
+        .tasks-section {
+            margin-top: 40px;
+        }
+
+        .task-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border-left: 5px solid #4facfe;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .task-id {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #666;
+            background: #f1f3f4;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .task-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-processing {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-completed {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-pending {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .progress-container {
+            margin: 15px 0;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 12px;
+            background: #e1e5e9;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transition: width 0.3s ease;
+            border-radius: 6px;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 14px;
+            width: auto;
+            margin: 0;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-delete {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        }
+
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .video-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .error-log {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .form-section {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span>🎬</span>
+                Parrot 批量視頻生成器
+                <span>⚡</span>
+            </h1>
+            <p>一次上傳多張圖片，使用相同 Prompt 批量生成視頻，並支持一鍵全部下載</p>
+        </div>
+
+        <div class="content">
+            <!-- API 配置和批量生成表單 -->
+            <div class="form-section">
+                <h2 style="margin-bottom: 20px; color: #333;">📝 批量生成設置</h2>
+                
+                <div class="form-group">
+                    <label for="apiKey">🔑 API Key</label>
+                    <input type="password" id="apiKey" class="api-key-input" 
+                           placeholder="請輸入你的 Parrot API Key">
+                </div>
+
+                <div class="form-group">
+                    <label for="promptText">💬 提示詞 (所有圖片共用)</label>
+                    <textarea id="promptText" class="prompt-textarea" 
+                              placeholder="輸入你想要的視頻效果描述，例如：a sexy woman giving a blowjob, realistic, high quality"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>🖼️ 上傳圖片 (支持多選)</label>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <div class="upload-icon">📁</div>
+                        <div class="upload-text">點擊或拖拽上傳多張圖片</div>
+                        <div class="upload-hint">支持 JPG, PNG 格式，建議每張圖片小於 10MB</div>
+                        <input type="file" id="fileInput" multiple accept="image/*">
+                    </div>
+                    <div class="file-list" id="fileList"></div>
+                </div>
+
+                <button class="btn" id="generateBtn" onclick="startBatchGeneration()">
+                    🚀 開始批量生成
+                </button>
+            </div>
+
+            <!-- 任務管理區域 -->
+            <div class="tasks-section">
+                <h2 style="margin-bottom: 20px; color: #333;">📊 批量任務管理</h2>
+                
+                <div class="stats" id="statsContainer">
+                    <!-- 統計信息將動態載入 -->
+                </div>
+
+                <button class="btn btn-secondary" onclick="refreshTasks()">
+                    🔄 刷新任務列表
+                </button>
+
+                <div id="tasksList">
+                    <!-- 任務列表將動態載入 -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFiles = [];
+        const API_BASE = window.location.origin;
+
+        // 初始化頁面
+        document.addEventListener('DOMContentLoaded', function() {
+            setupFileUpload();
+            refreshTasks();
+            
+            // 每 5 秒自動刷新任務狀態
+            setInterval(refreshTasks, 5000);
+        });
+
+        // 設置文件上傳
+        function setupFileUpload() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('fileUploadArea');
+            const fileList = document.getElementById('fileList');
+
+            // 點擊上傳區域
+            uploadArea.addEventListener('click', () => fileInput.click());
+
+            // 文件選擇
+            fileInput.addEventListener('change', handleFileSelect);
+
+            // 拖拽上傳
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.classList.add('drag-over');
+            });
+
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.classList.remove('drag-over');
+            });
+
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.classList.remove('drag-over');
+                
+                const files = Array.from(e.dataTransfer.files);
+                addFiles(files);
+            });
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files);
+            addFiles(files);
+        }
+
+        function addFiles(files) {
+            const imageFiles = files.filter(file => file.type.startsWith('image/'));
+            selectedFiles = [...selectedFiles, ...imageFiles];
+            updateFileList();
+            updateUploadArea();
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            updateFileList();
+            updateUploadArea();
+        }
+
+        function updateFileList() {
+            const fileList = document.getElementById('fileList');
+            
+            if (selectedFiles.length === 0) {
+                fileList.innerHTML = '';
+                return;
+            }
+
+            fileList.innerHTML = selectedFiles.map((file, index) => `
+                <div class="file-item">
+                    <div class="file-info">
+                        <img class="file-preview" src="${URL.createObjectURL(file)}" alt="Preview">
+                        <div>
+                            <div style="font-weight: 600;">${file.name}</div>
+                            <div style="color: #666; font-size: 12px;">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                        </div>
+                    </div>
+                    <button class="remove-btn" onclick="removeFile(${index})">移除</button>
+                </div>
+            `).join('');
+        }
+
+        function updateUploadArea() {
+            const uploadArea = document.getElementById('fileUploadArea');
+            const uploadText = uploadArea.querySelector('.upload-text');
+            
+            if (selectedFiles.length > 0) {
+                uploadArea.classList.add('has-files');
+                uploadText.textContent = `已選擇 ${selectedFiles.length} 張圖片，點擊或拖拽添加更多`;
+            } else {
+                uploadArea.classList.remove('has-files');
+                uploadText.textContent = '點擊或拖拽上傳多張圖片';
+            }
+        }
+
+        // 開始批量生成
+        async function startBatchGeneration() {
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const promptText = document.getElementById('promptText').value.trim();
+            const generateBtn = document.getElementById('generateBtn');
+
+            if (!apiKey) {
+                alert('請輸入 API Key');
+                return;
+            }
+
+            if (!promptText) {
+                alert('請輸入提示詞');
+                return;
+            }
+
+            if (selectedFiles.length === 0) {
+                alert('請上傳至少一張圖片');
+                return;
+            }
+
+            generateBtn.disabled = true;
+            generateBtn.textContent = '🔄 正在啟動批量生成...';
+
+            try {
+                const formData = new FormData();
+                formData.append('promptText', promptText);
+                
+                selectedFiles.forEach(file => {
+                    formData.append('images', file);
+                });
+
+                const response = await fetch(`${API_BASE}/batch/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'X-API-KEY': apiKey
+                    },
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`✅ 批量生成已啟動！任務 ID: ${result.task_id}\n正在處理 ${selectedFiles.length} 張圖片...`);
+                    
+                    // 清空表單
+                    selectedFiles = [];
+                    updateFileList();
+                    updateUploadArea();
+                    document.getElementById('promptText').value = '';
+                    
+                    // 刷新任務列表
+                    refreshTasks();
+                } else {
+                    alert(`❌ 啟動失敗: ${result.error}`);
+                }
+
+            } catch (error) {
+                alert(`❌ 網路錯誤: ${error.message}`);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = '🚀 開始批量生成';
+            }
+        }
+
+        // 刷新任務列表
+        async function refreshTasks() {
+            try {
+                const response = await fetch(`${API_BASE}/batch/tasks`);
+                const data = await response.json();
+                
+                updateStats(data.tasks);
+                updateTasksList(data.tasks);
+                
+            } catch (error) {
+                console.error('刷新任務失敗:', error);
+            }
+        }
+
+        function updateStats(tasks) {
+            const statsContainer = document.getElementById('statsContainer');
+            
+            const totalTasks = tasks.length;
+            const processingTasks = tasks.filter(t => t.status === 'processing').length;
+            const completedTasks = tasks.filter(t => t.status === 'completed').length;
+            const totalVideos = tasks.reduce((sum, t) => sum + t.completed_videos, 0);
+
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${totalTasks}</div>
+                    <div class="stat-label">總任務數</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${processingTasks}</div>
+                    <div class="stat-label">處理中</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${completedTasks}</div>
+                    <div class="stat-label">已完成</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">${totalVideos}</div>
+                    <div class="stat-label">生成視頻</div>
+                </div>
+            `;
+        }
+
+        function updateTasksList(tasks) {
+            const tasksList = document.getElementById('tasksList');
+            
+            if (tasks.length === 0) {
+                tasksList.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">暫無批量任務</p>';
+                return;
+            }
+
+            tasksList.innerHTML = tasks.map(task => `
+                <div class="task-card">
+                    <div class="task-header">
+                        <div class="task-id">ID: ${task.task_id}</div>
+                        <div class="task-status status-${task.status}">${getStatusText(task.status)}</div>
+                    </div>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${task.progress}%"></div>
+                        </div>
+                        <div class="progress-text">
+                            進度: ${task.completed_videos + task.failed_videos}/${task.total_images} 
+                            (成功: ${task.completed_videos}, 失敗: ${task.failed_videos})
+                        </div>
+                    </div>
+
+                    ${task.video_results.length > 0 ? `
+                        <div class="video-grid">
+                            ${task.video_results.map(video => `
+                                <div class="video-item">
+                                    <div style="font-size: 12px; margin-bottom: 5px;">${video.image_filename}</div>
+                                    <div style="color: #4caf50; font-size: 10px;">✅ 已完成</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${task.error_log.length > 0 ? `
+                        <div class="error-log">
+                            <strong>錯誤日誌:</strong><br>
+                            ${task.error_log.join('<br>')}
+                        </div>
+                    ` : ''}
+
+                    <div class="task-actions">
+                        ${task.status === 'completed' && task.video_results.length > 0 ? `
+                            <button class="btn btn-small btn-download" onclick="downloadBatchVideos('${task.task_id}')">
+                                📦 一鍵下載所有視頻
+                            </button>
+                        ` : ''}
+                        <button class="btn btn-small btn-delete" onclick="deleteTask('${task.task_id}')">
+                            🗑️ 刪除任務
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': '等待中',
+                'processing': '處理中',
+                'completed': '已完成'
+            };
+            return statusMap[status] || status;
+        }
+
+        // 下載批量視頻
+        async function downloadBatchVideos(taskId) {
+            try {
+                const response = await fetch(`${API_BASE}/batch/download/${taskId}`);
+                
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `batch_videos_${taskId}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    alert('✅ 下載已開始！');
+                } else {
+                    const error = await response.json();
+                    alert(`❌ 下載失敗: ${error.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 下載錯誤: ${error.message}`);
+            }
+        }
+
+        // 刪除任務
+        async function deleteTask(taskId) {
+            if (!confirm('確定要刪除這個任務嗎？相關的視頻文件也會被刪除。')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/batch/delete/${taskId}`, {
+                    method: 'DELETE'
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('✅ 任務已刪除');
+                    refreshTasks();
+                } else {
+                    alert(`❌ 刪除失敗: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ 刪除錯誤: ${error.message}`);
+            }
+        }
+    </script>
+</body>
+</html> 

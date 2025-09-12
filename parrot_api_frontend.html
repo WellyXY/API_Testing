@@ -699,10 +699,10 @@
                 } catch {}
             }
 
-            // 預填對應 provider 的默認 API Key（若輸入框為空）
+            // 同步當前 provider 的默認 API Key 到輸入框（避免使用錯誤 provider 的 key）
             try {
                 const keyInput = document.getElementById('apiKey');
-                if (keyInput && (!keyInput.value || keyInput.value.trim() === '')) {
+                if (keyInput) {
                     keyInput.value = providerConfig?.apiKey || '';
                 }
             } catch {}

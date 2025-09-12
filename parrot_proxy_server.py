@@ -111,6 +111,16 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         api_key = request.headers.get('X-API-KEY') or request.form.get('api_key')
         if not api_key:
             api_key = provider_config['api_key']  # 使用配置中的默認 API Key
+        # 防呆：若選擇的 provider 與傳入的 key 不匹配，糾正為對應 provider 的默認 key
+        try:
+            original_key = API_PROVIDERS['original']['api_key']
+            staging_key = API_PROVIDERS['staging']['api_key']
+            if provider == 'original' and api_key == staging_key:
+                api_key = original_key
+            elif provider == 'staging' and api_key == original_key:
+                api_key = staging_key
+        except Exception:
+            pass
 
         print("=" * 60)
         print(f"🚀 收到圖片轉視頻請求")

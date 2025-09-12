@@ -17,7 +17,7 @@
 API_PROVIDERS = {
     'original': {
         'name': 'Original',
-        'base_url': 'https://qazwsxedcrf3g5h.parrot.art',
+        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
         'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
         'supported_versions': {
             'v0': {

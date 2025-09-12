@@ -14,7 +14,7 @@
 ## 🔧 API 提供商配置
 
 ### Original API
-- **基礎 URL**: `https://qazwsxedcrf3g5h.parrot.art`
+- **基礎 URL**: `https://qazwsxedcrf3g5h.pika.art`
 - **API Key**: `pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM`
 - **支援版本**: v0
 - **端點選項**:
@@ -24,7 +24,7 @@
   - `/generate/v0/audio-to-video` (圖片+音頻合成視頻)
 
 ### Staging API  
-- **基礎 URL**: `https://089e99349ace.parrotlabs.app`
+- **基礎 URL**: `https://089e99349ace.pikalabs.app`
 - **API Key**: `pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM`
 - **支援版本**: v2.2
 - **端點**: `/generate/2.2/i2v`

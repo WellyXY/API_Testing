@@ -20,7 +20,7 @@ app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
 
 # Parrot API 配置
-PARROT_BASE_URL = "https://qazwsxedcrf3g5h.parrot.art"
+PARROT_BASE_URL = "https://qazwsxedcrf3g5h.pika.art"
 
 # 存儲配置
 UPLOAD_FOLDER = 'uploads'

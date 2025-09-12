@@ -24,7 +24,7 @@ CORS(app)  # 允許所有跨域請求
 API_PROVIDERS = {
     'original': {
         'name': 'Original',
-        'base_url': 'https://qazwsxedcrf3g5h.parrot.art',
+        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
         'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
         'supported_versions': {
             'v0': {
@@ -37,7 +37,7 @@ API_PROVIDERS = {
     },
     'staging': {
         'name': 'Staging',
-        'base_url': 'https://089e99349ace.parrotlabs.app',
+        'base_url': 'https://089e99349ace.pikalabs.app',
         'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
         'supported_versions': {
             'v2.2': '/generate/2.2/i2v'

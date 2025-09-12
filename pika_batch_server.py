@@ -20,7 +20,7 @@ app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
 
 # Parrot API 配置
-PARROT_BASE_URL = "https://qazwsxedcrf3g5h.parrot.art"
+PIKA_BASE_URL = "https://qazwsxedcrf3g5h.pika.art"
 
 # 存儲配置
 UPLOAD_FOLDER = 'uploads'
@@ -142,7 +142,7 @@ def process_batch_generation(task_id, image_paths, prompt_text, api_key):
                 
                 # 發送生成請求
                 response = requests.post(
-                    f"{PARROT_BASE_URL}/generate/v0/image-to-video",
+                    f"{PIKA_BASE_URL}/generate/v0/image-to-video",
                     headers=headers,
                     files=files,
                     data=data,
@@ -209,7 +209,7 @@ def wait_for_video_completion(video_id, api_key, max_wait=300):
     while time.time() - start_time < max_wait:
         try:
             response = requests.get(
-                f"{PARROT_BASE_URL}/videos/{video_id}",
+                f"{PIKA_BASE_URL}/videos/{video_id}",
                 headers=headers,
                 timeout=10
             )

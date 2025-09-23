@@ -384,6 +384,7 @@
                         <option value="image-to-video">image-to-video (默認)</option>
                         <option value="image-to-video-new">image-to-video-new</option>
                         <option value="image-to-video-inner">image-to-video-inner</option>
+                        <option value="image-to-video-nmd">image-to-video-nmd</option>
                         <option value="audio-to-video">audio-to-video</option>
                     </select>
                 </div>
@@ -569,6 +570,11 @@
                                 path: '/generate/v0/image-to-video-inner',
                                 description: '圖片轉視頻 - v0 版本 (內部端點)',
                                 name: 'Original v0 (內部端點)'
+                            },
+                            'image-to-video-nmd': {
+                                path: '/generate/v0/image-to-video-nmd',
+                                description: '圖片轉視頻 - v0 版本 (NMD 端點)',
+                                name: 'Original v0 (nmd)'
                             },
                             'audio-to-video': {
                                 path: '/generate/v0/audio-to-video',
@@ -1713,9 +1719,9 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             
             try {
                 // 生成基於圖片名稱的文件名，添加任務ID確保唯一性
-                const imageName = task.imageName.replace(/\.[^/.]+$/, '') || 'video';
+                const imageName = (task.imageName || '').replace(/\.[^/.]+$/, '') || 'video';
                 const shortTaskId = task.id.substring(0, 8); // 使用任務ID前8位
-                const defaultFileName = `${imageName}_${shortTaskId}.mp4`;
+                const defaultFileName = `${imageName}.mp4`;
                 
                 console.log('🔄 Downloading single video:', {
                     taskId: task.id,
@@ -1913,9 +1919,8 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         link.href = url;
                         
                         // 使用圖片名稱作為視頻檔名，添加任務ID確保唯一性
-                        const imageName = task.imageName.replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
-                        const shortTaskId = task.id.substring(0, 8); // 使用任務ID前8位
-                        const fileName = `${imageName}_${shortTaskId}.mp4`;
+                        const imageName = (task.imageName || '').replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
+                        const fileName = `${imageName}.mp4`;
                         link.download = fileName;
                         link.style.display = 'none';
                         

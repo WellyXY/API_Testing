@@ -845,7 +845,7 @@
 
         let selectedImages = []; // 全局變量存儲選中的圖片
 
-        function handleMultipleFileSelect(files) {
+        async function handleMultipleFileSelect(files) {
             // 過濾出圖片文件
             const imageFiles = files.filter(file => file.type.startsWith('image/'));
             
@@ -878,6 +878,22 @@
                 }
             });
 
+            // 自動將 AVIF 轉為 JPG
+            const finalFiles = [];
+            for (const f of newUniqueImages) {
+                if (isAvifFile(f)) {
+                    try {
+                        const converted = await convertAvifToJpeg(f);
+                        finalFiles.push(converted);
+                    } catch (e) {
+                        console.warn('AVIF to JPEG conversion failed, using original file:', e);
+                        finalFiles.push(f);
+                    }
+                } else {
+                    finalFiles.push(f);
+                }
+            }
+
             if (newUniqueImages.length === 0) {
                 showError('All selected images are already added');
                 return;
@@ -888,8 +904,8 @@
                 showSuccess(`${newUniqueImages.length} image(s) added. ${duplicateCount} duplicate(s) skipped.`);
             }
 
-            // 將新的唯一圖片添加到選中列表
-            selectedImages = [...selectedImages, ...newUniqueImages];
+            // 將新的唯一圖片（含轉換後 JPG）添加到選中列表
+            selectedImages = [...selectedImages, ...finalFiles];
             
             // 更新 file input 的 files 屬性
             updateFileInput();
@@ -900,6 +916,48 @@
             // 更新上傳區域狀態
             uploadArea.classList.add('has-file');
             updateUploadAreaText();
+        }
+
+        function isAvifFile(file) {
+            return file && (file.type === 'image/avif' || /\.avif$/i.test(file.name || ''));
+        }
+
+        async function convertAvifToJpeg(file) {
+            const url = URL.createObjectURL(file);
+            try {
+                try {
+                    const bitmap = await createImageBitmap(file);
+                    const canvas = document.createElement('canvas');
+                    canvas.width = bitmap.width;
+                    canvas.height = bitmap.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(bitmap, 0, 0);
+                    const jpegBlob = await new Promise((resolve, reject) => {
+                        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.92);
+                    });
+                    const newName = (file.name || 'image').replace(/\.avif$/i, '.jpg');
+                    return new File([jpegBlob], newName, { type: 'image/jpeg' });
+                } catch (_) {
+                    const image = await new Promise((resolve, reject) => {
+                        const img = new Image();
+                        img.onload = () => resolve(img);
+                        img.onerror = reject;
+                        img.src = url;
+                    });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = image.width;
+                    canvas.height = image.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(image, 0, 0);
+                    const jpegBlob = await new Promise((resolve, reject) => {
+                        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.92);
+                    });
+                    const newName = (file.name || 'image').replace(/\.avif$/i, '.jpg');
+                    return new File([jpegBlob], newName, { type: 'image/jpeg' });
+                }
+            } finally {
+                URL.revokeObjectURL(url);
+            }
         }
 
         function updateFileInput() {

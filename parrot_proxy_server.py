@@ -158,12 +158,15 @@ def benchmark_merge_batch():
 
         tmp_files = []
         zip_path = tempfile.mktemp(suffix='.zip')
+        added_count = 0
+        errors = []
         with zipfile.ZipFile(zip_path, 'w') as zf:
             for idx, item in enumerate(pairs, start=1):
                 left_url = item.get('left_url')
                 right_url = item.get('right_url')
                 out_name = item.get('filename') or f'merged_{idx}.mp4'
                 if not left_url or not right_url:
+                    errors.append(f'pair#{idx}: missing left/right url')
                     continue
 
                 lpath = tempfile.mktemp(suffix='.mp4')
@@ -192,9 +195,9 @@ def benchmark_merge_batch():
                     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     # 添加到 ZIP
                     zf.write(opath, out_name)
-                except Exception:
-                    # 出錯則跳過此對
-                    pass
+                    added_count += 1
+                except Exception as e:
+                    errors.append(f'pair#{idx}: {type(e).__name__}: {e}')
                 finally:
                     for p in [lpath, rpath, opath]:
                         try:
@@ -202,6 +205,9 @@ def benchmark_merge_batch():
                                 tmp_files.append(p)
                         except Exception:
                             pass
+            # 如果有錯誤，將錯誤寫入壓縮包
+            if errors:
+                zf.writestr('errors.txt', '\n'.join(errors))
 
         # 清理臨時合併視頻
         for p in tmp_files:
@@ -210,6 +216,9 @@ def benchmark_merge_batch():
             except Exception:
                 pass
 
+        if added_count == 0:
+            # 沒有任何成功合併，直接返回錯誤
+            return jsonify({'error': 'no merged outputs', 'errors': errors}), 500
         return send_file(zip_path, mimetype='application/zip', as_attachment=True, download_name='benchmark_merged_all.zip')
     except FileNotFoundError:
         return jsonify({'error': 'ffmpeg not found. Please install ffmpeg.'}), 500

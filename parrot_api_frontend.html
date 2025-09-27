@@ -394,9 +394,9 @@
                     </select>
                 </div>
 
-                <!-- Benchmark 配置區域 (B) -->
+                <!-- Benchmark 配置區域 -->
                 <div id="benchmarkConfig" class="section hidden" style="margin-top:12px;padding-top:12px;border-top:1px dashed #ddd;">
-                    <h4 style="margin-bottom:8px;">Benchmark B</h4>
+                    <h4 style="margin-bottom:8px;">Benchmark</h4>
                     <div class="form-group">
                         <label for="promptTextA">Prompt (A)</label>
                         <textarea id="promptTextA" class="form-control" placeholder="Prompt for A..." rows="2"></textarea>
@@ -576,6 +576,12 @@
                     </div>
                 </div>
                 <div id="tasksList"></div>
+            </div>
+
+            <!-- Benchmark 結果對比區域 -->
+            <div id="benchmarkResults" class="section" style="display:none; margin-top:16px; padding:12px; background:#f8f9ff; border:1px solid #e1e5e9; border-radius:8px;">
+                <h3 style="margin-bottom:8px;">🧪 Benchmark Results (A vs B)</h3>
+                <div id="benchmarkPairs" style="display:flex; flex-direction:column; gap:16px;"></div>
             </div>
 
             <!-- 錯誤訊息區域 -->
@@ -1607,6 +1613,9 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             
             // 更新到 Map 中
             tasks.set(task.id, task);
+
+            // 若為 Benchmark，嘗試合併到左右對比
+            try { maybeRenderBenchmarkPair(task); } catch {}
         }
 
         // 下載日誌：輸出 CSV，包含 id, provider, version, endpointType, prompt, submittedAt, startedAt, finishedAt, waitSec, genSec
@@ -1896,6 +1905,54 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     </div>
                 </div>
             `;
+        }
+
+        // ==== Benchmark 對比渲染 ====
+        function getPairKey(task) {
+            // 以圖片名作為配對鍵
+            return (task.imageName || '').toLowerCase();
+        }
+
+        function maybeRenderBenchmarkPair(task) {
+            if (!task.benchmarkLabel) return; // 非 Benchmark 跳過
+            const pairKey = getPairKey(task);
+            if (!pairKey) return;
+            // 找同圖另一半
+            const other = Array.from(tasks.values()).find(t => t !== task && t.imageName === task.imageName && t.benchmarkLabel && t.url);
+            if (!other || !task.url) return;
+
+            // 構建左右對比卡
+            const container = document.getElementById('benchmarkResults');
+            const pairs = document.getElementById('benchmarkPairs');
+            if (!container || !pairs) return;
+            container.style.display = 'block';
+
+            const promptA = task.benchmarkLabel === 'A' ? (task.promptText || '') : (other.promptText || '');
+            const promptB = task.benchmarkLabel === 'B' ? (task.promptText || '') : (other.promptText || '');
+            const endpointA = task.benchmarkLabel === 'A' ? (task.submissionDetails?.endpoint || '') : (other.submissionDetails?.endpoint || '');
+            const endpointB = task.benchmarkLabel === 'B' ? (task.submissionDetails?.endpoint || '') : (other.submissionDetails?.endpoint || '');
+
+            const safe = s => (s || '').replaceAll('<','&lt;').replaceAll('>','&gt;');
+
+            const pairDiv = document.createElement('div');
+            pairDiv.style.cssText = 'display:flex; gap:12px; align-items:flex-start; justify-content:center;';
+            pairDiv.innerHTML = `
+                <div style="flex:1; text-align:center; background:#fff; border:1px solid #e1e5e9; border-radius:6px; padding:8px;">
+                    <div style="font-size:12px; color:#666; margin-bottom:4px;">A • ${safe(endpointA)}</div>
+                    <video controls width="100%" preload="metadata" style="max-width:420px;">
+                        <source src="${task.benchmarkLabel === 'A' ? task.url : other.url}" type="video/mp4">
+                    </video>
+                    <div style="font-size:12px; color:#555; white-space:pre-wrap; word-break:break-word; margin-top:4px;">📝 ${safe(promptA)}</div>
+                </div>
+                <div style="flex:1; text-align:center; background:#fff; border:1px solid #e1e5e9; border-radius:6px; padding:8px;">
+                    <div style="font-size:12px; color:#666; margin-bottom:4px;">B • ${safe(endpointB)}</div>
+                    <video controls width="100%" preload="metadata" style="max-width:420px;">
+                        <source src="${task.benchmarkLabel === 'B' ? task.url : other.url}" type="video/mp4">
+                    </video>
+                    <div style="font-size:12px; color:#555; white-space:pre-wrap; word-break:break-word; margin-top:4px;">📝 ${safe(promptB)}</div>
+                </div>
+            `;
+            pairs.prepend(pairDiv);
         }
 
         async function downloadTaskVideo(taskId) {

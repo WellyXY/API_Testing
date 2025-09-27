@@ -580,7 +580,13 @@
 
             <!-- Benchmark 結果對比區域 -->
             <div id="benchmarkResults" class="section" style="display:none; margin-top:16px; padding:12px; background:#f8f9ff; border:1px solid #e1e5e9; border-radius:8px;">
-                <h3 style="margin-bottom:8px;">🧪 Benchmark Results (A vs B)</h3>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px;">
+                    <h3 style="margin-bottom:8px;">🧪 Benchmark Results (A vs B)</h3>
+                    <div style="display:flex; gap:8px;">
+                        <button class="btn" id="downloadMergedBtn" style="width:auto; padding:10px 16px; background:#28a745;" onclick="downloadMergedBenchmark()">⬇️ Download Merged (Top Pair)</button>
+                        <button class="btn" id="downloadMergedAllBtn" style="width:auto; padding:10px 16px; background:#17a2b8;" onclick="downloadMergedAll()">⬇️ Download All Merged (ZIP)</button>
+                    </div>
+                </div>
                 <div id="benchmarkPairs" style="display:flex; flex-direction:column; gap:16px;"></div>
             </div>
 
@@ -1469,6 +1475,11 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         };
                         tasks.set(realId, task); // 用真實ID存儲
                         
+                        // 確保輪詢已啟動
+                        if (!statusCheckInterval) {
+                            try { startStatusCheck(); } catch {}
+                        }
+
                         updateTaskCard(task); // 用新ID更新一次UI
                         
                         // 恢復API信息顯示並添加詳細信息
@@ -1532,7 +1543,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const apiConfig = getCurrentAPIConfig();
             const baseUrl = '/';  // 使用本地代理
             
-            if (!apiKey) return;
+            // 允許未輸入 API Key 時仍輪詢，後端會使用預設 key（若有）
             
             const activeTasks = Array.from(tasks.values()).filter(task => 
                 !['finished', 'completed', 'failed', 'error'].includes(task.status)
@@ -1554,7 +1565,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         headers['X-API-KEY'] = apiKey;
                     }
                     
-                    const response = await fetch(`${baseUrl}videos/${task.id}?provider=${apiConfig.provider}`, {
+                    const response = await fetch(`/videos/${task.id}?provider=${apiConfig.provider}`, {
                         headers: headers
                     });
 
@@ -1952,7 +1963,62 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     <div style="font-size:12px; color:#555; white-space:pre-wrap; word-break:break-word; margin-top:4px;">📝 ${safe(promptB)}</div>
                 </div>
             `;
+            // 保存 URL 於節點屬性，便於一鍵下載合併
+            pairDiv.dataset.leftUrl = task.benchmarkLabel === 'A' ? task.url : other.url;
+            pairDiv.dataset.rightUrl = task.benchmarkLabel === 'B' ? task.url : other.url;
             pairs.prepend(pairDiv);
+        }
+
+        async function downloadMergedBenchmark() {
+            try {
+                const pairs = document.getElementById('benchmarkPairs');
+                if (!pairs || !pairs.firstElementChild) { showError('No benchmark pairs to download'); return; }
+                const first = pairs.firstElementChild;
+                const leftUrl = first.dataset.leftUrl;
+                const rightUrl = first.dataset.rightUrl;
+                if (!leftUrl || !rightUrl) { showError('Pair URLs missing'); return; }
+                const form = new FormData();
+                form.append('left_url', leftUrl);
+                form.append('right_url', rightUrl);
+                form.append('filename', 'benchmark_merged.mp4');
+                const resp = await fetch('/benchmark/merge', { method: 'POST', body: form });
+                if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge failed'); }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url; a.download = 'benchmark_merged.mp4';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showSuccess('✅ Merged video downloaded');
+            } catch (e) {
+                showError('Merge download failed: ' + (e.message || e));
+            }
+        }
+
+        async function downloadMergedAll() {
+            try {
+                const pairs = document.getElementById('benchmarkPairs');
+                const list = [];
+                Array.from(pairs.children).forEach((node, idx) => {
+                    const leftUrl = node.dataset.leftUrl;
+                    const rightUrl = node.dataset.rightUrl;
+                    if (leftUrl && rightUrl) {
+                        const baseName = (node.querySelector('video source')?.src || '').split('/').pop().replace(/\.mp4$/i,'') || `pair_${idx+1}`;
+                        list.push({ left_url: leftUrl, right_url: rightUrl, filename: `${baseName}_merged.mp4` });
+                    }
+                });
+                if (list.length === 0) { showError('No pairs available'); return; }
+                const resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
+                if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch failed'); }
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = 'benchmark_merged_all.zip';
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showSuccess('✅ All merged videos downloaded as ZIP');
+            } catch (e) {
+                showError('Merge batch download failed: ' + (e.message || e));
+            }
         }
 
         async function downloadTaskVideo(taskId) {

@@ -4,7 +4,8 @@ Parrot API 代理服務器
 解決瀏覽器 CORS 跨域問題
 """
 
-from flask import Flask, request, jsonify, send_from_directory, Response
+from flask import Flask, request, jsonify, send_from_directory, Response, send_file
+import zipfile
 from flask_cors import CORS
 import requests
 import os
@@ -81,6 +82,139 @@ def generate_video_v0_inner():
 def generate_video_v0_nmd():
     """代理圖片轉視頻請求 - 使用original環境 (nmd端點)"""
     return _generate_video_internal('original', 'v0', 'image-to-video-nmd')
+
+@app.route('/benchmark/merge', methods=['POST'])
+def benchmark_merge():
+    """下載兩個視頻並使用 ffmpeg 合併為左右拼接，返回 mp4。
+    請求: form 或 json
+      - left_url: 左側視頻 URL（必填）
+      - right_url: 右側視頻 URL（必填）
+      - filename: 下載文件名（可選，默認 merged.mp4）
+    """
+    try:
+        left_url = request.form.get('left_url') or (request.json or {}).get('left_url')
+        right_url = request.form.get('right_url') or (request.json or {}).get('right_url')
+        file_name = request.form.get('filename') or (request.json or {}).get('filename') or 'merged.mp4'
+        if not left_url or not right_url:
+            return jsonify({'error': 'left_url and right_url are required'}), 400
+
+        # 下載到臨時文件
+        lpath = tempfile.mktemp(suffix='.mp4')
+        rpath = tempfile.mktemp(suffix='.mp4')
+        opath = tempfile.mktemp(suffix='.mp4')
+        try:
+            for url, path in [(left_url, lpath), (right_url, rpath)]:
+                with requests.get(url, stream=True, timeout=120) as resp:
+                    resp.raise_for_status()
+                    with open(path, 'wb') as f:
+                        for chunk in resp.iter_content(chunk_size=8192):
+                            if chunk:
+                                f.write(chunk)
+
+            # 使用 ffmpeg 進行左右拼接（將兩路縮放到同高 720，再 hstack）
+            cmd = [
+                'ffmpeg','-y',
+                '-i', lpath,
+                '-i', rpath,
+                '-filter_complex', '[0:v]scale=-2:720[lv];[1:v]scale=-2:720[rv];[lv][rv]hstack=inputs=2[v]',
+                '-map', '[v]',
+                '-map', '0:a?',
+                '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+                '-c:a', 'aac', '-shortest',
+                opath
+            ]
+            subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            # 返回文件
+            return send_file(opath, mimetype='video/mp4', as_attachment=True, download_name=file_name)
+        except FileNotFoundError:
+            return jsonify({'error': 'ffmpeg not found. Please install ffmpeg.'}), 500
+        except subprocess.CalledProcessError as e:
+            return jsonify({'error': f'ffmpeg failed: {e}'}), 500
+        except requests.RequestException as rexc:
+            return jsonify({'error': f'download failed: {rexc}'}), 500
+        finally:
+            # 清理臨時文件
+            for p in [lpath, rpath]:
+                try:
+                    if p and os.path.exists(p):
+                        os.remove(p)
+                except Exception:
+                    pass
+            # 輸出文件由 send_file 控制，不在此處刪除
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/benchmark/merge_batch', methods=['POST'])
+def benchmark_merge_batch():
+    """批量左右拼接，返回 ZIP。
+    請求 body JSON: { pairs: [ { left_url, right_url, filename? }, ... ] }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        pairs = data.get('pairs') or []
+        if not isinstance(pairs, list) or not pairs:
+            return jsonify({'error': 'pairs is required'}), 400
+
+        tmp_files = []
+        zip_path = tempfile.mktemp(suffix='.zip')
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            for idx, item in enumerate(pairs, start=1):
+                left_url = item.get('left_url')
+                right_url = item.get('right_url')
+                out_name = item.get('filename') or f'merged_{idx}.mp4'
+                if not left_url or not right_url:
+                    continue
+
+                lpath = tempfile.mktemp(suffix='.mp4')
+                rpath = tempfile.mktemp(suffix='.mp4')
+                opath = tempfile.mktemp(suffix='.mp4')
+                try:
+                    for url, path in [(left_url, lpath), (right_url, rpath)]:
+                        with requests.get(url, stream=True, timeout=180) as resp:
+                            resp.raise_for_status()
+                            with open(path, 'wb') as f:
+                                for chunk in resp.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        f.write(chunk)
+
+                    cmd = [
+                        'ffmpeg','-y',
+                        '-i', lpath,
+                        '-i', rpath,
+                        '-filter_complex', '[0:v]scale=-2:720[lv];[1:v]scale=-2:720[rv];[lv][rv]hstack=inputs=2[v]',
+                        '-map', '[v]',
+                        '-map', '0:a?',
+                        '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+                        '-c:a', 'aac', '-shortest',
+                        opath
+                    ]
+                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    # 添加到 ZIP
+                    zf.write(opath, out_name)
+                except Exception:
+                    # 出錯則跳過此對
+                    pass
+                finally:
+                    for p in [lpath, rpath, opath]:
+                        try:
+                            if p and os.path.exists(p):
+                                tmp_files.append(p)
+                        except Exception:
+                            pass
+
+        # 清理臨時合併視頻
+        for p in tmp_files:
+            try:
+                os.remove(p)
+            except Exception:
+                pass
+
+        return send_file(zip_path, mimetype='application/zip', as_attachment=True, download_name='benchmark_merged_all.zip')
+    except FileNotFoundError:
+        return jsonify({'error': 'ffmpeg not found. Please install ffmpeg.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/generate/2.2/i2v', methods=['POST'])
 def generate_video_v22():
@@ -830,18 +964,23 @@ def test_connection():
         }), 500
 
 if __name__ == '__main__':
-    port = 5003
+    # 允許通過環境變量配置端口與主機
+    try:
+        port = int(os.getenv('PORT', '5003'))
+    except Exception:
+        port = 5003
+    host = os.getenv('HOST', '0.0.0.0')
     try:
         # 關閉自動重載，以避免請求中途重啟導致 connection reset
-        app.run(port=port, debug=False, use_reloader=False)
+        app.run(host=host, port=port, debug=False, use_reloader=False)
     except OSError as e:
         if "Address already in use" in str(e):
             print(f"⚠️ Port {port} is in use. Trying to find a free port...")
             try:
                 free_port = find_free_port()
                 print(f"✅ Found free port: {free_port}. Starting server...")
-                app.run(port=free_port, debug=False, use_reloader=False)
+                app.run(host=host, port=free_port, debug=False, use_reloader=False)
             except Exception as e_new:
                 print(f"❌ Could not start server on a free port. Error: {e_new}")
         else:
-            print(f"❌ An unexpected error occurred: {e}") 
+            print(f"❌ An unexpected error occurred: {e}")

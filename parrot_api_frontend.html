@@ -398,6 +398,10 @@
                 <div id="benchmarkConfig" class="section hidden" style="margin-top:12px;padding-top:12px;border-top:1px dashed #ddd;">
                     <h4 style="margin-bottom:8px;">Benchmark B</h4>
                     <div class="form-group">
+                        <label for="promptTextA">Prompt (A)</label>
+                        <textarea id="promptTextA" class="form-control" placeholder="Prompt for A..." rows="2"></textarea>
+                    </div>
+                    <div class="form-group">
                         <label for="apiProviderB">API Provider (B):</label>
                         <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
                             <option value="staging">Staging - Parrot Labs API 服務器</option>
@@ -892,7 +896,8 @@
                 genDurationSec: null,
                 url: null,
                 created: new Date(),
-                retryCount: 0
+                retryCount: 0,
+                benchmarkLabel: window.benchmarkLabel || ''
             };
         }
 
@@ -1303,9 +1308,10 @@
 
         // 提交單個任務，包含重試邏輯
         async function submitTask(imageFile) {
-            const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const promptText = document.getElementById('promptText').value;
+            // 若有 Benchmark 覆蓋，使用覆蓋參數
+            const apiKey = (window.benchmarkOverrideApiKey ?? document.getElementById('apiKey').value) || '';
+            const apiConfig = window.benchmarkOverrideConfig || getCurrentAPIConfig();
+            const promptText = (window.benchmarkOverridePrompt ?? document.getElementById('promptText').value) || '';
             const MAX_RETRIES = 20; // 提高重試上限
             const RETRY_DELAY = 8000; // 8秒重試間隔
 
@@ -1381,7 +1387,7 @@
                     const headers = {};
                     if (apiKey) headers['X-API-KEY'] = apiKey; // 如果用户提供了API Key就使用，否则使用服务器默认的
                     
-                    // 記錄詳細的API調用信息
+            // 記錄詳細的API調用信息
                     const providerConfig = API_PROVIDERS[apiConfig.provider];
                     const baseUrl = providerConfig.baseUrl;
                     const fullUrl = baseUrl + apiConfig.endpoint;
@@ -1409,18 +1415,18 @@
 
                     if (response.ok) {
                         // 顯示詳細的成功信息
-                        const successDetails = `
+                    const successDetails = `
 ✅ Video Generation Started Successfully!
 
 🆔 Video ID: ${result.video_id}
-📍 Provider: ${apiConfig.provider}
+📍 Provider: ${apiConfig.provider}${window.benchmarkLabel ? ` (${window.benchmarkLabel})` : ''}
 🔗 Version: ${apiConfig.version}
 ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 🌐 Base URL: ${baseUrl}
 🎯 Endpoint: ${apiConfig.endpoint}
 🔗 Full URL: ${fullUrl}
 🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Server Default'}
-📝 Prompt: ${promptText.trim() || 'No prompt provided'}
+📝 Prompt: ${(window.benchmarkOverridePrompt ?? promptText).trim() || 'No prompt provided'}
 📎 Image: ${imageFile.name} (${(imageFile.size / 1024).toFixed(2)} KB)
 🏗️ Worker: ${result.worker || 'Not specified'}
 📊 Status: ${result.status || 'pending'}
@@ -1873,14 +1879,21 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             if (!videoContainer || !task.url) return;
             
             videoContainer.style.display = 'block';
+            const label = task.benchmarkLabel ? `<span style="margin-right:8px; padding:2px 6px; border-radius:10px; background:#eef; color:#335; font-size:12px;">${task.benchmarkLabel}</span>` : '';
+            const endpointInfo = task.submissionDetails ? `${task.submissionDetails.endpoint}` : '';
+            const promptInfo = (task.promptText || '').replaceAll('<','&lt;').replaceAll('>','&gt;');
             videoContainer.innerHTML = `
-                <video controls width="60%" preload="metadata" style="display: block; margin: 10px auto;">
-                    <source src="${task.url}" type="video/mp4">
-                    Your browser does not support video playback.
-                </video>
-                <div style="margin-top: 10px; font-size: 12px; color: #666;">
-                    🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">Open Video</a> |
-                    <a href="javascript:void(0)" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 Download</a>
+                <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
+                    <div style="font-size:12px; color:#666;">${label}${endpointInfo}</div>
+                    <video controls width="60%" preload="metadata" style="display: block; margin: 6px auto;">
+                        <source src="${task.url}" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
+                    <div style="font-size:12px; color:#555; max-width:60%; white-space:pre-wrap; word-break:break-word;">📝 ${promptInfo || 'No prompt'}</div>
+                    <div style="margin-top: 6px; font-size: 12px; color: #666;">
+                        🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">Open Video</a> |
+                        <a href="javascript:void(0)" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 Download</a>
+                    </div>
                 </div>
             `;
         }
@@ -2440,7 +2453,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 return;
             }
 
-            // Benchmark 模式：同一批圖片，分別用 A/B 兩組配置提交
+            // Benchmark 模式：同一批圖片，分別用 A/B 兩組配置提交（使用 Benchmark 區域的 Prompt）
             const images = Array.from(document.getElementById('imageFile').files || []);
             if (images.length === 0) { showError('Please select at least one image file'); return; }
 
@@ -2448,33 +2461,31 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const bKey = document.getElementById('apiKeyB')?.value || '';
             const aCfg = getCurrentAPIConfig();
             const bCfg = getCurrentAPIConfigB();
-            const promptA = document.getElementById('promptText')?.value || '';
+            const promptA = document.getElementById('promptTextA')?.value || '';
             const promptB = document.getElementById('promptTextB')?.value || '';
 
-            // 逐張圖片，先 A 再 B 提交（避免一次性爆量）
             for (const img of images) {
-                // A 組
-                try {
-                    await submitWithConfig(img, aCfg, aKey, promptA);
-                } catch {}
-                // B 組
-                try {
-                    await submitWithConfig(img, bCfg, bKey, promptB);
-                } catch {}
+                // A：覆寫參數後復用原有 submitTask（保留任務/輪詢/錯誤處理）
+                window.benchmarkOverrideConfig = aCfg;
+                window.benchmarkOverrideApiKey = aKey;
+                window.benchmarkOverridePrompt = promptA;
+                window.benchmarkLabel = 'A';
+                window.benchmarkImageName = img.name || '';
+                await submitTask(img);
+                // B：
+                window.benchmarkOverrideConfig = bCfg;
+                window.benchmarkOverrideApiKey = bKey;
+                window.benchmarkOverridePrompt = promptB;
+                window.benchmarkLabel = 'B';
+                window.benchmarkImageName = img.name || '';
+                await submitTask(img);
+                // 清理
+                window.benchmarkOverrideConfig = null;
+                window.benchmarkOverrideApiKey = null;
+                window.benchmarkOverridePrompt = null;
+                window.benchmarkLabel = null;
+                window.benchmarkImageName = null;
             }
-        }
-
-        async function submitWithConfig(imageFile, cfg, apiKey, promptText) {
-            if (!cfg || !cfg.provider || !cfg.version || !cfg.endpoint) return;
-            const formData = new FormData();
-            formData.append('image', imageFile);
-            formData.append('provider', cfg.provider);
-            formData.append('version', cfg.version);
-            if (cfg.endpointType) formData.append('endpoint_type', cfg.endpointType);
-            if (promptText && promptText.trim()) formData.append('promptText', promptText.trim());
-            const headers = {};
-            if (apiKey) headers['X-API-KEY'] = apiKey;
-            await fetch('/api/generate', { method: 'POST', headers, body: formData });
         }
 
         // Minimax Clone 前端交互（自動克隆）

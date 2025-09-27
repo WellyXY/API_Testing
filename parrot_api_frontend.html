@@ -358,6 +358,11 @@
             <!-- API 配置區域 -->
             <div class="api-config">
                 <h3>🔧 API Configuration</h3>
+                <div class="form-group" style="margin-top: 10px;">
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        <input type="checkbox" id="benchmarkToggle" /> Benchmark Mode（雙路對比，同圖資）
+                    </label>
+                </div>
                 
                 <!-- API 提供商選擇 -->
                 <div class="form-group">
@@ -387,6 +392,43 @@
                         <option value="image-to-video-nmd">image-to-video-nmd</option>
                         <option value="audio-to-video">audio-to-video</option>
                     </select>
+                </div>
+
+                <!-- Benchmark 配置區域 (B) -->
+                <div id="benchmarkConfig" class="section hidden" style="margin-top:12px;padding-top:12px;border-top:1px dashed #ddd;">
+                    <h4 style="margin-bottom:8px;">Benchmark B</h4>
+                    <div class="form-group">
+                        <label for="apiProviderB">API Provider (B):</label>
+                        <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
+                            <option value="staging">Staging - Parrot Labs API 服務器</option>
+                            <option value="original" selected>Original - Original Parrot API 服務器</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="apiVersionB">API Version (B):</label>
+                        <select id="apiVersionB" class="form-control" onchange="updateAPIDescriptionB()"></select>
+                    </div>
+                    <div class="form-group" id="endpointTypeGroupB" style="display:none;">
+                        <label for="endpointTypeB">Endpoint Type (B):</label>
+                        <select id="endpointTypeB" class="form-control" onchange="updateAPIDescriptionB()">
+                            <option value="image-to-video">image-to-video (默認)</option>
+                            <option value="image-to-video-new">image-to-video-new</option>
+                            <option value="image-to-video-inner">image-to-video-inner</option>
+                            <option value="image-to-video-nmd">image-to-video-nmd</option>
+                            <option value="audio-to-video">audio-to-video</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <div id="apiDescriptionB" style="background:#f8f9fa;padding:10px;border-radius:5px;border:1px solid #e9ecef;font-size:14px;color:#666;">請選擇 API 提供商和版本</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="apiKeyB">API Key (B):</label>
+                        <input type="password" id="apiKeyB" class="form-control" value="" placeholder="Enter API Key for B">
+                    </div>
+                    <div class="form-group">
+                        <label for="promptTextB">Prompt (B)</label>
+                        <textarea id="promptTextB" class="form-control" placeholder="Prompt for B..." rows="2"></textarea>
+                    </div>
                 </div>
 
                 <!-- API 描述顯示 -->
@@ -714,6 +756,78 @@
             } catch {}
 
             updateAPIDescription();
+        }
+
+        // Benchmark: 更新 B 路的提供商/版本/端點顯示
+        function updateProviderVersionsB() {
+            const providerSelect = document.getElementById('apiProviderB');
+            const versionSelect = document.getElementById('apiVersionB');
+            const endpointTypeGroup = document.getElementById('endpointTypeGroupB');
+            if (!providerSelect || !versionSelect) return;
+            const selectedProvider = providerSelect.value;
+            const providerConfig = API_PROVIDERS[selectedProvider];
+            versionSelect.innerHTML = '';
+            if (providerConfig && providerConfig.versions) {
+                Object.keys(providerConfig.versions).forEach(versionKey => {
+                    const version = providerConfig.versions[versionKey];
+                    const option = document.createElement('option');
+                    option.value = versionKey;
+                    option.textContent = version.name || versionKey;
+                    versionSelect.appendChild(option);
+                });
+            }
+            if (endpointTypeGroup) {
+                const selectedVersion = versionSelect.value;
+                const versionConfig = providerConfig?.versions[selectedVersion];
+                if (versionConfig && versionConfig.endpoints) {
+                    endpointTypeGroup.style.display = 'block';
+                } else {
+                    endpointTypeGroup.style.display = 'none';
+                }
+            }
+            // 自動填入 B 的默認 key
+            try {
+                const keyInput = document.getElementById('apiKeyB');
+                if (keyInput) keyInput.value = providerConfig?.apiKey || '';
+            } catch {}
+            updateAPIDescriptionB();
+        }
+
+        function getCurrentAPIConfigB() {
+            const provider = document.getElementById('apiProviderB')?.value || 'staging';
+            const apiVersion = document.getElementById('apiVersionB')?.value || 'v2.2';
+            const endpointType = document.getElementById('endpointTypeB')?.value;
+            const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
+            let endpoint = '/generate/2.2/i2v';
+            if (versionConfig) {
+                if (versionConfig.endpoints) {
+                    const selectedEndpoint = endpointType && versionConfig.endpoints[endpointType]
+                        ? versionConfig.endpoints[endpointType]
+                        : versionConfig.endpoints[versionConfig.defaultEndpoint];
+                    endpoint = selectedEndpoint.path;
+                } else {
+                    endpoint = versionConfig.endpoint;
+                }
+            }
+            return { provider, version: apiVersion, endpoint, endpointType };
+        }
+
+        function updateAPIDescriptionB() {
+            const provider = document.getElementById('apiProviderB')?.value;
+            const version = document.getElementById('apiVersionB')?.value;
+            const endpointType = document.getElementById('endpointTypeB')?.value;
+            const descElement = document.getElementById('apiDescriptionB');
+            if (!descElement || !provider || !version) return;
+            const providerConfig = API_PROVIDERS[provider];
+            const versionConfig = providerConfig?.versions[version];
+            if (providerConfig && versionConfig) {
+                let description = `${providerConfig.description} - ${versionConfig.description}`;
+                if (versionConfig.endpoints && endpointType) {
+                    const endpointConfig = versionConfig.endpoints[endpointType];
+                    if (endpointConfig) description += ` (${endpointConfig.description})`;
+                }
+                descElement.textContent = description;
+            }
         }
 
         // 根據端點類型顯示/隱藏音頻上傳
@@ -2241,6 +2355,14 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             
             // API配置已固定為staging環境
             updateProviderVersions(); // 初始化提供商和版本選擇
+            // 初始化 Benchmark 區域
+            try {
+                document.getElementById('benchmarkToggle')?.addEventListener('change', (e) => {
+                    const on = e.target.checked;
+                    document.getElementById('benchmarkConfig')?.classList.toggle('hidden', !on);
+                    if (on) updateProviderVersionsB();
+                });
+            } catch {}
         });
 
         // 頁面卸載時清理
@@ -2307,12 +2429,52 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
         }
 
         async function onStartButtonClick() {
+            const isBenchmark = document.getElementById('benchmarkToggle')?.checked;
             const provider = document.getElementById('apiProvider')?.value;
-            if (provider === 'minimax') {
-                await minimaxTTS();
-            } else {
-                await generateVideo();
+            if (!isBenchmark) {
+                if (provider === 'minimax') {
+                    await minimaxTTS();
+                } else {
+                    await generateVideo();
+                }
+                return;
             }
+
+            // Benchmark 模式：同一批圖片，分別用 A/B 兩組配置提交
+            const images = Array.from(document.getElementById('imageFile').files || []);
+            if (images.length === 0) { showError('Please select at least one image file'); return; }
+
+            const aKey = document.getElementById('apiKey')?.value || '';
+            const bKey = document.getElementById('apiKeyB')?.value || '';
+            const aCfg = getCurrentAPIConfig();
+            const bCfg = getCurrentAPIConfigB();
+            const promptA = document.getElementById('promptText')?.value || '';
+            const promptB = document.getElementById('promptTextB')?.value || '';
+
+            // 逐張圖片，先 A 再 B 提交（避免一次性爆量）
+            for (const img of images) {
+                // A 組
+                try {
+                    await submitWithConfig(img, aCfg, aKey, promptA);
+                } catch {}
+                // B 組
+                try {
+                    await submitWithConfig(img, bCfg, bKey, promptB);
+                } catch {}
+            }
+        }
+
+        async function submitWithConfig(imageFile, cfg, apiKey, promptText) {
+            if (!cfg || !cfg.provider || !cfg.version || !cfg.endpoint) return;
+            const formData = new FormData();
+            formData.append('image', imageFile);
+            formData.append('provider', cfg.provider);
+            formData.append('version', cfg.version);
+            if (cfg.endpointType) formData.append('endpoint_type', cfg.endpointType);
+            if (promptText && promptText.trim()) formData.append('promptText', promptText.trim());
+            const headers = {};
+            if (apiKey) headers['X-API-KEY'] = apiKey;
+            await fetch('/api/generate', { method: 'POST', headers, body: formData });
         }
 
         // Minimax Clone 前端交互（自動克隆）

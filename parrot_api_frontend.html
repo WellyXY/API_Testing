@@ -2008,8 +2008,12 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     }
                 });
                 if (list.length === 0) { showError('No pairs available'); return; }
-                const resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
-                if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch failed'); }
+                let resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
+                if (!resp.ok) {
+                    // 線上環境無 ffmpeg 時退化為打包原視頻
+                    resp = await fetch('/benchmark/zip_pairs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
+                    if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch/zip fallback failed'); }
+                }
                 const blob = await resp.blob();
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a'); a.href = url; a.download = 'benchmark_merged_all.zip';

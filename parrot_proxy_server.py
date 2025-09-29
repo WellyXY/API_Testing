@@ -145,6 +145,52 @@ def benchmark_merge():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/benchmark/zip_pairs', methods=['POST'])
+def benchmark_zip_pairs():
+    """在無 ffmpeg 環境下的降級路由：僅把 A/B 原視頻打包為 ZIP 返回。
+    請求 body JSON: { pairs: [ { left_url, right_url, filename? }, ... ] }
+    """
+    try:
+        data = request.get_json(silent=True) or {}
+        pairs = data.get('pairs') or []
+        if not isinstance(pairs, list) or not pairs:
+            return jsonify({'error': 'pairs is required'}), 400
+
+        zip_path = tempfile.mktemp(suffix='.zip')
+        errors = []
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            for idx, item in enumerate(pairs, start=1):
+                left_url = item.get('left_url')
+                right_url = item.get('right_url')
+                base = (item.get('filename') or f'pair_{idx}').replace('/', '_')
+                if not left_url or not right_url:
+                    errors.append(f'pair#{idx}: missing url')
+                    continue
+                for tag, url in [('left', left_url), ('right', right_url)]:
+                    try:
+                        tmp = tempfile.mktemp(suffix='.mp4')
+                        with requests.get(url, stream=True, timeout=300, headers={'User-Agent':'parrot-benchmark/1.0'}) as resp:
+                            resp.raise_for_status()
+                            with open(tmp, 'wb') as f:
+                                for chunk in resp.iter_content(chunk_size=8192):
+                                    if chunk:
+                                        f.write(chunk)
+                        zf.write(tmp, f'{base}_{tag}.mp4')
+                    except Exception as e:
+                        errors.append(f'pair#{idx}-{tag}: {type(e).__name__}: {e}')
+                    finally:
+                        try:
+                            if 'tmp' in locals() and tmp and os.path.exists(tmp):
+                                os.remove(tmp)
+                        except Exception:
+                            pass
+            if errors:
+                zf.writestr('errors.txt', '\n'.join(errors))
+
+        return send_file(zip_path, mimetype='application/zip', as_attachment=True, download_name='benchmark_raw_pairs.zip')
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/benchmark/merge_batch', methods=['POST'])
 def benchmark_merge_batch():
     """批量左右拼接，返回 ZIP。
@@ -173,8 +219,9 @@ def benchmark_merge_batch():
                 rpath = tempfile.mktemp(suffix='.mp4')
                 opath = tempfile.mktemp(suffix='.mp4')
                 try:
+                    print(f"[merge_batch] downloading pair#{idx}")
                     for url, path in [(left_url, lpath), (right_url, rpath)]:
-                        with requests.get(url, stream=True, timeout=180) as resp:
+                        with requests.get(url, stream=True, timeout=300, headers={'User-Agent':'parrot-benchmark/1.0'}) as resp:
                             resp.raise_for_status()
                             with open(path, 'wb') as f:
                                 for chunk in resp.iter_content(chunk_size=8192):
@@ -192,12 +239,24 @@ def benchmark_merge_batch():
                         '-c:a', 'aac', '-shortest',
                         opath
                     ]
-                    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    run = subprocess.run(cmd, check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                    if run.returncode != 0 or not os.path.exists(opath) or os.path.getsize(opath) == 0:
+                        raise RuntimeError(f"ffmpeg failed rc={run.returncode} stderr={run.stderr.decode(errors='ignore')[:200]}")
                     # 添加到 ZIP
                     zf.write(opath, out_name)
                     added_count += 1
                 except Exception as e:
-                    errors.append(f'pair#{idx}: {type(e).__name__}: {e}')
+                    err_msg = f'pair#{idx}: {type(e).__name__}: {e}'
+                    print('[merge_batch][error]', err_msg)
+                    errors.append(err_msg)
+                    # 回退：至少把左右原視頻打包入 ZIP，避免空包
+                    try:
+                        if os.path.exists(lpath):
+                            zf.write(lpath, f'pair_{idx}_left.mp4')
+                        if os.path.exists(rpath):
+                            zf.write(rpath, f'pair_{idx}_right.mp4')
+                    except Exception:
+                        pass
                 finally:
                     for p in [lpath, rpath, opath]:
                         try:

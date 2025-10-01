@@ -111,12 +111,19 @@ def benchmark_merge():
                             if chunk:
                                 f.write(chunk)
 
-            # 使用 ffmpeg 進行左右拼接（將兩路縮放到同高 720，再 hstack）
+            # 使用 ffmpeg 進行左右拼接（將兩路縮放到同高 720，再 hstack）+ 添加 Group (A) 和 Group (B) 文字水印
+            filter_complex = (
+                "[0:v]scale=-2:720,drawtext=text='Group (A)':fontsize=24:fontcolor=white:"
+                "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[lv];"
+                "[1:v]scale=-2:720,drawtext=text='Group (B)':fontsize=24:fontcolor=white:"
+                "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[rv];"
+                "[lv][rv]hstack=inputs=2[v]"
+            )
             cmd = [
                 'ffmpeg','-y',
                 '-i', lpath,
                 '-i', rpath,
-                '-filter_complex', '[0:v]scale=-2:720[lv];[1:v]scale=-2:720[rv];[lv][rv]hstack=inputs=2[v]',
+                '-filter_complex', filter_complex,
                 '-map', '[v]',
                 '-map', '0:a?',
                 '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
@@ -228,11 +235,19 @@ def benchmark_merge_batch():
                                     if chunk:
                                         f.write(chunk)
 
+                    # 添加 Group (A) 和 Group (B) 文字水印
+                    filter_complex = (
+                        "[0:v]scale=-2:720,drawtext=text='Group (A)':fontsize=24:fontcolor=white:"
+                        "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[lv];"
+                        "[1:v]scale=-2:720,drawtext=text='Group (B)':fontsize=24:fontcolor=white:"
+                        "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[rv];"
+                        "[lv][rv]hstack=inputs=2[v]"
+                    )
                     cmd = [
                         'ffmpeg','-y',
                         '-i', lpath,
                         '-i', rpath,
-                        '-filter_complex', '[0:v]scale=-2:720[lv];[1:v]scale=-2:720[rv];[lv][rv]hstack=inputs=2[v]',
+                        '-filter_complex', filter_complex,
                         '-map', '[v]',
                         '-map', '0:a?',
                         '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',

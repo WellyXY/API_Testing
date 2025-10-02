@@ -2521,17 +2521,18 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 });
                 if (list.length === 0) { showError('No pairs available'); return; }
                 let resp = null;
-                // 優先嘗試本地合併服務
-                try {
-                    resp = await fetch('http://localhost:55003/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }), mode: 'cors' });
-                } catch (e) { resp = null; }
-                if (!resp || !resp.ok) {
-                    resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
-                }
+                // 直接调用当前服务器的合并服务
+                console.log('🎬 Requesting batch merge for', list.length, 'pairs');
+                resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
                 if (!resp.ok) {
+                    console.error('❌ Merge batch failed:', resp.status, resp.statusText);
+                    const errorText = await resp.text();
+                    console.error('Error details:', errorText);
                     // 線上環境無 ffmpeg 時退化為打包原視頻
+                    console.log('🔄 Falling back to zip_pairs...');
                     resp = await fetch('/benchmark/zip_pairs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
                     if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch/zip fallback failed'); }
+                    console.log('✅ Using fallback zip (original videos without merge)');
                 }
                 const blob = await resp.blob();
                 const url = URL.createObjectURL(blob);

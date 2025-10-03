@@ -2097,8 +2097,19 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const prevStatus = task.status;
             task.status = result.status || task.status;
             task.progress = result.progress || task.progress;
-            task.url = result.url || task.url;
-            task.streamUrl = result.stream_url || task.streamUrl; // HLS streaming URL
+            
+            // 处理URL：streaming状态下url是m3u8，finished状态下url是mp4
+            if (result.url) {
+                if (task.status === 'streaming') {
+                    task.streamUrl = result.url;
+                    console.log(`📡 Got HLS stream URL: ${result.url}`);
+                } else if (task.status === 'finished' || task.status === 'completed') {
+                    task.url = result.url;
+                    console.log(`🎬 Got final MP4 URL: ${result.url}`);
+                } else {
+                    task.url = result.url;
+                }
+            }
             
             // 如果从streaming转到finished，清理HLS实例
             if (prevStatus === 'streaming' && (task.status === 'finished' || task.status === 'completed')) {

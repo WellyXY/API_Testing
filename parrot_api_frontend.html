@@ -2234,18 +2234,29 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
         // 顯示錯誤訊息
         function showError(message) {
             const errorArea = document.getElementById('errorArea');
-            errorArea.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+            if (errorArea) {
+                errorArea.innerHTML = `<div class="error-message">❌ ${message}</div>`;
+            } else {
+                console.error('❌', message);
+            }
         }
 
-        // 顯示成功訊息
+        // Show success message
         function showSuccess(message) {
             const errorArea = document.getElementById('errorArea');
-            errorArea.innerHTML = `<div class="success-message">✅ ${message}</div>`;
+            if (errorArea) {
+                errorArea.innerHTML = `<div class="success-message">✅ ${message}</div>`;
+            } else {
+                console.log('✅', message);
+            }
         }
 
-        // 清除訊息
+        // Clear messages
         function clearMessages() {
-            document.getElementById('errorArea').innerHTML = '';
+            const errorArea = document.getElementById('errorArea');
+            if (errorArea) {
+                errorArea.innerHTML = '';
+            }
         }
 
         // 任務UI管理

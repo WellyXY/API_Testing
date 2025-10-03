@@ -772,6 +772,8 @@
             }
         }
     </style>
+    <!-- HLS.js for streaming support -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 </head>
 <body>
     <div class="container">
@@ -2096,6 +2098,16 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             task.status = result.status || task.status;
             task.progress = result.progress || task.progress;
             task.url = result.url || task.url;
+            task.streamUrl = result.stream_url || task.streamUrl; // HLS streaming URL
+            
+            // 如果从streaming转到finished，清理HLS实例
+            if (prevStatus === 'streaming' && (task.status === 'finished' || task.status === 'completed')) {
+                if (task.hlsInstance) {
+                    task.hlsInstance.destroy();
+                    task.hlsInstance = null;
+                    console.log(`🔄 Transitioning task #${task.taskNumber} from streaming to finished`);
+                }
+            }
             
             // 計時：等待時間（submitted -> started）與生成時間（started -> finished）
             if (!task.startedAt && (task.status === 'started' || task.progress > 0)) {
@@ -2394,6 +2406,13 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 if (task.url) {
                     showTaskVideo(task);
                 }
+            } else if (task.status === 'streaming') {
+                statusElement.classList.add('processing');
+                statusElement.textContent = '📡 Streaming';
+                
+                if (task.streamUrl) {
+                    showTaskVideo(task);
+                }
             } else if (task.status === 'failed' || task.status === 'error') {
                 statusElement.classList.add('failed');
                 statusElement.textContent = '❌ Failed';
@@ -2412,26 +2431,55 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 
         function showTaskVideo(task) {
             const videoContainer = document.getElementById(`video-${task.id}`);
-            if (!videoContainer || !task.url) return;
+            if (!videoContainer) return;
+            
+            // 判断是streaming状态还是finished状态
+            const isStreaming = task.status === 'streaming';
+            const videoUrl = isStreaming ? task.streamUrl : task.url;
+            
+            if (!videoUrl) return;
             
             videoContainer.style.display = 'block';
             const label = task.benchmarkLabel ? `<span style="margin-right:8px; padding:2px 6px; border-radius:10px; background:#eef; color:#335; font-size:12px;">${task.benchmarkLabel}</span>` : '';
             const endpointInfo = task.submissionDetails ? `${task.submissionDetails.endpoint}` : '';
             const promptInfo = (task.promptText || '').replaceAll('<','&lt;').replaceAll('>','&gt;');
+            const videoId = `video-player-${task.id}`;
+            
             videoContainer.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
-                    <div style="font-size:12px; color:#666;">${label}${endpointInfo}</div>
-                    <video controls width="60%" preload="metadata" style="display: block; margin: 6px auto;">
-                        <source src="${task.url}" type="video/mp4">
+                    <div style="font-size:12px; color:#666;">${label}${endpointInfo} ${isStreaming ? '📡' : ''}</div>
+                    <video id="${videoId}" controls width="60%" ${isStreaming ? '' : 'preload="metadata"'} style="display: block; margin: 6px auto;">
+                        ${isStreaming ? '' : `<source src="${videoUrl}" type="video/mp4">`}
                         Your browser does not support video playback.
                     </video>
                     <div style="font-size:12px; color:#555; max-width:60%; white-space:pre-wrap; word-break:break-word;">📝 ${promptInfo || 'No prompt'}</div>
+                    ${!isStreaming && task.url ? `
                     <div style="margin-top: 6px; font-size: 12px; color: #666;">
                         🎬 <a href="${task.url}" target="_blank" style="color: #4facfe;">Open Video</a> |
                         <a href="javascript:void(0)" onclick="downloadTaskVideo('${task.id}')" style="color: #4facfe;">💾 Download</a>
                     </div>
+                    ` : ''}
                 </div>
             `;
+            
+            // 如果是streaming，使用HLS.js加载m3u8
+            if (isStreaming && task.streamUrl) {
+                const video = document.getElementById(videoId);
+                if (video && window.Hls && window.Hls.isSupported()) {
+                    const hls = new window.Hls();
+                    hls.loadSource(task.streamUrl);
+                    hls.attachMedia(video);
+                    hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
+                        console.log(`📡 HLS stream ready for task #${task.taskNumber}`);
+                    });
+                    // 保存hls实例以便后续清理
+                    task.hlsInstance = hls;
+                } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
+                    // 原生支持HLS (Safari)
+                    video.src = task.streamUrl;
+                    console.log(`📡 Native HLS for task #${task.taskNumber}`);
+                }
+            }
         }
 
         // ==== Benchmark 對比渲染 ====

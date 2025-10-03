@@ -2498,19 +2498,15 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         lowLatencyMode: true,
                         backBufferLength: 90
                     });
-                    hls.loadSource(task.streamUrl);
+                    
+                    // 🎯 使用轉碼代理 URL（將 AC-3 轉為 AAC）
+                    const transcodedUrl = `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
+                    console.log(`🔄 Using transcoded URL: ${transcodedUrl}`);
+                    hls.loadSource(transcodedUrl);
                     hls.attachMedia(video);
                     
                     hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
                         console.log(`📡 HLS stream ready for task #${task.taskNumber}`);
-                        
-                        // 檢查是否有音頻軌道
-                        const audioTracks = hls.audioTracks;
-                        console.log(`🎵 Audio tracks count: ${audioTracks.length}`);
-                        if (audioTracks.length === 0) {
-                            console.warn(`⚠️ No audio tracks found in streaming video for task #${task.taskNumber}`);
-                        }
-                        
                         // 🎯 兩階段播放策略：先靜音播放，然後取消靜音
                         video.muted = true;
                         video.play().then(() => {
@@ -2518,11 +2514,17 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                             setTimeout(() => {
                                 video.muted = false;
                                 video.volume = 1.0;
-                                if (audioTracks.length > 0) {
-                                    console.log(`🔊 Audio unmuted for task #${task.taskNumber}`);
-                                } else {
-                                    console.log(`🔇 Video has no audio track (task #${task.taskNumber})`);
-                                }
+                                console.log(`🔊 Audio unmuted for task #${task.taskNumber}`);
+                                
+                                // 檢測實際播放時是否有音頻（更可靠的方法）
+                                setTimeout(() => {
+                                    const hasAudio = !video.muted && video.volume > 0 && 
+                                                   (video.mozHasAudio || video.webkitAudioDecodedByteCount > 0 || 
+                                                    (video.audioTracks && video.audioTracks.length > 0));
+                                    if (hasAudio === false) {
+                                        console.warn(`⚠️ Video may not have audio track (task #${task.taskNumber})`);
+                                    }
+                                }, 500);
                             }, 100);
                         }).catch(e => console.log('Autoplay prevented:', e));
                     });
@@ -2549,20 +2551,11 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     
                     task.hlsInstance = hls;
                 } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
-                    // 原生支持HLS (Safari)
-                    video.src = task.streamUrl;
+                    // 原生支持HLS (Safari) - 也使用轉碼代理
+                    const transcodedUrl = `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
+                    console.log(`🔄 Safari using transcoded URL: ${transcodedUrl}`);
+                    video.src = transcodedUrl;
                     video.muted = true;
-                    
-                    // 檢查是否有音頻軌道（Safari）
-                    video.addEventListener('loadedmetadata', function checkAudio() {
-                        const hasAudio = video.audioTracks && video.audioTracks.length > 0;
-                        console.log(`🎵 Safari - Audio tracks: ${hasAudio ? video.audioTracks.length : 0}`);
-                        if (!hasAudio) {
-                            console.warn(`⚠️ No audio tracks found in streaming video for task #${task.taskNumber}`);
-                        }
-                        video.removeEventListener('loadedmetadata', checkAudio);
-                    }, { once: true });
-                    
                     video.play().then(() => {
                         console.log(`📡 Native HLS streaming started (muted) for task #${task.taskNumber}`);
                         setTimeout(() => {

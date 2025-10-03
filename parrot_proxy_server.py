@@ -598,6 +598,105 @@ def api_info():
         'providers': API_PROVIDERS
     })
 
+@app.route('/hls-transcode/<path:stream_url>', methods=['GET'])
+def hls_transcode_proxy(stream_url):
+    """
+    HLS streaming 轉碼代理
+    將 AC-3 音頻轉碼為 AAC，使瀏覽器可以播放
+    """
+    try:
+        # 解碼 URL
+        import urllib.parse
+        decoded_url = urllib.parse.unquote(stream_url)
+        
+        print(f"轉碼代理請求: {decoded_url}")
+        
+        # 如果是 m3u8 播放列表，修改其中的 segment URLs
+        if decoded_url.endswith('.m3u8'):
+            response = requests.get(decoded_url, timeout=30)
+            if response.status_code == 200:
+                content = response.text
+                base_url = decoded_url.rsplit('/', 1)[0]
+                
+                # 修改 segment URLs 指向我們的轉碼端點
+                lines = []
+                for line in content.split('\n'):
+                    if line.strip() and not line.startswith('#'):
+                        # segment file
+                        segment_url = f"{base_url}/{line.strip()}"
+                        encoded_segment = urllib.parse.quote(segment_url, safe='')
+                        proxied_url = f"/hls-transcode/{encoded_segment}"
+                        lines.append(proxied_url)
+                    else:
+                        lines.append(line)
+                
+                return Response('\n'.join(lines), mimetype='application/vnd.apple.mpegurl')
+        
+        # 如果是 .ts segment，進行實時轉碼
+        elif decoded_url.endswith('.ts'):
+            # 下載原始 segment
+            response = requests.get(decoded_url, timeout=30)
+            if response.status_code != 200:
+                return jsonify({'error': 'Failed to fetch segment'}), 500
+            
+            # 保存原始 segment
+            with tempfile.NamedTemporaryFile(suffix='.ts', delete=False) as temp_in:
+                temp_in.write(response.content)
+                temp_in_path = temp_in.name
+            
+            # 轉碼輸出
+            temp_out_path = tempfile.mktemp(suffix='.ts')
+            
+            try:
+                # 使用 ffmpeg 轉碼: AC-3 -> AAC
+                cmd = [
+                    'ffmpeg', '-i', temp_in_path,
+                    '-c:v', 'copy',  # 視頻不轉碼
+                    '-c:a', 'aac',   # 音頻轉為 AAC
+                    '-b:a', '128k',  # 音頻比特率
+                    '-f', 'mpegts',  # 輸出格式
+                    '-y',            # 覆蓋輸出
+                    temp_out_path
+                ]
+                
+                result = subprocess.run(
+                    cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.PIPE,
+                    timeout=10
+                )
+                
+                if result.returncode == 0 and os.path.exists(temp_out_path):
+                    with open(temp_out_path, 'rb') as f:
+                        transcoded_data = f.read()
+                    
+                    # 清理臨時文件
+                    os.remove(temp_in_path)
+                    os.remove(temp_out_path)
+                    
+                    return Response(transcoded_data, mimetype='video/mp2t')
+                else:
+                    print(f"FFmpeg 錯誤: {result.stderr.decode()}")
+                    # 轉碼失敗，返回原始數據
+                    os.remove(temp_in_path)
+                    return Response(response.content, mimetype='video/mp2t')
+                    
+            except Exception as e:
+                print(f"轉碼錯誤: {e}")
+                # 清理並返回原始數據
+                if os.path.exists(temp_in_path):
+                    os.remove(temp_in_path)
+                if os.path.exists(temp_out_path):
+                    os.remove(temp_out_path)
+                return Response(response.content, mimetype='video/mp2t')
+        
+        else:
+            return jsonify({'error': 'Unsupported file type'}), 400
+            
+    except Exception as e:
+        print(f"轉碼代理錯誤: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/minimax/env', methods=['GET'])
 def minimax_env():
     """返回 MiniMax 憑證（僅用於本地開發自動填充）

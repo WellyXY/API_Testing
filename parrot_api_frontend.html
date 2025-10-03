@@ -2450,16 +2450,26 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             
             if (!videoUrl) return;
             
+            const videoId = `video-player-${task.id}`;
+            
+            // 检查是否已经渲染过相同的URL，避免重复渲染
+            if (task._currentVideoUrl === videoUrl && document.getElementById(videoId)) {
+                // 视频已经在播放，不要重新渲染
+                return;
+            }
+            
+            // 记录当前URL，避免重复渲染
+            task._currentVideoUrl = videoUrl;
+            
             videoContainer.style.display = 'block';
             const label = task.benchmarkLabel ? `<span style="margin-right:8px; padding:2px 6px; border-radius:10px; background:#eef; color:#335; font-size:12px;">${task.benchmarkLabel}</span>` : '';
             const endpointInfo = task.submissionDetails ? `${task.submissionDetails.endpoint}` : '';
             const promptInfo = (task.promptText || '').replaceAll('<','&lt;').replaceAll('>','&gt;');
-            const videoId = `video-player-${task.id}`;
             
             videoContainer.innerHTML = `
                 <div style="display:flex; flex-direction:column; gap:6px; align-items:center;">
                     <div style="font-size:12px; color:#666;">${label}${endpointInfo} ${isStreaming ? '📡' : ''}</div>
-                    <video id="${videoId}" controls width="60%" ${isStreaming ? '' : 'preload="metadata"'} style="display: block; margin: 6px auto;">
+                    <video id="${videoId}" controls width="60%" ${isStreaming ? 'autoplay' : 'preload="metadata"'} style="display: block; margin: 6px auto;">
                         ${isStreaming ? '' : `<source src="${videoUrl}" type="video/mp4">`}
                         Your browser does not support video playback.
                     </video>
@@ -2482,12 +2492,14 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     hls.attachMedia(video);
                     hls.on(window.Hls.Events.MANIFEST_PARSED, function() {
                         console.log(`📡 HLS stream ready for task #${task.taskNumber}`);
+                        video.play().catch(e => console.log('Autoplay prevented:', e));
                     });
                     // 保存hls实例以便后续清理
                     task.hlsInstance = hls;
                 } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
                     // 原生支持HLS (Safari)
                     video.src = task.streamUrl;
+                    video.play().catch(e => console.log('Autoplay prevented:', e));
                     console.log(`📡 Native HLS for task #${task.taskNumber}`);
                 }
             }

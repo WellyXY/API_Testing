@@ -2636,11 +2636,27 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 form.append('left_url', leftUrl);
                 form.append('right_url', rightUrl);
                 form.append('filename', 'benchmark_merged.mp4');
-                // 優先使用本地合併服務
+                // 優先使用本地合併服務 (有FFmpeg)
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 let resp;
-                try {
-                    resp = await fetch('http://localhost:55003/benchmark/merge', { method: 'POST', body: form, mode: 'cors' });
-                } catch (e) { resp = null; }
+                
+                // 如果不在本地環境，嘗試連接本地服務
+                if (!isLocalhost) {
+                    try {
+                        console.log('🔄 Trying local merge service for single pair...');
+                        resp = await fetch('http://localhost:8000/benchmark/merge', { method: 'POST', body: form, mode: 'cors' });
+                        if (resp && resp.ok) {
+                            console.log('✅ Using local merge service');
+                        } else {
+                            resp = null;
+                        }
+                    } catch (e) { 
+                        console.log('⚠️ Local service not available');
+                        resp = null; 
+                    }
+                }
+                
+                // Fallback到當前服務器
                 if (!resp || !resp.ok) {
                     resp = await fetch('/benchmark/merge', { method: 'POST', body: form });
                 }
@@ -2671,18 +2687,47 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 });
                 if (list.length === 0) { showError('No pairs available'); return; }
                 let resp = null;
-                // 直接调用当前服务器的合并服务
+                
+                // 優先嘗試本地合併服務 (有FFmpeg) - 檢測是否在本地環境
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 console.log('🎬 Requesting batch merge for', list.length, 'pairs');
-                resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
-                if (!resp.ok) {
-                    console.error('❌ Merge batch failed:', resp.status, resp.statusText);
-                    const errorText = await resp.text();
-                    console.error('Error details:', errorText);
-                    // 線上環境無 ffmpeg 時退化為打包原視頻
-                    console.log('🔄 Falling back to zip_pairs...');
-                    resp = await fetch('/benchmark/zip_pairs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
-                    if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch/zip fallback failed'); }
-                    console.log('✅ Using fallback zip (original videos without merge)');
+                console.log(`📍 Running on: ${isLocalhost ? 'Local (FFmpeg available)' : 'Online (No FFmpeg)'}`);
+                
+                // 如果不在本地，嘗試連接本地merge服務
+                if (!isLocalhost) {
+                    try {
+                        console.log('🔄 Trying to connect to local merge service...');
+                        resp = await fetch('http://localhost:8000/benchmark/merge_batch', { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify({ pairs: list }),
+                            mode: 'cors'
+                        });
+                        if (resp && resp.ok) {
+                            console.log('✅ Using local merge service (localhost:8000)');
+                        } else {
+                            resp = null;
+                        }
+                    } catch (e) {
+                        console.log('⚠️ Local merge service not available:', e.message);
+                        resp = null;
+                    }
+                }
+                
+                // 如果本地服務不可用，使用當前服務器
+                if (!resp) {
+                    console.log('🎬 Requesting batch merge from current server');
+                    resp = await fetch('/benchmark/merge_batch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
+                    if (!resp.ok) {
+                        console.error('❌ Merge batch failed:', resp.status, resp.statusText);
+                        const errorText = await resp.text();
+                        console.error('Error details:', errorText);
+                        // 線上環境無 ffmpeg 時退化為打包原視頻
+                        console.log('🔄 Falling back to zip_pairs...');
+                        resp = await fetch('/benchmark/zip_pairs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ pairs: list }) });
+                        if (!resp.ok) { const t = await resp.text(); throw new Error(t || 'merge batch/zip fallback failed'); }
+                        console.log('✅ Using fallback zip (original videos without merge)');
+                    }
                 }
                 const blob = await resp.blob();
                 const url = URL.createObjectURL(blob);

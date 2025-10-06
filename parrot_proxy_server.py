@@ -21,6 +21,9 @@ import time
 app = Flask(__name__)
 CORS(app)  # 允許所有跨域請求
 
+# 增加上传文件大小限制到100MB
+app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
+
 # API 提供商配置
 API_PROVIDERS = {
     'original': {

@@ -119,8 +119,27 @@ def benchmark_merge():
                 "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[rv];"
                 "[lv][rv]hstack=inputs=2[v]"
             )
+            # 尝试多个可能的ffmpeg路径
+            ffmpeg_paths = [
+                '/opt/homebrew/bin/ffmpeg',  # Mac Homebrew
+                '/usr/local/bin/ffmpeg',      # Linux/Mac alternative
+                '/usr/bin/ffmpeg',            # Linux standard
+                'ffmpeg'                      # PATH fallback
+            ]
+            ffmpeg_cmd = None
+            for path in ffmpeg_paths:
+                try:
+                    subprocess.run([path, '-version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                    ffmpeg_cmd = path
+                    break
+                except (FileNotFoundError, subprocess.CalledProcessError):
+                    continue
+            
+            if not ffmpeg_cmd:
+                raise FileNotFoundError("⚠️ FFmpeg not available on this server. Please use local server (http://localhost:8000) for video merging.")
+            
             cmd = [
-                '/opt/homebrew/bin/ffmpeg','-y',
+                ffmpeg_cmd,'-y',
                 '-i', lpath,
                 '-i', rpath,
                 '-filter_complex', filter_complex,
@@ -243,8 +262,28 @@ def benchmark_merge_batch():
                         "box=1:boxcolor=black@0.5:boxborderw=5:x=20:y=20[rv];"
                         "[lv][rv]hstack=inputs=2[v]"
                     )
+                    
+                    # 尝试多个可能的ffmpeg路径
+                    ffmpeg_paths = [
+                        '/opt/homebrew/bin/ffmpeg',
+                        '/usr/local/bin/ffmpeg',
+                        '/usr/bin/ffmpeg',
+                        'ffmpeg'
+                    ]
+                    ffmpeg_cmd = None
+                    for path in ffmpeg_paths:
+                        try:
+                            subprocess.run([path, '-version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                            ffmpeg_cmd = path
+                            break
+                        except (FileNotFoundError, subprocess.CalledProcessError):
+                            continue
+                    
+                    if not ffmpeg_cmd:
+                        raise FileNotFoundError("⚠️ FFmpeg not available on this server. Please use local server (http://localhost:8000) for video merging.")
+                    
                     cmd = [
-                        '/opt/homebrew/bin/ffmpeg','-y',
+                        ffmpeg_cmd,'-y',
                         '-i', lpath,
                         '-i', rpath,
                         '-filter_complex', filter_complex,

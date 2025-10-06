@@ -120,7 +120,7 @@ def benchmark_merge():
                 "[lv][rv]hstack=inputs=2[v]"
             )
             cmd = [
-                'ffmpeg','-y',
+                '/opt/homebrew/bin/ffmpeg','-y',
                 '-i', lpath,
                 '-i', rpath,
                 '-filter_complex', filter_complex,
@@ -244,7 +244,7 @@ def benchmark_merge_batch():
                         "[lv][rv]hstack=inputs=2[v]"
                     )
                     cmd = [
-                        'ffmpeg','-y',
+                        '/opt/homebrew/bin/ffmpeg','-y',
                         '-i', lpath,
                         '-i', rpath,
                         '-filter_complex', filter_complex,

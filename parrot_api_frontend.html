@@ -386,22 +386,125 @@
         }
 
         /* Benchmark Section */
+        #benchmarkConfig {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-lg);
+        }
+        
+        .benchmark-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: var(--spacing-lg);
+        }
+        
         .benchmark-section {
-            background: #f0f7ff;
-            border: 1px solid #cce4ff;
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            margin-top: var(--spacing-md);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.15);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .benchmark-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+            pointer-events: none;
+        }
+        
+        .benchmark-section:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(102, 126, 234, 0.25);
+        }
+        
+        .benchmark-section:first-child {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 8px 24px rgba(245, 87, 108, 0.15);
+        }
+        
+        .benchmark-section:first-child:hover {
+            box-shadow: 0 12px 32px rgba(245, 87, 108, 0.25);
         }
 
         .benchmark-section h4 {
-            font-size: 14px;
-            font-weight: 500;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: var(--spacing-lg);
             display: flex;
             align-items: center;
             gap: var(--spacing-sm);
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .benchmark-section .form-group {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .benchmark-section label {
+            color: rgba(255,255,255,0.95);
+            font-weight: 500;
+            font-size: 13px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .benchmark-section .form-control {
+            background: white;
+            border: 1px solid rgba(255,255,255,0.3);
+            backdrop-filter: blur(10px);
+            color: var(--text-primary);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .benchmark-section .form-control:focus {
+            background: white;
+            border-color: rgba(255,255,255,0.6);
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+        }
+        
+        .benchmark-section select.form-control {
+            background: white;
+            cursor: pointer;
+        }
+        
+        .benchmark-section select.form-control option {
+            background: white;
+            color: var(--text-primary);
+        }
+        
+        .benchmark-section .description-box {
+            background: rgba(255,255,255,0.15);
+            border-left: 3px solid rgba(255,255,255,0.5);
+            color: white;
+            backdrop-filter: blur(10px);
+            font-size: 11px;
+            line-height: 1.4;
+            max-height: 60px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .benchmark-section .description-box::before {
+            content: '📋 ';
+        }
+        
+        /* 在小屏幕上垂直排列 */
+        @media (max-width: 1024px) {
+            .benchmark-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .btn {
@@ -850,53 +953,48 @@
                 <div id="benchmarkConfig" class="section hidden">
                     <div class="section-divider"></div>
                     
-                    <div class="benchmark-section">
-                        <h4>🅰️ Path A Configuration</h4>
-                        <div class="form-group">
-                            <label for="promptTextA">Prompt (A)</label>
-                            <textarea id="promptTextA" class="form-control" placeholder="Enter prompt for path A..." rows="2"></textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="benchmark-section" style="margin-top: var(--spacing-md);">
-                        <h4>🅱️ Path B Configuration</h4>
-                        
-                        <div class="select-row">
-                            <label for="apiProviderB">Provider:</label>
-                            <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
-                                <option value="staging">Staging - Parrot Labs</option>
-                                <option value="original" selected>Original - Parrot API</option>
-                            </select>
+                    <div class="benchmark-grid">
+                        <!-- Path A -->
+                        <div class="benchmark-section">
+                            <h4>🅰️ Path A Configuration</h4>
+                            <div class="form-group">
+                                <label for="promptTextA">Prompt (A)</label>
+                                <textarea id="promptTextA" class="form-control" placeholder="Enter prompt for path A..." rows="3"></textarea>
+                            </div>
                         </div>
                         
-                        <div class="select-row">
-                            <label for="apiVersionB">Version:</label>
-                            <select id="apiVersionB" class="form-control" onchange="updateAPIDescriptionB()"></select>
-                        </div>
-                        
-                        <div class="select-row" id="endpointTypeGroupB" style="display:none;">
-                            <label for="endpointTypeB">Endpoint:</label>
-                            <select id="endpointTypeB" class="form-control" onchange="updateAPIDescriptionB()">
-                                <option value="image-to-video">image-to-video (default)</option>
-                                <option value="image-to-video-new">image-to-video-new</option>
-                                <option value="image-to-video-inner">image-to-video-inner</option>
-                                <option value="image-to-video-nmd">image-to-video-nmd</option>
-                                <option value="audio-to-video">audio-to-video</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <div id="apiDescriptionB" class="description-box">Select API provider and version for Path B</div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="apiKeyB">API Key (B):</label>
-                            <input type="password" id="apiKeyB" class="form-control" value="" placeholder="Enter API Key for Path B">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="promptTextB">Prompt (B)</label>
-                            <textarea id="promptTextB" class="form-control" placeholder="Enter prompt for path B..." rows="2"></textarea>
+                        <!-- Path B -->
+                        <div class="benchmark-section">
+                            <h4>🅱️ Path B Configuration</h4>
+                            
+                            <div class="form-group">
+                                <label for="apiProviderB">Provider</label>
+                                <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
+                                    <option value="staging">Staging - Parrot Labs</option>
+                                    <option value="original" selected>Original - Parrot API</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="apiVersionB">Version</label>
+                                <select id="apiVersionB" class="form-control" onchange="updateAPIDescriptionB()"></select>
+                            </div>
+                            
+                            <div class="form-group" id="endpointTypeGroupB" style="display:none;">
+                                <label for="endpointTypeB">Endpoint</label>
+                                <select id="endpointTypeB" class="form-control" onchange="updateAPIDescriptionB()">
+                                    <option value="image-to-video">image-to-video (default)</option>
+                                    <option value="image-to-video-new">image-to-video-new</option>
+                                    <option value="image-to-video-inner">image-to-video-inner</option>
+                                    <option value="image-to-video-nmd">image-to-video-nmd</option>
+                                    <option value="audio-to-video">audio-to-video</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="promptTextB">Prompt (B)</label>
+                                <textarea id="promptTextB" class="form-control" placeholder="Enter prompt for path B..." rows="3"></textarea>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1344,10 +1442,16 @@
             const providerConfig = API_PROVIDERS[provider];
             const versionConfig = providerConfig?.versions[version];
             if (providerConfig && versionConfig) {
-                let description = `${providerConfig.description} - ${versionConfig.description}`;
+                // 简化描述文字
+                let description = `${version}`;
                 if (versionConfig.endpoints && endpointType) {
                     const endpointConfig = versionConfig.endpoints[endpointType];
-                    if (endpointConfig) description += ` (${endpointConfig.description})`;
+                    if (endpointConfig) {
+                        // 只显示 endpoint 类型，不显示完整描述
+                        description += ` • ${endpointType}`;
+                    }
+                } else {
+                    description = versionConfig.description;
                 }
                 descElement.textContent = description;
             }

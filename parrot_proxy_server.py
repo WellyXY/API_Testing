@@ -36,6 +36,7 @@ API_PROVIDERS = {
                 'image-to-video-new': '/generate/v0/image-to-video-new',
                 'image-to-video-inner': '/generate/v0/image-to-video-inner',
                 'image-to-video-nmd': '/generate/v0/image-to-video-nmd',
+                'image-to-video-v2': '/generate/v0/image-to-video-v2',
                 'audio-to-video': '/generate/v0/audio-to-video'
             }
         }
@@ -85,6 +86,11 @@ def generate_video_v0_inner():
 def generate_video_v0_nmd():
     """代理圖片轉視頻請求 - 使用original環境 (nmd端點)"""
     return _generate_video_internal('original', 'v0', 'image-to-video-nmd')
+
+@app.route('/generate/v0/image-to-video-v2', methods=['POST'])
+def generate_video_v0_v2():
+    """代理圖片轉視頻請求 - 使用original環境 (v2端點)"""
+    return _generate_video_internal('original', 'v0', 'image-to-video-v2')
 
 @app.route('/benchmark/merge', methods=['POST'])
 def benchmark_merge():

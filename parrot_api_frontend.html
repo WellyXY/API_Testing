@@ -1169,7 +1169,7 @@
                 <!-- i2i Toggle -->
                 <div class="form-group" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-md);">
                     <label style="margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                        🎨 Enable i2i (Image-to-Image)
+                        🎨 Enable reference image
                     </label>
                     <label class="switch" style="margin-left: auto;">
                         <input type="checkbox" id="i2iToggle" onchange="toggleI2IMode()">
@@ -1868,9 +1868,8 @@
             const promptHint = document.getElementById('promptHint');
             
             if (i2iToggle.checked) {
-                generateBtnText.textContent = '🎨 Generate Images → Videos (i2i + i2v)';
-                promptHint.textContent = '(for both image and video generation)';
-                showSuccess('✅ i2i mode enabled: Images will be processed through Seedream first, then converted to video');
+                generateBtnText.textContent = '🎨 Generate Videos';
+                promptHint.textContent = '(with reference image)';
             } else {
                 generateBtnText.textContent = '🚀 Generate Videos';
                 promptHint.textContent = '(for video generation)';
@@ -1881,86 +1880,109 @@
         async function processI2I(imageFile, prompt) {
             console.log('🎨 Starting i2i process with Seedream...');
             console.log(`📝 i2i Prompt: ${prompt}`);
-            console.log(`🖼️ Original Image: ${imageFile.name}`);
+            console.log(`🖼️ Original Image: ${imageFile.name} (${imageFile.type})`);
             
             return new Promise((resolve, reject) => {
+                // Convert image to JPEG format (Seedream doesn't support webp)
+                const img = new Image();
                 const reader = new FileReader();
-                reader.onload = async function(e) {
-                    try {
-                        const base64Image = e.target.result;
-                        
-                        const seedreamPayload = {
-                            model: "ep-20250921042133-t769x",
-                            prompt: prompt,
-                            image: base64Image,
-                            size: "1440x2560",
-                            watermark: false
-                        };
-
-                        console.log('📤 Sending request to Seedream API via proxy...');
-                        
-                        // Use our proxy server endpoint
-                        const response = await fetch('/seedream/generate', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(seedreamPayload)
-                        });
-
-                        if (!response.ok) {
-                            const errorText = await response.text();
-                            throw new Error(`Seedream API returned ${response.status}: ${errorText}`);
-                        }
-
-                        const result = await response.json();
-                        console.log('📦 Seedream API response:', result);
-                        
-                        if (result.data && result.data.length > 0) {
-                            const imageData = result.data[0];
-                            console.log('✅ i2i generation successful!');
+                
+                reader.onload = function(e) {
+                    img.onload = async function() {
+                        try {
+                            // Create canvas and convert to JPEG
+                            const canvas = document.createElement('canvas');
+                            canvas.width = img.width;
+                            canvas.height = img.height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0);
                             
-                            // 優先使用 base64 數據（後端已下載並轉換）
-                            if (imageData.base64) {
-                                console.log('📦 Using base64 data from server (CORS bypass)');
-                                // Convert base64 to File
-                                const base64Data = imageData.base64.split(',')[1];
-                                const binaryData = atob(base64Data);
-                                const arrayBuffer = new Uint8Array(binaryData.length);
-                                for (let i = 0; i < binaryData.length; i++) {
-                                    arrayBuffer[i] = binaryData.charCodeAt(i);
-                                }
-                                const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
-                                const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
-                                console.log('✅ Converted base64 to File object');
-                                resolve(newFile);
-                            } else if (imageData.url) {
-                                // 回退：嘗試直接下載 URL（可能有 CORS 問題）
-                                console.log('🖼️ Generated image URL:', imageData.url);
-                                console.log('📥 Downloading generated image...');
-                                const imgResponse = await fetch(imageData.url);
-                                if (!imgResponse.ok) {
-                                    throw new Error(`Failed to download generated image: ${imgResponse.status}`);
-                                }
-                                const blob = await imgResponse.blob();
-                                const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
-                                console.log('✅ Downloaded and converted to File object');
-                                resolve(newFile);
-                            } else {
-                                throw new Error('No image data (base64 or URL) returned');
+                            // Convert to JPEG base64 (Seedream API needs data URL format)
+                            const base64Image = canvas.toDataURL('image/jpeg', 0.95);
+                            console.log(`🔄 Converted ${imageFile.type} to image/jpeg`);
+                            
+                            const seedreamPayload = {
+                                model: "ep-20250921042133-t769x",
+                                prompt: prompt,
+                                image: base64Image,
+                                size: "1440x2560",
+                                watermark: false
+                            };
+
+                            console.log('📤 Sending request to Seedream API via proxy...');
+                            
+                            // Use our proxy server endpoint
+                            const response = await fetch('/seedream/generate', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify(seedreamPayload)
+                            });
+
+                            if (!response.ok) {
+                                const errorText = await response.text();
+                                throw new Error(`Seedream API returned ${response.status}: ${errorText}`);
                             }
-                        } else {
-                            throw new Error('Seedream API returned no image data');
+
+                            const result = await response.json();
+                            console.log('📦 Seedream API response:', result);
+                            
+                            if (result.data && result.data.length > 0) {
+                                const imageData = result.data[0];
+                                console.log('✅ i2i generation successful!');
+                                
+                                // 優先使用 base64 數據（後端已下載並轉換）
+                                if (imageData.base64) {
+                                    console.log('📦 Using base64 data from server (CORS bypass)');
+                                    // Convert base64 to File
+                                    const base64Data = imageData.base64.split(',')[1];
+                                    const binaryData = atob(base64Data);
+                                    const arrayBuffer = new Uint8Array(binaryData.length);
+                                    for (let i = 0; i < binaryData.length; i++) {
+                                        arrayBuffer[i] = binaryData.charCodeAt(i);
+                                    }
+                                    const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
+                                    const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
+                                    console.log('✅ Converted base64 to File object');
+                                    resolve(newFile);
+                                } else if (imageData.url) {
+                                    // 回退：嘗試直接下載 URL（可能有 CORS 問題）
+                                    console.log('🖼️ Generated image URL:', imageData.url);
+                                    console.log('📥 Downloading generated image...');
+                                    const imgResponse = await fetch(imageData.url);
+                                    if (!imgResponse.ok) {
+                                        throw new Error(`Failed to download generated image: ${imgResponse.status}`);
+                                    }
+                                    const blob = await imgResponse.blob();
+                                    const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
+                                    console.log('✅ Downloaded and converted to File object');
+                                    resolve(newFile);
+                                } else {
+                                    throw new Error('No image data (base64 or URL) returned');
+                                }
+                            } else {
+                                throw new Error('Seedream API returned no image data');
+                            }
+                        } catch (error) {
+                            console.error('❌ i2i processing failed:', error);
+                            reject(error);
                         }
-                    } catch (error) {
-                        console.error('❌ i2i processing failed:', error);
-                        reject(error);
-                    }
+                    };
+                    
+                    img.onerror = (error) => {
+                        console.error('❌ Image loading error:', error);
+                        reject(new Error('Failed to load image for conversion'));
+                    };
+                    
+                    img.src = e.target.result;
                 };
+                
                 reader.onerror = (error) => {
                     console.error('❌ FileReader error:', error);
                     reject(error);
                 };
+                
                 reader.readAsDataURL(imageFile);
             });
         }

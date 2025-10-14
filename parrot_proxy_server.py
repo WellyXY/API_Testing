@@ -1174,7 +1174,13 @@ def seedream_generate():
         print(f"📝 Prompt: {data.get('prompt', '')[:100]}...")
         print(f"🎨 Model: {data.get('model', '')}")
         
+        # 调试：打印 image 字段的前100个字符
+        if 'image' in data:
+            img_preview = str(data['image'])[:100] if data['image'] else 'None'
+            print(f"🖼️  Image data preview: {img_preview}...")
+        
         # 轉發請求到 Seedream API
+        print(f"🚀 發送請求到: {SEEDREAM_BASE_URL}/images/generations")
         seedream_response = requests.post(
             f"{SEEDREAM_BASE_URL}/images/generations",
             headers={
@@ -1184,6 +1190,7 @@ def seedream_generate():
             json=data,
             timeout=120
         )
+        print(f"📊 Seedream API 响应状态: {seedream_response.status_code}")
         
         result = seedream_response.json()
         

@@ -974,7 +974,7 @@
                     <div class="select-row">
                         <label for="apiProvider">Provider:</label>
                         <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                            <option value="testing" selected>🧪 Testing (New Architecture)</option>
+                            <option value="testing" selected>🧪 Testing (⚠️ 仅本地)</option>
                             <option value="staging">Staging - Parrot Labs</option>
                             <option value="original">Original - Parrot API</option>
                             <option value="minimax">Minimax TTS</option>
@@ -1022,7 +1022,7 @@
                             <div class="form-group">
                                 <label for="apiProviderB">Provider</label>
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
-                                    <option value="testing">🧪 Testing (New Architecture)</option>
+                                    <option value="testing">🧪 Testing (⚠️ 仅本地)</option>
                                     <option value="staging">Staging - Parrot Labs</option>
                                     <option value="original" selected>Original - Parrot API</option>
                                 </select>
@@ -1309,9 +1309,10 @@
         const API_PROVIDERS = {
             'testing': {
                 name: 'Testing (New Architecture)',
-                description: '新测试架构 - 需要 SSH 隧道',
+                description: '新测试架构 - ⚠️ 仅本地可用（需要 SSH 隧道）',
                 baseUrl: 'http://localhost:9580',
                 apiKey: 'test-api-key-123456',
+                localOnly: true,  // 标记为仅本地可用
                 versions: {
                     'v1': {
                         endpoints: {
@@ -1497,6 +1498,12 @@
                     keyInput.value = providerConfig?.apiKey || '';
                 }
             } catch {}
+            
+            // 检查是否选择了仅本地可用的 Provider，并且当前在线上环境
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            if (providerConfig?.localOnly && !isLocalhost) {
+                showError(`⚠️ "${providerConfig.name}" 仅支持本地使用！\n\n此 Provider 需要通过 SSH 隧道连接远程服务器。\n请在本地环境（localhost）运行并启动隧道：\n\n./start_testing_tunnel_bg.sh`);
+            }
 
             updateAPIDescription();
         }
@@ -2440,6 +2447,17 @@
 
         // 提交單個任務，包含重試邏輯
         async function submitTask(imageFile) {
+            // 检查是否在线上使用仅本地可用的 Provider
+            const apiConfig = getCurrentAPIConfig();
+            const providerConfig = API_PROVIDERS[apiConfig.provider];
+            const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            
+            if (providerConfig?.localOnly && !isLocalhost) {
+                showError(`❌ "${providerConfig.name}" 仅支持本地使用！\n\n请在本地环境运行并启动 SSH 隧道：\n./start_testing_tunnel_bg.sh`);
+                console.error(`❌ Cannot use ${apiConfig.provider} provider in online environment`);
+                return;
+            }
+            
             // Check if sticking video mode is enabled
             const stickingVideoToggle = document.getElementById('stickingVideoToggle');
             const stickingVideoEnabled = stickingVideoToggle?.checked || false;

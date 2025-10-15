@@ -1177,6 +1177,20 @@
                     </label>
                 </div>
 
+                <!-- Sticking Video Toggle -->
+                <div class="form-group" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); color: white;">
+                    <label style="margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                        🎬 Sticking Video (AI Prompt Generation)
+                    </label>
+                    <label class="switch" style="margin-left: auto;">
+                        <input type="checkbox" id="stickingVideoToggle" onchange="toggleStickingVideoMode()">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div id="stickingVideoHint" class="description-box" style="display: none; margin-bottom: var(--spacing-md);">
+                    ⚡ <strong>Sticking Video Mode:</strong> AI will generate 3 image variants from your reference, then create videos for each variant. This will produce 3 final videos.
+                </div>
+
                 <!-- Prompt (unified for both i2i and i2v) -->
                 <div class="form-group">
                     <label for="promptText">
@@ -1226,6 +1240,19 @@
                 </button>
                 <div style="margin-top: var(--spacing-sm); font-size: 12px; color: var(--text-secondary);">
                     💡 Videos will be named after their corresponding images
+                </div>
+            </div>
+
+            <!-- Sticking Video Merge Download -->
+            <div class="card" id="downloadStickingCard" style="display: none; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <div class="card-header" style="border-bottom-color: rgba(255,255,255,0.2);">
+                    <div class="card-title" style="color: white;">🎬 Sticking Video Merge</div>
+                </div>
+                <button class="btn btn-success" id="downloadStickingBtn" onclick="downloadMergedStickingVideos()" style="background: white; color: #667eea; font-weight: 600;">
+                    💫 Merge & Download (Dissolve Effect)
+                </button>
+                <div style="margin-top: var(--spacing-sm); font-size: 12px; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
+                    💡 Merges 3 variants with smooth dissolve transitions
                 </div>
             </div>
 
@@ -1864,16 +1891,245 @@
         // i2i Mode Toggle
         function toggleI2IMode() {
             const i2iToggle = document.getElementById('i2iToggle');
+            const stickingVideoToggle = document.getElementById('stickingVideoToggle');
             const generateBtnText = document.getElementById('generateBtnText');
             const promptHint = document.getElementById('promptHint');
             
+            // Disable sticking video if i2i is enabled
             if (i2iToggle.checked) {
+                stickingVideoToggle.checked = false;
+                stickingVideoToggle.disabled = true;
+                document.getElementById('stickingVideoHint').style.display = 'none';
                 generateBtnText.textContent = '🎨 Generate Videos';
                 promptHint.textContent = '(with reference image)';
             } else {
+                stickingVideoToggle.disabled = false;
                 generateBtnText.textContent = '🚀 Generate Videos';
                 promptHint.textContent = '(for video generation)';
             }
+        }
+
+        // Sticking Video Mode Toggle
+        function toggleStickingVideoMode() {
+            const stickingVideoToggle = document.getElementById('stickingVideoToggle');
+            const i2iToggle = document.getElementById('i2iToggle');
+            const generateBtnText = document.getElementById('generateBtnText');
+            const promptHint = document.getElementById('promptHint');
+            const stickingVideoHint = document.getElementById('stickingVideoHint');
+            
+            if (stickingVideoToggle.checked) {
+                // Disable i2i if sticking video is enabled
+                i2iToggle.checked = false;
+                i2iToggle.disabled = true;
+                stickingVideoHint.style.display = 'block';
+                generateBtnText.textContent = '🎬 Generate Sticking Videos (3x)';
+                promptHint.textContent = '(AI will generate variants)';
+            } else {
+                i2iToggle.disabled = false;
+                stickingVideoHint.style.display = 'none';
+                generateBtnText.textContent = '🚀 Generate Videos';
+                promptHint.textContent = '(for video generation)';
+            }
+        }
+
+        // Process Sticking Video - Generate prompts and create multiple variants
+        async function processStickingVideo(imageFile, videoPrompt) {
+            console.log('🎬 Starting Sticking Video process...');
+            console.log(`📷 Image: ${imageFile.name}`);
+            console.log(`📝 Video Prompt: ${videoPrompt}`);
+            
+            try {
+                // Step 1: Call backend to generate prompts
+                showSuccess(`🤖 Generating AI prompts for ${imageFile.name}...`);
+                
+                const formData = new FormData();
+                formData.append('image', imageFile);
+                formData.append('video_prompt', videoPrompt);
+                
+                console.log('📤 Sending request to /generate-prompts...');
+                const response = await fetch('/generate-prompts', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`Prompt generation failed: ${response.status} - ${errorText}`);
+                }
+                
+                const result = await response.json();
+                console.log('✅ Prompts generated:', result);
+                
+                const imagePrompts = result.image_prompts || [];
+                const videoPrompts = result.video_prompts || [];
+                
+                if (imagePrompts.length === 0 || videoPrompts.length === 0) {
+                    throw new Error('No prompts generated');
+                }
+                
+                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting image generation...`);
+                
+                // Step 2: For each prompt pair, do i2i → i2v
+                const processedTasks = [];
+                
+                for (let i = 0; i < imagePrompts.length; i++) {
+                    const imagePrompt = imagePrompts[i];
+                    const videoPromptVariant = videoPrompts[i];
+                    
+                    console.log(`\n${'='.repeat(70)}`);
+                    console.log(`🎨 Processing variant ${i + 1}/${imagePrompts.length}`);
+                    console.log(`${'='.repeat(70)}`);
+                    console.log(`📝 Image Prompt: ${imagePrompt.substring(0, 100)}...`);
+                    console.log(`📝 Video Prompt: ${videoPromptVariant.substring(0, 100)}...`);
+                    
+                    try {
+                        // Step 2a: i2i with Seedream
+                        showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant...`);
+                        const processedImage = await processI2I(imageFile, imagePrompt);
+                        console.log(`✅ Variant ${i + 1} image generated`);
+                        
+                        // Step 2b: Submit i2v task with processed image and video prompt
+                        showSuccess(`🎬 [${i + 1}/${imagePrompts.length}] Submitting video generation...`);
+                        
+                        // Create a modified submitTask call with override prompt
+                        window.stickingVideoOverridePrompt = videoPromptVariant;
+                        window.stickingVideoVariantIndex = i + 1;
+                        window.stickingVideoTotalVariants = imagePrompts.length;
+                        
+                        await submitTaskForStickingVideo(processedImage, videoPromptVariant, i + 1, imageFile.name);
+                        
+                        // Clean up overrides
+                        window.stickingVideoOverridePrompt = null;
+                        window.stickingVideoVariantIndex = null;
+                        window.stickingVideoTotalVariants = null;
+                        
+                        console.log(`✅ Variant ${i + 1} submitted`);
+                        
+                        // Small delay between variants
+                        if (i < imagePrompts.length - 1) {
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                        
+                    } catch (variantError) {
+                        console.error(`❌ Variant ${i + 1} failed:`, variantError);
+                        showError(`❌ Variant ${i + 1} failed: ${variantError.message}`);
+                        // Continue with other variants
+                    }
+                }
+                
+                showSuccess(`🎉 All ${imagePrompts.length} sticking video variants submitted!`);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Sticking Video process failed:', error);
+                showError(`❌ Sticking Video failed: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Modified submitTask for Sticking Video (submits a single variant)
+        async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName) {
+            const apiKey = document.getElementById('apiKey').value || '';
+            const apiConfig = getCurrentAPIConfig();
+            const MAX_RETRIES = 20;
+            const RETRY_DELAY = 8000;
+            
+            let lastError = 'Unknown error';
+            
+            // Create task with variant info
+            const tempId = `sticking-${Date.now()}-${Math.random()}`;
+            const displayName = `[Sticking ${variantIndex}] ${originalImageName}`;
+            const task = createTask(tempId, videoPrompt, displayName);
+            task.stickingVideoMode = true;
+            task.stickingVideoVariant = variantIndex;
+            task.status = 'submitting';
+            task.submittedAt = Date.now();
+            task.apiProvider = apiConfig.provider;
+            task.apiVersion = apiConfig.version;
+            task.apiEndpointType = apiConfig.endpointType;
+            task.apiKey = apiKey;
+            tasks.set(tempId, task);
+            createTaskCard(task);
+            updateTaskCard(task);
+            showTasksArea();
+            
+            // Submission logic (similar to submitTask)
+            for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                task.retryCount = attempt;
+                updateTaskCard(task);
+                
+                try {
+                    if (attempt > 0) {
+                        console.log(`[Retry] Attempt ${attempt}/${MAX_RETRIES} for sticking video variant ${variantIndex}...`);
+                        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+                    }
+                    
+                    const formData = new FormData();
+                    formData.append('image', processedImageFile);
+                    formData.append('provider', apiConfig.provider);
+                    formData.append('version', apiConfig.version);
+                    if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
+                    if (videoPrompt.trim()) formData.append('promptText', videoPrompt.trim());
+                    
+                    const headers = {};
+                    if (apiKey) headers['X-API-KEY'] = apiKey;
+                    
+                    console.log(`📤 Submitting sticking video variant ${variantIndex} to API...`);
+                    const response = await fetch('/api/generate', { method: 'POST', headers, body: formData });
+                    const result = await response.json().catch(() => ({}));
+                    
+                    console.log('📊 API Response:', response.status, result);
+                    
+                    if (response.ok) {
+                        const realId = result.video_id;
+                        tasks.delete(task.id);
+                        updateCardIds(task.id, realId);
+                        task.id = realId;
+                        task.status = 'waiting';
+                        tasks.set(realId, task);
+                        
+                        if (!statusCheckInterval) {
+                            try { startStatusCheck(); } catch {}
+                        }
+                        
+                        updateTaskCard(task);
+                        console.log(`✅ Sticking video variant ${variantIndex} submitted: ${realId}`);
+                        return;
+                    }
+                    
+                    lastError = result.detail || result.message || `HTTP ${response.status}`;
+                    const isRetryable = response.status === 429 || response.status >= 500;
+                    
+                    if (isRetryable && attempt < MAX_RETRIES) {
+                        console.warn(`[Retry] Will retry variant ${variantIndex}. Error: ${lastError}`);
+                        task.status = `retrying (${attempt + 1})`;
+                        updateTaskCard(task);
+                        continue;
+                    } else {
+                        task.status = 'failed';
+                        updateTaskCard(task);
+                        showError(lastError);
+                        return;
+                    }
+                    
+                } catch (error) {
+                    lastError = error.message || 'Request error';
+                    const isNetwork = lastError.toLowerCase().includes('network');
+                    if (isNetwork && attempt < MAX_RETRIES) {
+                        task.status = `retrying (${attempt + 1})`;
+                        updateTaskCard(task);
+                        continue;
+                    }
+                    task.status = 'failed';
+                    updateTaskCard(task);
+                    showError(lastError);
+                    return;
+                }
+            }
+            
+            console.error(`❌ Sticking video variant ${variantIndex} failed after ${MAX_RETRIES} retries`);
+            task.status = 'failed';
+            updateTaskCard(task);
         }
 
         // Call Seedream API for i2i
@@ -2129,12 +2385,34 @@
 
         // 提交單個任務，包含重試邏輯
         async function submitTask(imageFile) {
+            // Check if sticking video mode is enabled
+            const stickingVideoToggle = document.getElementById('stickingVideoToggle');
+            const stickingVideoEnabled = stickingVideoToggle?.checked || false;
+            
             // Check if i2i mode is enabled
             const i2iToggle = document.getElementById('i2iToggle');
             const i2iEnabled = i2iToggle?.checked || false;
             
             // Get the unified prompt
             const promptText = (window.benchmarkOverridePrompt ?? document.getElementById('promptText').value) || '';
+            
+            // Handle Sticking Video Mode
+            if (stickingVideoEnabled && !window.benchmarkOverridePrompt) {
+                if (!promptText.trim()) {
+                    showError('❌ Sticking Video mode requires a video prompt!');
+                    return;
+                }
+                
+                console.log('🎬 Sticking Video mode detected - processing...');
+                try {
+                    await processStickingVideo(imageFile, promptText);
+                    return; // processStickingVideo handles everything
+                } catch (error) {
+                    console.error('❌ Sticking Video failed:', error);
+                    showError(`❌ Sticking Video failed: ${error.message}`);
+                    return;
+                }
+            }
             
             let processedImageFile = imageFile;
 
@@ -3227,6 +3505,101 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 } else {
                     downloadCard.style.display = 'none';
                 }
+            }
+            
+            // 顯示/隱藏 Sticking Video 合併下載按鈕
+            const downloadStickingCard = document.getElementById('downloadStickingCard');
+            const completedStickingVideos = Array.from(tasks.values()).filter(task => 
+                task.stickingVideoMode && 
+                (task.status === 'finished' || task.status === 'completed') && 
+                task.url
+            );
+            
+            if (downloadStickingCard) {
+                if (completedStickingVideos.length === 3) {
+                    downloadStickingCard.style.display = 'block';
+                } else {
+                    downloadStickingCard.style.display = 'none';
+                }
+            }
+        }
+
+        // 下載合併的 Sticking Videos
+        async function downloadMergedStickingVideos() {
+            console.log('🎬 Starting sticking videos merge...');
+            
+            // 獲取所有完成的 sticking video 任務
+            const completedStickingVideos = Array.from(tasks.values()).filter(task => 
+                task.stickingVideoMode && 
+                (task.status === 'finished' || task.status === 'completed') && 
+                task.url
+            ).sort((a, b) => a.stickingVideoVariant - b.stickingVideoVariant); // 按變體編號排序
+            
+            console.log(`📋 Found ${completedStickingVideos.length} completed sticking videos:`, 
+                completedStickingVideos.map(t => ({ variant: t.stickingVideoVariant, url: t.url })));
+            
+            if (completedStickingVideos.length !== 3) {
+                showError(`❌ Need exactly 3 completed sticking videos, but found ${completedStickingVideos.length}`);
+                return;
+            }
+            
+            const downloadBtn = document.getElementById('downloadStickingBtn');
+            const originalText = downloadBtn.textContent;
+            downloadBtn.disabled = true;
+            downloadBtn.textContent = '⏳ Merging videos...';
+            
+            try {
+                // 使用 dissolve 轉場效果
+                const transition = 'dissolve';
+                console.log(`💫 Using dissolve transition`);
+                
+                // 提取視頻 URLs
+                const videoUrls = completedStickingVideos.map(task => task.url);
+                
+                showSuccess('💫 Downloading and merging videos with dissolve effect...');
+                
+                // 調用後端合併 API
+                const response = await fetch('/merge-sticking-videos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        video_urls: videoUrls,
+                        transition: transition
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+                
+                // 獲取合併後的視頻 blob
+                const blob = await response.blob();
+                
+                // 創建下載連結
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `sticking_videos_merged_dissolve.mp4`;
+                link.style.display = 'none';
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // 清理 blob URL
+                window.URL.revokeObjectURL(url);
+                
+                showSuccess(`✅ Sticking videos merged successfully with dissolve effect!`);
+                
+            } catch (error) {
+                console.error('❌ Merge failed:', error);
+                showError(`❌ Merge failed: ${error.message}`);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = originalText;
             }
         }
 

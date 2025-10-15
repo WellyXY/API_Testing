@@ -1223,6 +1223,283 @@ def seedream_generate():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@app.route('/merge-sticking-videos', methods=['POST'])
+def merge_sticking_videos():
+    """
+    合并 3 个 sticking video 变体为一个视频，添加转场效果
+    
+    请求 JSON:
+      {
+        "video_urls": ["url1", "url2", "url3"],
+        "transition": "fade" (可选: fade, wipeleft, wiperight, slideleft, slideright, circlecrop, dissolve)
+      }
+    
+    响应: 合并后的视频文件
+    """
+    try:
+        data = request.get_json() or {}
+        video_urls = data.get('video_urls', [])
+        transition = data.get('transition', 'dissolve')  # 默认使用溶解效果
+        
+        if len(video_urls) != 3:
+            return jsonify({'error': 'Exactly 3 video URLs required'}), 400
+        
+        print(f"\n{'='*70}")
+        print(f"🎬 收到 Sticking Videos 合併請求")
+        print(f"{'='*70}")
+        print(f"📹 視頻數量: {len(video_urls)}")
+        print(f"🎨 轉場效果: {transition}")
+        
+        # 下載 3 個視頻到臨時文件
+        temp_files = []
+        for idx, url in enumerate(video_urls, 1):
+            print(f"📥 下載視頻 {idx}/3...")
+            temp_file = tempfile.mktemp(suffix='.mp4')
+            try:
+                response = requests.get(url, stream=True, timeout=300, headers={'User-Agent': 'sticking-video-merger/1.0'})
+                response.raise_for_status()
+                with open(temp_file, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+                temp_files.append(temp_file)
+                print(f"✅ 視頻 {idx} 下載完成")
+            except Exception as e:
+                print(f"❌ 視頻 {idx} 下載失敗: {e}")
+                for f in temp_files:
+                    try:
+                        if os.path.exists(f):
+                            os.remove(f)
+                    except:
+                        pass
+                return jsonify({'error': f'Failed to download video {idx}: {str(e)}'}), 500
+        
+        # 檢查是否有 ffmpeg
+        ffmpeg_paths = [
+            '/opt/homebrew/bin/ffmpeg',
+            '/usr/local/bin/ffmpeg',
+            '/usr/bin/ffmpeg',
+            'ffmpeg'
+        ]
+        ffmpeg_cmd = None
+        for path in ffmpeg_paths:
+            try:
+                subprocess.run([path, '-version'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                ffmpeg_cmd = path
+                print(f"✅ 找到 ffmpeg: {path}")
+                break
+            except (FileNotFoundError, subprocess.CalledProcessError):
+                continue
+        
+        if not ffmpeg_cmd:
+            # 清理臨時文件
+            for f in temp_files:
+                try:
+                    if os.path.exists(f):
+                        os.remove(f)
+                except:
+                    pass
+            return jsonify({'error': 'FFmpeg not available on this server'}), 500
+        
+        # 輸出文件
+        output_file = tempfile.mktemp(suffix='.mp4')
+        
+        try:
+            # 構建 ffmpeg 命令 - 使用 xfade 濾鏡添加轉場
+            # 每個視頻預計 3-5 秒，我們在最後 0.5 秒開始轉場
+            print(f"🎬 開始合併視頻，使用 {transition} 轉場效果...")
+            
+            # 先獲取每個視頻的時長
+            durations = []
+            for temp_file in temp_files:
+                probe_cmd = [
+                    ffmpeg_cmd, '-i', temp_file,
+                    '-f', 'null', '-'
+                ]
+                result = subprocess.run(probe_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+                # 從 stderr 中提取時長
+                for line in result.stderr.split('\n'):
+                    if 'Duration:' in line:
+                        time_str = line.split('Duration:')[1].split(',')[0].strip()
+                        h, m, s = time_str.split(':')
+                        duration = float(h) * 3600 + float(m) * 60 + float(s)
+                        durations.append(duration)
+                        break
+            
+            if len(durations) != 3:
+                # 如果無法獲取時長，使用默認值
+                durations = [3.0, 3.0, 3.0]
+                print(f"⚠️ 無法獲取視頻時長，使用默認值: {durations}")
+            else:
+                print(f"📊 視頻時長: {durations}")
+            
+            # 轉場時長
+            transition_duration = 0.5
+            
+            # 計算轉場開始時間
+            # 第一次轉場：video1 末尾前 0.5s 開始
+            offset1 = durations[0] - transition_duration
+            # 第二次轉場：合併後的 v01 末尾前 0.5s 開始
+            # v01 長度 = durations[0] + durations[1] - transition_duration
+            offset2 = durations[0] + durations[1] - 2 * transition_duration
+            
+            # 構建複雜的 filter_complex
+            # 使用 xfade 濾鏡在視頻之間添加轉場效果
+            filter_complex = (
+                f"[0:v][1:v]xfade=transition={transition}:duration={transition_duration}:offset={offset1}[v01];"
+                f"[v01][2:v]xfade=transition={transition}:duration={transition_duration}:offset={offset2}[vout]"
+            )
+            
+            cmd = [
+                ffmpeg_cmd, '-y',
+                '-i', temp_files[0],
+                '-i', temp_files[1],
+                '-i', temp_files[2],
+                '-filter_complex', filter_complex,
+                '-map', '[vout]',
+                '-c:v', 'libx264',
+                '-preset', 'medium',
+                '-crf', '23',
+                '-movflags', '+faststart',
+                output_file
+            ]
+            
+            print(f"📝 FFmpeg 命令: {' '.join(cmd[:10])}...")
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode != 0:
+                print(f"❌ FFmpeg 錯誤:")
+                print(result.stderr[-1000:])  # 只打印最後 1000 字符
+                raise Exception(f"FFmpeg failed with code {result.returncode}")
+            
+            print(f"✅ 視頻合併完成!")
+            print(f"📁 輸出文件: {output_file}")
+            print(f"📊 文件大小: {os.path.getsize(output_file) / 1024 / 1024:.2f} MB")
+            print(f"{'='*70}\n")
+            
+            # 返回合併後的視頻
+            return send_file(
+                output_file,
+                mimetype='video/mp4',
+                as_attachment=True,
+                download_name='sticking_videos_merged.mp4'
+            )
+            
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Video merging timeout (>5 minutes)'}), 500
+        except Exception as e:
+            print(f"❌ 視頻合併失敗: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'error': f'Video merging failed: {str(e)}'}), 500
+        finally:
+            # 清理臨時文件
+            for f in temp_files + [output_file]:
+                try:
+                    if os.path.exists(f):
+                        os.remove(f)
+                except:
+                    pass
+                    
+    except Exception as e:
+        print(f"❌ 合併請求錯誤: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/generate-prompts', methods=['POST'])
+def generate_prompts():
+    """
+    生成 image 和 video prompts（用於 sticking video 功能）
+    
+    請求:
+      - image: 圖片文件 (FormData)
+      - video_prompt: 原始視頻 prompt (FormData)
+    
+    響應: JSON
+      {
+        "image_prompts": [...],  # 3個圖片prompts
+        "video_prompts": [...]   # 3個視頻prompts
+      }
+    """
+    try:
+        print(f"\n{'='*70}")
+        print(f"🎨 收到 Sticking Video Prompt 生成請求")
+        print(f"{'='*70}")
+        
+        # 獲取上傳的圖片
+        if 'image' not in request.files:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image_file = request.files['image']
+        video_prompt = request.form.get('video_prompt', '')
+        
+        print(f"📷 圖片: {image_file.filename}")
+        print(f"📝 視頻 Prompt: {video_prompt[:100]}...")
+        
+        # 保存圖片到臨時文件
+        temp_image_path = tempfile.mktemp(suffix='.jpg')
+        image_file.save(temp_image_path)
+        
+        try:
+            # 導入 image_prompt_generator
+            from PIL import Image
+            import sys
+            sys.path.insert(0, os.path.dirname(__file__))
+            from image_prompt_generator import generate_variant_prompts, generate_video_prompts_for_images
+            
+            # 加載圖片
+            image = Image.open(temp_image_path)
+            print(f"✅ 圖片已加載: {image.size}")
+            
+            # 生成 image prompts
+            print(f"⏳ 正在生成 image prompts...")
+            image_prompts = generate_variant_prompts(
+                user_prompt="Generate prompts",
+                image=image,
+                max_retries=3
+            )
+            
+            if not image_prompts:
+                return jsonify({'error': 'Failed to generate image prompts'}), 500
+            
+            print(f"✅ 生成了 {len(image_prompts)} 個 image prompts")
+            
+            # 生成 video prompts
+            print(f"⏳ 正在生成 video prompts...")
+            video_prompts = generate_video_prompts_for_images(
+                image_prompts=image_prompts,
+                video_prompt=video_prompt,
+                parallel=True  # 並行生成
+            )
+            
+            if not video_prompts:
+                return jsonify({'error': 'Failed to generate video prompts'}), 500
+            
+            print(f"✅ 生成了 {len(video_prompts)} 個 video prompts")
+            print(f"{'='*70}\n")
+            
+            return jsonify({
+                'image_prompts': image_prompts,
+                'video_prompts': video_prompts,
+                'count': len(image_prompts)
+            })
+            
+        finally:
+            # 清理臨時文件
+            try:
+                if os.path.exists(temp_image_path):
+                    os.remove(temp_image_path)
+            except Exception:
+                pass
+                
+    except Exception as e:
+        print(f"❌ Prompt 生成錯誤: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/test', methods=['GET', 'OPTIONS'])
 def test_connection():
     """測試連接端點"""
@@ -1269,9 +1546,9 @@ def test_connection():
 if __name__ == '__main__':
     # 允許通過環境變量配置端口與主機
     try:
-        port = int(os.getenv('PORT', '5003'))
+        port = int(os.getenv('PORT', '5005'))
     except Exception:
-        port = 5003
+        port = 5005
     host = os.getenv('HOST', '0.0.0.0')
     try:
         # 關閉自動重載，以避免請求中途重啟導致 connection reset

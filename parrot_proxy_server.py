@@ -1239,7 +1239,7 @@ def merge_sticking_videos():
     try:
         data = request.get_json() or {}
         video_urls = data.get('video_urls', [])
-        transition = data.get('transition', 'dissolve')  # 默认使用溶解效果
+        transition = data.get('transition', 'fade')  # 默认使用淡入淡出效果
         
         if len(video_urls) != 3:
             return jsonify({'error': 'Exactly 3 video URLs required'}), 400

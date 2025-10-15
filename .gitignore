@@ -4,6 +4,9 @@ ssh_key.pub
 *.pem
 aws-general.pem
 
+# Vertex AI credentials
+vertex-ai.json
+
 # Test files
 test_image.png
 test_*.png

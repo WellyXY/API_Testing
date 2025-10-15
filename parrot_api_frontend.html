@@ -1251,10 +1251,10 @@
                     <div class="card-title" style="color: white;">🎬 Sticking Video Merge</div>
                 </div>
                 <button class="btn btn-success" id="downloadStickingBtn" onclick="downloadMergedStickingVideos()" style="background: white; color: #667eea; font-weight: 600;">
-                    💫 Merge & Download (Dissolve Effect)
+                    💫 Merge & Download (Fade Effect)
                 </button>
                 <div style="margin-top: var(--spacing-sm); font-size: 12px; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
-                    💡 Merges 3 variants with smooth dissolve transitions
+                    💡 Merges 3 variants with smooth fade transitions
                 </div>
             </div>
 
@@ -1990,57 +1990,63 @@
                     throw new Error('No prompts generated');
                 }
                 
-                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting image generation...`);
+                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting parallel image generation...`);
                 
-                // Step 2: For each prompt pair, do i2i → i2v
-                const processedTasks = [];
+                // Step 2: 并行处理所有 i2i → i2v
+                console.log('🚀 Starting parallel processing of all variants...');
                 
-                for (let i = 0; i < imagePrompts.length; i++) {
-                    const imagePrompt = imagePrompts[i];
-                    const videoPromptVariant = videoPrompts[i];
-                    
+                // 并行生成所有图片变体
+                const i2iPromises = imagePrompts.map(async (imagePrompt, i) => {
                     console.log(`\n${'='.repeat(70)}`);
-                    console.log(`🎨 Processing variant ${i + 1}/${imagePrompts.length}`);
+                    console.log(`🎨 Processing variant ${i + 1}/${imagePrompts.length} (parallel)`);
                     console.log(`${'='.repeat(70)}`);
                     console.log(`📝 Image Prompt: ${imagePrompt.substring(0, 100)}...`);
-                    console.log(`📝 Video Prompt: ${videoPromptVariant.substring(0, 100)}...`);
                     
                     try {
-                        // Step 2a: i2i with Seedream
-                        showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant...`);
+                        showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant (parallel)...`);
                         const processedImage = await processI2I(imageFile, imagePrompt);
                         console.log(`✅ Variant ${i + 1} image generated`);
+                        return { processedImage, videoPrompt: videoPrompts[i], index: i + 1 };
+                    } catch (error) {
+                        console.error(`❌ Variant ${i + 1} i2i failed:`, error);
+                        throw error;
+                    }
+                });
+                
+                // 等待所有 i2i 完成
+                const i2iResults = await Promise.allSettled(i2iPromises);
+                
+                // 并行提交所有 i2v 任务
+                const i2vPromises = i2iResults.map(async (result, i) => {
+                    if (result.status === 'fulfilled') {
+                        const { processedImage, videoPrompt, index } = result.value;
                         
-                        // Step 2b: Submit i2v task with processed image and video prompt
-                        showSuccess(`🎬 [${i + 1}/${imagePrompts.length}] Submitting video generation...`);
+                        console.log(`📝 Video Prompt ${index}: ${videoPrompt.substring(0, 100)}...`);
+                        showSuccess(`🎬 [${index}/${imagePrompts.length}] Submitting video generation (parallel)...`);
                         
-                        // Create a modified submitTask call with override prompt
-                        window.stickingVideoOverridePrompt = videoPromptVariant;
-                        window.stickingVideoVariantIndex = i + 1;
+                        window.stickingVideoOverridePrompt = videoPrompt;
+                        window.stickingVideoVariantIndex = index;
                         window.stickingVideoTotalVariants = imagePrompts.length;
                         
-                        await submitTaskForStickingVideo(processedImage, videoPromptVariant, i + 1, imageFile.name);
-                        
-                        // Clean up overrides
-                        window.stickingVideoOverridePrompt = null;
-                        window.stickingVideoVariantIndex = null;
-                        window.stickingVideoTotalVariants = null;
-                        
-                        console.log(`✅ Variant ${i + 1} submitted`);
-                        
-                        // Small delay between variants
-                        if (i < imagePrompts.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        try {
+                            await submitTaskForStickingVideo(processedImage, videoPrompt, index, imageFile.name);
+                            console.log(`✅ Variant ${index} submitted`);
+                        } finally {
+                            window.stickingVideoOverridePrompt = null;
+                            window.stickingVideoVariantIndex = null;
+                            window.stickingVideoTotalVariants = null;
                         }
-                        
-                    } catch (variantError) {
-                        console.error(`❌ Variant ${i + 1} failed:`, variantError);
-                        showError(`❌ Variant ${i + 1} failed: ${variantError.message}`);
-                        // Continue with other variants
+                    } else {
+                        console.error(`❌ Variant ${i + 1} was skipped due to i2i failure`);
+                        showError(`❌ Variant ${i + 1} failed: ${result.reason?.message || 'Unknown error'}`);
                     }
-                }
+                });
                 
-                showSuccess(`🎉 All ${imagePrompts.length} sticking video variants submitted!`);
+                // 等待所有 i2v 提交完成
+                await Promise.allSettled(i2vPromises);
+                
+                const successCount = i2iResults.filter(r => r.status === 'fulfilled').length;
+                showSuccess(`🎉 ${successCount}/${imagePrompts.length} sticking video variants submitted!`);
                 return true;
                 
             } catch (error) {
@@ -3606,14 +3612,14 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             downloadBtn.textContent = '⏳ Merging videos...';
             
             try {
-                // 使用 dissolve 轉場效果
-                const transition = 'dissolve';
-                console.log(`💫 Using dissolve transition`);
+                // 使用 fade 轉場效果
+                const transition = 'fade';
+                console.log(`💫 Using fade transition`);
                 
                 // 提取視頻 URLs
                 const videoUrls = completedStickingVideos.map(task => task.url);
                 
-                showSuccess('💫 Downloading and merging videos with dissolve effect...');
+                showSuccess('💫 Downloading and merging videos with fade effect...');
                 
                 // 調用後端合併 API
                 const response = await fetch('/merge-sticking-videos', {
@@ -3639,7 +3645,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `sticking_videos_merged_dissolve.mp4`;
+                link.download = `sticking_videos_merged_fade.mp4`;
                 link.style.display = 'none';
                 
                 document.body.appendChild(link);
@@ -3649,7 +3655,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 // 清理 blob URL
                 window.URL.revokeObjectURL(url);
                 
-                showSuccess(`✅ Sticking videos merged successfully with dissolve effect!`);
+                showSuccess(`✅ Sticking videos merged successfully with fade effect!`);
                 
             } catch (error) {
                 console.error('❌ Merge failed:', error);

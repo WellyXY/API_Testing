@@ -1543,6 +1543,84 @@ def test_connection():
             'message': str(e)
         }), 500
 
+@app.route('/testing-proxy/<path:subpath>', methods=['GET', 'POST', 'OPTIONS'])
+def testing_proxy(subpath):
+    """
+    代理请求到 Testing Provider (localhost:9580)
+    解决 CORS 问题
+    """
+    if request.method == 'OPTIONS':
+        # 处理 CORS 预检请求
+        response = Response()
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type, X-API-Key'
+        return response
+    
+    try:
+        # 构建目标 URL
+        target_url = f"http://localhost:9580/{subpath}"
+        print(f"🔄 [Testing Proxy] {request.method} {target_url}")
+        
+        # 转发请求头
+        headers = {}
+        if 'X-API-Key' in request.headers:
+            headers['X-API-Key'] = request.headers['X-API-Key']
+        
+        # 转发请求
+        if request.method == 'POST':
+            # 转发 POST 请求（multipart/form-data）
+            files = {}
+            data = {}
+            
+            if request.files:
+                for key, file in request.files.items():
+                    files[key] = (file.filename, file.stream, file.content_type)
+            
+            if request.form:
+                for key, value in request.form.items():
+                    data[key] = value
+            
+            print(f"   Files: {list(files.keys())}")
+            print(f"   Data: {list(data.keys())}")
+            
+            response = requests.post(
+                target_url,
+                headers=headers,
+                files=files if files else None,
+                data=data if data else None,
+                timeout=120
+            )
+        else:
+            # GET 请求
+            response = requests.get(
+                target_url,
+                headers=headers,
+                timeout=30
+            )
+        
+        print(f"   Status: {response.status_code}")
+        
+        # 返回响应
+        return Response(
+            response.content,
+            status=response.status_code,
+            headers={
+                'Content-Type': response.headers.get('Content-Type', 'application/json'),
+                'Access-Control-Allow-Origin': '*'
+            }
+        )
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request timeout'}), 504
+    except requests.exceptions.ConnectionError:
+        return jsonify({'error': 'Cannot connect to testing server. Make sure SSH tunnel is running.'}), 503
+    except Exception as e:
+        print(f"❌ [Testing Proxy] Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     # 允許通過環境變量配置端口與主機
     try:

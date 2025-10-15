@@ -2114,8 +2114,9 @@
                     // 根据 provider 决定请求 URL
                     let requestUrl;
                     if (apiConfig.provider === 'testing') {
-                        const providerConfig = API_PROVIDERS[apiConfig.provider];
-                        requestUrl = `${providerConfig.baseUrl}${apiConfig.endpoint}`;
+                        // 新架构通过代理请求（解决 CORS 问题）
+                        const apiPath = apiConfig.endpoint.replace(/^\//, '');
+                        requestUrl = `/testing-proxy/${apiPath}`;
                     } else {
                         requestUrl = '/api/generate';
                     }
@@ -2597,9 +2598,10 @@
                     // 根据 provider 决定请求 URL
                     let requestUrl;
                     if (apiConfig.provider === 'testing') {
-                        // 新架构直接请求到 localhost:9580
-                        const providerConfig = API_PROVIDERS[apiConfig.provider];
-                        requestUrl = `${providerConfig.baseUrl}${apiConfig.endpoint}`;
+                        // 新架构通过代理请求（解决 CORS 问题）
+                        // 将 /api/v1/generate/v0/image-to-video 转换为 /testing-proxy/api/v1/generate/v0/image-to-video
+                        const apiPath = apiConfig.endpoint.replace(/^\//, ''); // 去掉开头的 /
+                        requestUrl = `/testing-proxy/${apiPath}`;
                     } else {
                         // 其他 provider 通过代理
                         requestUrl = '/api/generate';
@@ -2759,12 +2761,14 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     // 根据 provider 确定查询路径
                     let queryUrl;
                     if (taskProvider === 'testing') {
-                        // 新架构使用直接的 API 路径
+                        // 新架构通过代理请求（解决 CORS 问题）
                         const providerConfig = API_PROVIDERS[taskProvider];
                         const versionConfig = providerConfig?.versions[task.apiVersion || 'v1'];
                         const endpointConfig = versionConfig?.endpoints?.[task.apiEndpointType || 'image-to-video'];
                         const queryPath = endpointConfig?.queryPath || '/api/v1/generate/v0/videos';
-                        queryUrl = `${providerConfig.baseUrl}${queryPath}/${task.id}`;
+                        // 将 /api/v1/generate/v0/videos 转换为 /testing-proxy/api/v1/generate/v0/videos
+                        const apiPath = queryPath.replace(/^\//, '');
+                        queryUrl = `/testing-proxy/${apiPath}/${task.id}`;
                     } else {
                         // 其他 provider 使用代理
                         queryUrl = `/videos/${task.id}?provider=${taskProvider}`;

@@ -7,6 +7,9 @@ aws-general.pem
 # Vertex AI credentials - use environment variable instead
 vertex-ai.json
 
+# SSH tunnel runtime files
+testing_tunnel.pid
+
 # Test files
 test_image.png
 test_*.png

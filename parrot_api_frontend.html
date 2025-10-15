@@ -1969,19 +1969,27 @@
                 formData.append('image', imageFile);
                 formData.append('video_prompt', videoPrompt);
                 
-                console.log('📤 Sending request to /generate-prompts...');
+                console.log('📤 [Gemini] Sending request to /generate-prompts...');
+                console.log(`📤 [Gemini] Image: ${imageFile.name}, Size: ${(imageFile.size / 1024).toFixed(2)}KB`);
+                console.log(`📤 [Gemini] Video Prompt: ${videoPrompt}`);
+                
+                const startTime = Date.now();
                 const response = await fetch('/generate-prompts', {
                     method: 'POST',
                     body: formData
                 });
                 
+                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
+                
                 if (!response.ok) {
                     const errorText = await response.text();
+                    console.error(`❌ [Gemini] Failed after ${elapsed}s: ${response.status}`);
                     throw new Error(`Prompt generation failed: ${response.status} - ${errorText}`);
                 }
                 
                 const result = await response.json();
-                console.log('✅ Prompts generated:', result);
+                console.log(`✅ [Gemini] Completed in ${elapsed}s`);
+                console.log('✅ [Gemini] Generated prompts:', result);
                 
                 const imagePrompts = result.image_prompts || [];
                 const videoPrompts = result.video_prompts || [];
@@ -2172,9 +2180,10 @@
 
         // Call Seedream API for i2i
         async function processI2I(imageFile, prompt) {
-            console.log('🎨 Starting i2i process with Seedream...');
-            console.log(`📝 i2i Prompt: ${prompt}`);
-            console.log(`🖼️ Original Image: ${imageFile.name} (${imageFile.type})`);
+            const i2iStartTime = Date.now();
+            console.log('🎨 [Seedream] Starting i2i process...');
+            console.log(`📝 [Seedream] Prompt: ${prompt.substring(0, 100)}...`);
+            console.log(`🖼️ [Seedream] Input Image: ${imageFile.name} (${imageFile.type}), Size: ${(imageFile.size / 1024).toFixed(2)}KB`);
             
             return new Promise((resolve, reject) => {
                 // Convert image to JPEG format (Seedream doesn't support webp)
@@ -2193,7 +2202,8 @@
                             
                             // Convert to JPEG base64 (Seedream API needs data URL format)
                             const base64Image = canvas.toDataURL('image/jpeg', 0.95);
-                            console.log(`🔄 Converted ${imageFile.type} to image/jpeg`);
+                            const conversionTime = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
+                            console.log(`🔄 [Seedream] Converted to JPEG in ${conversionTime}s`);
                             
                             const seedreamPayload = {
                                 model: "ep-20250921042133-t769x",
@@ -2203,7 +2213,7 @@
                                 watermark: false
                             };
 
-                            console.log('📤 Sending request to Seedream API via proxy...');
+                            console.log('📤 [Seedream] Sending API request via proxy...');
                             
                             // Use our proxy server endpoint
                             const response = await fetch('/seedream/generate', {
@@ -2214,21 +2224,24 @@
                                 body: JSON.stringify(seedreamPayload)
                             });
 
+                            const apiElapsed = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
+                            
                             if (!response.ok) {
                                 const errorText = await response.text();
+                                console.error(`❌ [Seedream] API failed after ${apiElapsed}s: ${response.status}`);
                                 throw new Error(`Seedream API returned ${response.status}: ${errorText}`);
                             }
 
                             const result = await response.json();
-                            console.log('📦 Seedream API response:', result);
+                            console.log(`✅ [Seedream] API responded in ${apiElapsed}s`);
+                            console.log('📦 [Seedream] Response data:', result);
                             
                             if (result.data && result.data.length > 0) {
                                 const imageData = result.data[0];
-                                console.log('✅ i2i generation successful!');
                                 
                                 // 優先使用 base64 數據（後端已下載並轉換）
                                 if (imageData.base64) {
-                                    console.log('📦 Using base64 data from server (CORS bypass)');
+                                    console.log('📦 [Seedream] Using base64 data from server (CORS bypass)');
                                     // Convert base64 to File
                                     const base64Data = imageData.base64.split(',')[1];
                                     const binaryData = atob(base64Data);
@@ -2238,19 +2251,21 @@
                                     }
                                     const blob = new Blob([arrayBuffer], { type: 'image/jpeg' });
                                     const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
-                                    console.log('✅ Converted base64 to File object');
+                                    const totalElapsed = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
+                                    console.log(`✅ [Seedream] i2i complete in ${totalElapsed}s, Output: ${(newFile.size / 1024).toFixed(2)}KB`);
                                     resolve(newFile);
                                 } else if (imageData.url) {
                                     // 回退：嘗試直接下載 URL（可能有 CORS 問題）
-                                    console.log('🖼️ Generated image URL:', imageData.url);
-                                    console.log('📥 Downloading generated image...');
+                                    console.log('🖼️ [Seedream] Generated image URL:', imageData.url);
+                                    console.log('📥 [Seedream] Downloading generated image...');
                                     const imgResponse = await fetch(imageData.url);
                                     if (!imgResponse.ok) {
                                         throw new Error(`Failed to download generated image: ${imgResponse.status}`);
                                     }
                                     const blob = await imgResponse.blob();
                                     const newFile = new File([blob], `i2i_${imageFile.name}`, { type: 'image/jpeg' });
-                                    console.log('✅ Downloaded and converted to File object');
+                                    const totalElapsed = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
+                                    console.log(`✅ [Seedream] i2i complete in ${totalElapsed}s, Output: ${(newFile.size / 1024).toFixed(2)}KB`);
                                     resolve(newFile);
                                 } else {
                                     throw new Error('No image data (base64 or URL) returned');
@@ -2259,7 +2274,8 @@
                                 throw new Error('Seedream API returned no image data');
                             }
                         } catch (error) {
-                            console.error('❌ i2i processing failed:', error);
+                            const errorElapsed = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
+                            console.error(`❌ [Seedream] i2i failed after ${errorElapsed}s:`, error);
                             reject(error);
                         }
                     };

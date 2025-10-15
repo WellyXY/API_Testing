@@ -6,22 +6,48 @@ import io
 import random
 
 # ========== 认证配置 ==========
+import json
+import tempfile
+
 # 清除可能存在的旧认证
 os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
-# Vertex AI 认证文件路径 - 自动检测本地或集群路径
-# 优先使用本地文件，如果不存在则使用集群路径
+# 优先级：环境变量 > 本地文件 > 集群文件
 LOCAL_CREDENTIALS = os.path.join(os.path.dirname(__file__), "vertex-ai.json")
 CLUSTER_CREDENTIALS = "/mnt/nfs/chenlin/dataproc/vertex-ai.json"
 
-if os.path.exists(LOCAL_CREDENTIALS):
+# 1. 尝试从环境变量读取 JSON 内容（Vercel 等线上环境）
+vertex_ai_json = os.getenv("VERTEX_AI_JSON")
+if vertex_ai_json:
+    try:
+        # 验证 JSON 格式
+        credentials_data = json.loads(vertex_ai_json)
+        # 创建临时文件
+        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False)
+        json.dump(credentials_data, temp_file)
+        temp_file.close()
+        VERTEX_AI_CREDENTIALS = temp_file.name
+        print(f"✅ 使用环境变量认证 (VERTEX_AI_JSON)", flush=True)
+    except json.JSONDecodeError as e:
+        print(f"⚠️ VERTEX_AI_JSON 格式错误: {e}", flush=True)
+        vertex_ai_json = None
+
+# 2. 尝试本地文件
+if not vertex_ai_json and os.path.exists(LOCAL_CREDENTIALS):
     VERTEX_AI_CREDENTIALS = LOCAL_CREDENTIALS
     print(f"✅ 使用本地认证文件: {LOCAL_CREDENTIALS}", flush=True)
-elif os.path.exists(CLUSTER_CREDENTIALS):
+# 3. 尝试集群文件
+elif not vertex_ai_json and os.path.exists(CLUSTER_CREDENTIALS):
     VERTEX_AI_CREDENTIALS = CLUSTER_CREDENTIALS
     print(f"✅ 使用集群认证文件: {CLUSTER_CREDENTIALS}", flush=True)
-else:
-    raise FileNotFoundError(f"找不到认证文件！请确保以下任一文件存在:\n  - {LOCAL_CREDENTIALS}\n  - {CLUSTER_CREDENTIALS}")
+# 4. 都不存在则报错
+elif not vertex_ai_json:
+    raise FileNotFoundError(
+        f"找不到认证文件！请确保以下任一条件满足:\n"
+        f"  - 环境变量 VERTEX_AI_JSON 包含认证 JSON\n"
+        f"  - 本地文件: {LOCAL_CREDENTIALS}\n"
+        f"  - 集群文件: {CLUSTER_CREDENTIALS}"
+    )
 
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = VERTEX_AI_CREDENTIALS
 

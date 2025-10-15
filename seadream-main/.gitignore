@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Images (保留结构，但忽略大文件)
+images/generated/**/*.jpeg
+images/generated/**/*.jpg
+images/generated/**/*.png
+images/ref/**/*.jpeg
+images/ref/**/*.jpg
+images/ref/**/*.png
+New Cowgirl/*.webp
+
+# Videos
+*.mp4
+*.mov
+*.avi
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# API Keys (already in code, but for safety)
+# Consider using environment variables for production
+

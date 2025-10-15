@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Seedream 图像生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .left-panel {
+            border-right: 2px solid #e0e0e0;
+            padding-right: 30px;
+        }
+
+        .right-panel {
+            padding-left: 30px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 1.2em;
+            color: #667eea;
+            margin-bottom: 15px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        input[type="text"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: #f8f9ff;
+        }
+
+        .file-upload:hover {
+            background: #e8ebff;
+            border-color: #5568d3;
+        }
+
+        .file-upload input {
+            display: none;
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .preview-item {
+            position: relative;
+            width: 100px;
+            height: 100px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #555;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* 任务队列样式 */
+        .task-list {
+            max-height: 800px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .task-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .task-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .task-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .task-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .task-card {
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .task-card.pending {
+            border-color: #ffa726;
+            background: #fff8e1;
+        }
+
+        .task-card.processing {
+            border-color: #667eea;
+            background: #e8ebff;
+        }
+
+        .task-card.completed {
+            border-color: #66bb6a;
+            background: #e8f5e9;
+        }
+
+        .task-card.failed {
+            border-color: #ef5350;
+            background: #ffebee;
+        }
+
+        .task-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .task-id {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .task-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #ffa726;
+            color: white;
+        }
+
+        .status-processing {
+            background: #667eea;
+            color: white;
+        }
+
+        .status-completed {
+            background: #66bb6a;
+            color: white;
+        }
+
+        .status-failed {
+            background: #ef5350;
+            color: white;
+        }
+
+        .task-info {
+            margin: 10px 0;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .task-prompt {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #333;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .task-result {
+            margin-top: 15px;
+        }
+
+        .task-result img {
+            width: 100%;
+            height: auto;
+            max-height: 600px;
+            object-fit: contain;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.3s;
+            background: #f5f5f5;
+        }
+
+        .task-result img:hover {
+            transform: scale(1.02);
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state svg {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        @media (max-width: 1024px) {
+            .main-layout {
+                grid-template-columns: 1fr;
+            }
+
+            .left-panel {
+                border-right: none;
+                border-bottom: 2px solid #e0e0e0;
+                padding-right: 0;
+                padding-bottom: 30px;
+            }
+
+            .right-panel {
+                padding-left: 0;
+                padding-top: 30px;
+            }
+        }
+
+        .task-count {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 Seedream 图像生成器</h1>
+
+        <div class="main-layout">
+            <!-- 左侧：输入面板 -->
+            <div class="left-panel">
+                <div class="section">
+                    <div class="section-title">📝 Prompt</div>
+                    <div class="input-group">
+                        <textarea id="prompt" placeholder="输入您的描述..."></textarea>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">🖼️ 参考图片（可选，支持多张）</div>
+                    <div class="file-upload" onclick="document.getElementById('imageInput').click()">
+                        <input type="file" id="imageInput" accept="image/*" multiple onchange="handleFiles(this.files)">
+                        <p>📁 点击上传图片</p>
+                    </div>
+                    <div id="previewContainer" class="preview-container"></div>
+                </div>
+
+                <div class="section">
+                    <div class="section-title">⚙️ 设置</div>
+                    <div class="input-group">
+                        <label>模型选择：</label>
+                        <select id="model">
+                            <option value="ep-20250921042133-t769x" selected>Seedream 4.0 (推荐) - ep-20250921042133-t769x</option>
+                            <option value="ep-20250806055257-l5f4r">Seedream 3.0 - ep-20250806055257-l5f4r</option>
+                            <option value="ep-20250806055507-zhskr">SeedEdit (图像编辑) - ep-20250806055507-zhskr</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>分辨率：</label>
+                        <select id="size">
+                            <option value="1440x2560" selected>1440x2560 (高清竖屏)</option>
+                            <option value="2560x1440">2560x1440 (高清横屏)</option>
+                            <option value="2K">2K</option>
+                            <option value="1024x1024">1024x1024</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-group">
+                        <input type="checkbox" id="watermark">
+                        <label for="watermark" style="margin: 0;">添加水印</label>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn-secondary" onclick="clearForm()">清空表单</button>
+                    <button class="btn-primary" id="generateBtn" onclick="submitTask()">🚀 提交任务</button>
+                </div>
+            </div>
+
+            <!-- 右侧：任务队列 -->
+            <div class="right-panel">
+                <div class="section">
+                    <div class="section-title">
+                        📋 任务队列
+                        <span class="task-count" id="taskCount">0 个任务</span>
+                    </div>
+                    <div class="task-list" id="taskList">
+                        <div class="empty-state">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <p>暂无任务</p>
+                            <p style="font-size: 14px; margin-top: 10px;">提交任务后将在此显示</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedImages = [];
+        let tasks = [];
+        let taskIdCounter = 1;
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    selectedImages.push(e.target.result);
+                    updatePreviews();
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updatePreviews() {
+            const container = document.getElementById('previewContainer');
+            container.innerHTML = '';
+            selectedImages.forEach((img, index) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                div.innerHTML = `
+                    <img src="${img}">
+                    <button class="remove-btn" onclick="removeImage(${index})">×</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function removeImage(index) {
+            selectedImages.splice(index, 1);
+            updatePreviews();
+        }
+
+        function clearForm() {
+            document.getElementById('prompt').value = '';
+            selectedImages = [];
+            updatePreviews();
+        }
+
+        function submitTask() {
+            const prompt = document.getElementById('prompt').value.trim();
+            const model = document.getElementById('model').value;
+            const size = document.getElementById('size').value;
+            const watermark = document.getElementById('watermark').checked;
+            
+            if (!prompt) {
+                alert('请输入prompt');
+                return;
+            }
+
+            // 创建任务
+            const task = {
+                id: taskIdCounter++,
+                prompt: prompt,
+                model: model,
+                size: size,
+                watermark: watermark,
+                images: [...selectedImages],
+                status: 'pending',
+                timestamp: new Date(),
+                result: null,
+                error: null
+            };
+
+            tasks.unshift(task); // 添加到队列顶部
+            updateTaskList();
+            processTask(task);
+
+            // 可选：清空表单
+            // clearForm();
+        }
+
+        async function processTask(task) {
+            // 更新状态为处理中
+            task.status = 'processing';
+            updateTaskList();
+
+            const data = {
+                model: task.model,
+                prompt: task.prompt,
+                size: task.size,
+                watermark: task.watermark
+            };
+
+            if (task.images.length > 0) {
+                data.image = task.images.length === 1 ? task.images[0] : task.images;
+            }
+
+            try {
+                // 自动检测环境：本地或 Vercel
+                const apiUrl = window.location.hostname === 'localhost' 
+                    ? 'http://localhost:8888/api/generate'
+                    : '/api/generate';
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.error.message);
+                }
+
+                if (result.data && result.data.length > 0) {
+                    task.status = 'completed';
+                    task.result = result.data;
+                } else {
+                    throw new Error('未返回结果');
+                }
+            } catch (error) {
+                task.status = 'failed';
+                task.error = error.message;
+            }
+
+            updateTaskList();
+        }
+
+        function updateTaskList() {
+            const taskList = document.getElementById('taskList');
+            const taskCount = document.getElementById('taskCount');
+            
+            taskCount.textContent = `${tasks.length} 个任务`;
+
+            if (tasks.length === 0) {
+                taskList.innerHTML = `
+                    <div class="empty-state">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <p>暂无任务</p>
+                        <p style="font-size: 14px; margin-top: 10px;">提交任务后将在此显示</p>
+                    </div>
+                `;
+                return;
+            }
+
+            taskList.innerHTML = tasks.map(task => renderTask(task)).join('');
+        }
+
+        function renderTask(task) {
+            const statusText = {
+                'pending': '等待中',
+                'processing': '生成中',
+                'completed': '已完成',
+                'failed': '失败'
+            };
+
+            const modelName = task.model.includes('t769x') ? 'Seedream 4.0' : 
+                             task.model.includes('l5f4r') ? 'Seedream 3.0' : 'SeedEdit';
+
+            let resultHtml = '';
+            if (task.status === 'processing') {
+                resultHtml = '<div class="spinner"></div>';
+            } else if (task.status === 'completed' && task.result) {
+                resultHtml = task.result.map(r => `
+                    <div class="task-result">
+                        <img src="${r.url}" onclick="window.open('${r.url}', '_blank')">
+                    </div>
+                `).join('');
+            } else if (task.status === 'failed') {
+                resultHtml = `<div style="color: #ef5350; padding: 10px; background: white; border-radius: 6px;">❌ ${task.error}</div>`;
+            }
+
+            return `
+                <div class="task-card ${task.status}">
+                    <div class="task-header">
+                        <span class="task-id">#${task.id}</span>
+                        <span class="task-status status-${task.status}">${statusText[task.status]}</span>
+                    </div>
+                    <div class="task-info">
+                        <strong>模型:</strong> ${modelName} | 
+                        <strong>分辨率:</strong> ${task.size} | 
+                        <strong>图片:</strong> ${task.images.length}张
+                    </div>
+                    <div class="task-prompt">${task.prompt}</div>
+                    ${resultHtml}
+                </div>
+            `;
+        }
+
+        // 初始化
+        updateTaskList();
+    </script>
+</body>
+</html>

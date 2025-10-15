@@ -1,0 +1,40 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "parrot_proxy_server.py",
+      "use": "@vercel/python",
+      "config": { "maxLambdaSize": "15mb", "runtime": "python3.9" }
+    },
+    {
+      "src": "parrot_api_frontend.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)\\.(css|js|png|jpg|jpeg|gif|svg|ico)",
+      "dest": "/$1.$2"
+    },
+    {
+      "src": "/generate/v0/image-to-video",
+      "dest": "parrot_proxy_server.py"
+    },
+    {
+      "src": "/videos/(.*)",
+      "dest": "parrot_proxy_server.py"
+    },
+    {
+      "src": "/test",
+      "dest": "parrot_proxy_server.py"
+    },
+    {
+      "src": "/",
+      "dest": "parrot_api_frontend.html"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "parrot_proxy_server.py"
+    }
+  ]
+} 

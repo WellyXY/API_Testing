@@ -2004,17 +2004,35 @@
                 console.log(`✅ [Gemini] Completed in ${elapsed}s`);
                 console.log('✅ [Gemini] Generated prompts:', result);
                 
-                const imagePrompts = result.image_prompts || [];
-                const videoPrompts = result.video_prompts || [];
+                let imagePrompts = result.image_prompts || [];
+                let videoPrompts = result.video_prompts || [];
+                if (imagePrompts.length > 2) imagePrompts = imagePrompts.slice(0, 2);
+                if (videoPrompts.length > 2) videoPrompts = videoPrompts.slice(0, 2);
                 
                 if (imagePrompts.length === 0 || videoPrompts.length === 0) {
                     throw new Error('No prompts generated');
                 }
                 
-                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting parallel image generation...`);
+                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting baseline + variants...`);
                 
-                // Step 2: 并行处理所有 i2i → i2v
-                console.log('🚀 Starting parallel processing of all variants...');
+                // Step 2: 基線(直接 i2v) + 變體(兩條：i2i→i2v)
+                console.log('🚀 Starting parallel processing: baseline + variants...');
+
+                // 基線：使用上傳圖片 + 原始視頻 Prompt 作為第1條
+                const baselinePromise = (async () => {
+                    try {
+                        showSuccess('🎬 [1/3] Submitting baseline video (reference image + original prompt)...');
+                        window.stickingVideoOverridePrompt = videoPrompt;
+                        window.stickingVideoVariantIndex = 1;
+                        window.stickingVideoTotalVariants = imagePrompts.length + 1;
+                        await submitTaskForStickingVideo(imageFile, videoPrompt, 1, imageFile.name, '(baseline)');
+                        console.log('✅ Baseline video submitted');
+                    } finally {
+                        window.stickingVideoOverridePrompt = null;
+                        window.stickingVideoVariantIndex = null;
+                        window.stickingVideoTotalVariants = null;
+                    }
+                })();
                 
                 // 并行生成所有图片变体
                 const i2iPromises = imagePrompts.map(async (imagePrompt, i) => {
@@ -2027,23 +2045,23 @@
                         showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant (parallel)...`);
                         const processedImage = await processI2I(imageFile, imagePrompt);
                         console.log(`✅ Variant ${i + 1} image generated`);
-                        return { processedImage, videoPrompt: videoPrompts[i], imagePrompt, index: i + 1 };
+                        return { processedImage, videoPrompt: videoPrompts[i], imagePrompt, index: i + 2 };
                     } catch (error) {
                         console.error(`❌ Variant ${i + 1} i2i failed:`, error);
                         throw error;
                     }
                 });
                 
-                // 等待所有 i2i 完成
-                const i2iResults = await Promise.allSettled(i2iPromises);
+                // 等待基線與 i2i 完成
+                const i2iResults = await Promise.allSettled([baselinePromise, ...i2iPromises]);
                 
                 // 并行提交所有 i2v 任务
-                const i2vPromises = i2iResults.map(async (result, i) => {
+                const i2vPromises = i2iResults.slice(1).map(async (result, i) => {
                     if (result.status === 'fulfilled') {
-                        const { processedImage, videoPrompt, imagePrompt, index } = result.value;
+                        const { processedImage, videoPrompt, imagePrompt, index } = result.value; // 2 or 3
                         
                         console.log(`📝 Video Prompt ${index}: ${videoPrompt.substring(0, 100)}...`);
-                        showSuccess(`🎬 [${index}/${imagePrompts.length}] Submitting video generation (parallel)...`);
+                        showSuccess(`🎬 [${index}/3] Submitting video generation (parallel)...`);
                         
                         window.stickingVideoOverridePrompt = videoPrompt;
                         window.stickingVideoVariantIndex = index;
@@ -2058,16 +2076,16 @@
                             window.stickingVideoTotalVariants = null;
                         }
                     } else {
-                        console.error(`❌ Variant ${i + 1} was skipped due to i2i failure`);
-                        showError(`❌ Variant ${i + 1} failed: ${result.reason?.message || 'Unknown error'}`);
+                        console.error(`❌ Variant ${i + 2} was skipped due to i2i failure`);
+                        showError(`❌ Variant ${i + 2} failed: ${result.reason?.message || 'Unknown error'}`);
                     }
                 });
                 
                 // 等待所有 i2v 提交完成
                 await Promise.allSettled(i2vPromises);
                 
-                const successCount = i2iResults.filter(r => r.status === 'fulfilled').length;
-                showSuccess(`🎉 ${successCount}/${imagePrompts.length} sticking video variants submitted!`);
+                const successCount = i2iResults.filter(r => r.status === 'fulfilled').length; // include baseline
+                showSuccess(`🎉 Submitted baseline + ${Math.max(0, successCount - 1)}/${imagePrompts.length} variants!`);
                 return true;
                 
             } catch (error) {
@@ -3614,7 +3632,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             );
             
             if (downloadStickingCard) {
-                if (completedStickingVideos.length === 3) {
+                if (completedStickingVideos.length >= 3) {
                     downloadStickingCard.style.display = 'block';
                 } else {
                     downloadStickingCard.style.display = 'none';

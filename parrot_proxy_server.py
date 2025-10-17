@@ -1378,9 +1378,32 @@ def merge_sticking_videos():
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode != 0:
-                print(f"❌ FFmpeg 錯誤:")
-                print(result.stderr[-1000:])  # 只打印最後 1000 字符
-                raise Exception(f"FFmpeg failed with code {result.returncode}")
+                print(f"❌ FFmpeg 錯誤（xfade）:\n{result.stderr[-2000:]}")
+                # 退化方案：無轉場 concat
+                print("🔁 嘗試無轉場 concat 回退方案…")
+                concat_filter = (
+                    f"[0:v]{pre}[cv0];[1:v]{pre}[cv1];[2:v]{pre}[cv2];"
+                    f"[cv0][cv1][cv2]concat=n=3:v=1:a=0[vout]"
+                )
+                cmd_fallback = [
+                    ffmpeg_cmd, '-y',
+                    '-i', temp_files[0],
+                    '-i', temp_files[1],
+                    '-i', temp_files[2],
+                    '-filter_complex', concat_filter,
+                    '-map', '[vout]',
+                    '-c:v', 'libx264',
+                    '-preset', 'medium',
+                    '-crf', '23',
+                    '-movflags', '+faststart',
+                    '-vsync', '2',
+                    '-pix_fmt', 'yuv420p',
+                    output_file
+                ]
+                result_fb = subprocess.run(cmd_fallback, capture_output=True, text=True, timeout=300)
+                if result_fb.returncode != 0:
+                    print(f"❌ FFmpeg 回退也失敗:\n{result_fb.stderr[-2000:]}")
+                    raise Exception(f"FFmpeg failed with code {result.returncode} / fallback {result_fb.returncode}")
             
             print(f"✅ 視頻合併完成!")
             print(f"📁 輸出文件: {output_file}")

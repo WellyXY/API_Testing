@@ -974,9 +974,9 @@
                     <div class="select-row">
                         <label for="apiProvider">Provider:</label>
                         <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                            <option value="testing" selected>🧪 Testing (New Architecture)</option>
+                            <option value="original" selected>Original - Parrot API</option>
+                            <option value="testing">🧪 Testing (New Architecture)</option>
                             <option value="staging">Staging - Parrot Labs</option>
-                            <option value="original">Original - Parrot API</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -991,7 +991,8 @@
                     <div class="select-row" id="endpointTypeGroup" style="display: none;">
                         <label for="endpointType">Endpoint:</label>
                         <select id="endpointType" class="form-control" onchange="updateAPIDescription()">
-                            <option value="image-to-video">image-to-video (default)</option>
+                            <option value="image-to-video-v2" selected>image-to-video-v2 (default)</option>
+                            <option value="image-to-video">image-to-video</option>
                             <option value="image-to-video-new">image-to-video-new</option>
                             <option value="image-to-video-inner">image-to-video-inner</option>
                             <option value="image-to-video-nmd">image-to-video-nmd</option>
@@ -1322,7 +1323,7 @@
                                 queryPath: '/api/v1/generate/v0/videos' // 查询路径
                             }
                         },
-                        defaultEndpoint: 'image-to-video',
+                        defaultEndpoint: 'image-to-video-v2',
                         description: 'Image to Video - v1 (新测试架构)',
                         name: 'Testing v1'
                     }
@@ -1438,7 +1439,7 @@
             
             if (!providerSelect || !versionSelect) return;
             
-            const selectedProvider = providerSelect.value;
+            const selectedProvider = providerSelect.value || 'original';
             const providerConfig = API_PROVIDERS[selectedProvider];
             
             // 清空版本選項
@@ -1455,6 +1456,11 @@
                 });
             }
             
+            // 若為 original，強制選擇 v0
+            if (selectedProvider === 'original') {
+                versionSelect.value = 'v0';
+            }
+
             // 檢查是否需要顯示端點類型選擇器
             if (endpointTypeGroup) {
                 const selectedVersion = versionSelect.value;
@@ -1507,7 +1513,7 @@
             const versionSelect = document.getElementById('apiVersionB');
             const endpointTypeGroup = document.getElementById('endpointTypeGroupB');
             if (!providerSelect || !versionSelect) return;
-            const selectedProvider = providerSelect.value;
+            const selectedProvider = providerSelect.value || 'original';
             const providerConfig = API_PROVIDERS[selectedProvider];
             versionSelect.innerHTML = '';
             if (providerConfig && providerConfig.versions) {
@@ -1518,6 +1524,13 @@
                     option.textContent = version.name || versionKey;
                     versionSelect.appendChild(option);
                 });
+            }
+
+            // Default to original/v0 and endpoint image-to-video-v2
+            if (selectedProvider === 'original') {
+                versionSelect.value = 'v0';
+                const et = document.getElementById('endpointType');
+                if (et) et.value = 'image-to-video-v2';
             }
             if (endpointTypeGroup) {
                 const selectedVersion = versionSelect.value;
@@ -2014,7 +2027,7 @@
                         showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant (parallel)...`);
                         const processedImage = await processI2I(imageFile, imagePrompt);
                         console.log(`✅ Variant ${i + 1} image generated`);
-                        return { processedImage, videoPrompt: videoPrompts[i], index: i + 1 };
+                        return { processedImage, videoPrompt: videoPrompts[i], imagePrompt, index: i + 1 };
                     } catch (error) {
                         console.error(`❌ Variant ${i + 1} i2i failed:`, error);
                         throw error;
@@ -2027,7 +2040,7 @@
                 // 并行提交所有 i2v 任务
                 const i2vPromises = i2iResults.map(async (result, i) => {
                     if (result.status === 'fulfilled') {
-                        const { processedImage, videoPrompt, index } = result.value;
+                        const { processedImage, videoPrompt, imagePrompt, index } = result.value;
                         
                         console.log(`📝 Video Prompt ${index}: ${videoPrompt.substring(0, 100)}...`);
                         showSuccess(`🎬 [${index}/${imagePrompts.length}] Submitting video generation (parallel)...`);
@@ -2037,7 +2050,7 @@
                         window.stickingVideoTotalVariants = imagePrompts.length;
                         
                         try {
-                            await submitTaskForStickingVideo(processedImage, videoPrompt, index, imageFile.name);
+                            await submitTaskForStickingVideo(processedImage, videoPrompt, index, imageFile.name, imagePrompt);
                             console.log(`✅ Variant ${index} submitted`);
                         } finally {
                             window.stickingVideoOverridePrompt = null;
@@ -2065,7 +2078,7 @@
         }
 
         // Modified submitTask for Sticking Video (submits a single variant)
-        async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName) {
+        async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName, imagePrompt) {
             const apiKey = document.getElementById('apiKey').value || '';
             const apiConfig = getCurrentAPIConfig();
             const MAX_RETRIES = 20;
@@ -2079,6 +2092,7 @@
             const task = createTask(tempId, videoPrompt, displayName);
             task.stickingVideoMode = true;
             task.stickingVideoVariant = variantIndex;
+            task.imagePrompt = imagePrompt || '';
             task.status = 'submitting';
             task.submittedAt = Date.now();
             task.apiProvider = apiConfig.provider;
@@ -3031,6 +3045,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 </div>
                 <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
                     🖼️ Image: ${task.imageName} | 💬 Prompt: ${task.promptText || 'None'}
+                    ${task.stickingVideoMode && task.imagePrompt ? `<div style="margin-top:6px; font-size:12px; color:#444; background:#f1f3f5; padding:6px; border-radius:4px;">🖊️ Image Prompt: ${task.imagePrompt.replaceAll('<','&lt;').replaceAll('>','&gt;')}</div>` : ''}
                 </div>
                 <div style="font-size: 12px; color: #888; margin-bottom: 10px; padding: 5px; background: #f8f9fa; border-radius: 3px;" id="api-info-${task.id}">
                     📍 API: Loading... | 🔗 Version: Loading... | 🔑 Key: Loading...

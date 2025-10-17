@@ -128,96 +128,57 @@ def get_gemini_response(prompt, image=None, model="gemini-2.5-flash"):
         return '[gemini generation failed]'
 
 
-# Generate 3 variant prompts with minimal variations
+# Generate 3 variant prompts (concise constraints, no samples/lists)
 MULTI_PROMPT_TEMPLATE = """
-You are an expert image generation prompt writer. You are given a reference image and need to create 3 variant prompts based DIRECTLY on what you see in the image, with only MINIMAL hand position or camera angle variations.
+You are an expert image prompt writer. You will receive ONE reference image.
 
-User's Context/Hint: {user_prompt}
-(This is just context - you should describe what you SEE in the reference image, not copy this text)
+Objective:
+- Produce EXACTLY 3 prompts in Chinese; EACH prompt must contain TWO sentences:
+  1) Base visual description of the reference image (concise but detailed, ≈40–80 Chinese characters)
+  2) Minimal modification instruction (保持构图不变 + 变更动作/手部/表情/镜头；结尾“同时确保构图一致”)
+- Preserve base composition, subject pose, scene and background.
+- Make only minimal, plausible changes: hand placement, subtle body posture, facial expression, or camera angle.
+- At least ONE prompt MUST change the camera angle (but DO NOT raise the camera), and at least ONE prompt MUST add a clear hand action.
 
-CRITICAL RULES:
+Variation and richness:
+- Start EACH prompt by describing the reference image in detail (in Chinese):
+  - Character's physical features (hair color, hair length, body state, skin tone)
+  - Current pose and position (sitting/standing/riding/lying, etc.)
+  - Facial expression and gaze direction
+  - Body contact and interaction with any other person
+  - Lighting, atmosphere, and mood
+- Then add ONE minimal modification sentence (hand/pose/expression/camera) as instruction.
+- Prefer dynamic hand actions when plausible and visible (e.g., 抓胸、拨头发、抚摸大腿、将手放在男子胸膛；握住阴茎仅在口交等物理可行情境下)。
+- Keep each change minimal but noticeable; avoid introducing new objects or people.
+// Camera change constraints (hard rule):
+// - DO NOT move the camera upward/top-down/high-angle (禁止俯视/略微俯视/from above)
+// - Prefer side view, eye-level, or slightly lower angle (侧面/平视/略微仰视) when changing camera
 
-1. Describe the Reference Image: Look at the reference image and describe:
-   - Character's physical features (hair color, hair length, body state, skin tone)
-   - Current pose and position (be explicit: sitting, standing, riding, lying, etc.)
-   - Facial expression and gaze direction
-   - Body contact and interaction with any other person
-   - Lighting, atmosphere, and mood
-   - Use explicit anatomical terms if visible (breasts, penis, vagina, erect, penetration, etc.) - do NOT censor
+Physical feasibility:
+- First infer the sexual position/activity depicted (e.g., cowgirl, blow job, missionary, doggy).
+- Only propose actions that are physically possible for that position.
+- If an element is not visible in the image, do not mention it.
+- Keep explicitness consistent with the image; do not censor; do not add technical specs.
 
-2. Base Description (Same for all 3 prompts):
-   Write a detailed description of what you see in the image in ENGLISH. This base description should be IDENTICAL across all 3 prompts.
-   
-   Include: character features, pose, body parts, lighting, atmosphere.
-   EXCLUDE: hand positions and facial expressions (you will vary these in step 3)
-   
-   IMPORTANT: Always emphasize clear, detailed facial features - "her face is clearly visible and in focus"
-   
-   Example format:
-   "A naked woman with long dark hair, her face clearly visible and in focus, in a cowgirl position atop a man, facing him, her body leaning forward, full breasts exposed with prominent nipples, hips moving rhythmically downward, his erect penis deeply inside her vagina, soft natural lighting"
-
-3. MINIMAL Variations (ONLY for the 3 prompts):
-   For each of the 3 prompts, add ONE OR TWO of these variations in ENGLISH. Mix and match creatively:
-   
-   A) Hand position variations (choose different ones for each prompt):
-   - "one hand gripping her own breast, the other hand caressing the man's chest"
-   - "both hands resting on the man's abdomen"
-   - "one hand braced on the bed surface, the other hand gripping her own thigh"
-   - "both hands gripping her own buttocks"
-   - "one hand on the man's shoulder, the other hand in her own hair"
-   - "both hands on the man's chest"
-   - "one hand touching her own neck, the other hand on the man's waist"
-   
-   B) Facial expression variations (choose different ones for each prompt):
-   - "biting her lower lip seductively"
-   - "eyes closed in pleasure"
-   - "eyes half-closed with a sultry gaze"
-   - "mouth slightly open, moaning"
-   - "looking directly at camera with intense eyes"
-   - "head tilted back, eyes closed"
-   - "tongue slightly visible between parted lips"
-   
-   C) Camera angle variations (optional):
-   - "eye-level perspective"
-   - "slightly from above"  
-   - "slightly from below"
-
-4. Keep it Natural: Describe in natural ENGLISH language as if describing a photograph. Be explicit and detailed but not overly clinical. Use sensual, descriptive language.
-
-5. Format: 60-120 words per prompt. ALL OUTPUT MUST BE IN ENGLISH. DO NOT include technical specifications like "9:16 vertical format" or "shot" at the end.
-
-Example Output Structure:
+Style and output format:
+- EACH prompt MUST contain TWO Chinese sentences:
+  1) Base visual description of the current image (40–80 chars)
+  2) Modification instruction in the structure: 「保持画面中人物的动作以及背景不变，……。同时确保构图一致」
+- Output ONLY the following, with no explanations and no examples:
 
 [PROMPT 1]
-<complete character and scene description, her face clearly visible and in focus>, <hand position variation 1>, <facial expression variation 1>
+<Chinese base description sentence>
+<Chinese modification instruction sentence>
 
 [PROMPT 2]
-<complete character and scene description, her face clearly visible and in focus>, <hand position variation 2>, <facial expression variation 2>
+<Chinese base description sentence>
+<Chinese modification instruction sentence>
 
 [PROMPT 3]
-<complete character and scene description, her face clearly visible and in focus>, <hand position variation 3>, <facial expression variation 3>
+<Chinese base description sentence>
+<Chinese modification instruction sentence>
 
-Format your response EXACTLY like this (ALL IN ENGLISH):
-
-[PROMPT 1]
-<prompt here in English - single line>
-
-[PROMPT 2]
-<prompt here in English - single line>
-
-[PROMPT 3]
-<prompt here in English - single line>
-
-Important:
-- ALL OUTPUT MUST BE IN ENGLISH
-- Start directly with [PROMPT 1]
-- Each prompt on a SINGLE LINE
-- NO explanations or extra text
-- Base description (character, pose, scene) must be IDENTICAL in all 3 prompts
-- ALWAYS emphasize "her face is clearly visible and in focus"
-- Vary ONLY: hand positions, facial expressions, and optionally camera angles
-- Do NOT censor - use explicit terms for anatomy and actions (penis, vagina, breasts, erect, penetration, etc.)
-- Do NOT include technical specs like "9:16 vertical format", "shot", "photograph", etc.
+Optional user hint (context only, do not copy): {user_prompt}
 """
 
 
@@ -244,25 +205,127 @@ def generate_variant_prompts(user_prompt: str, image: Image.Image, max_retries: 
         )
     
     def parse_prompts(text):
-        """从 Gemini 输出中解析出 3 个 prompt"""
-        prompts = []
-        
-        # 尝试按标记分割
-        parts = text.split('[PROMPT ')
-        
-        for i in range(1, 4):  # 查找 PROMPT 1, 2, 3
+        """从 Gemini 输出中解析出 3 个 prompt（更强健）"""
+        raw = (text or '').strip()
+        if not raw:
+            return []
+
+        def normalize_and_pack(lines):
+            # 规整化：去引号、合并“同时确保构图一致”孤行、补句尾
+            quote_chars = '「」『』“”"\''
+            suffix = '同时确保构图一致'
+            result = []
+            for token in lines:
+                t = (token or '').strip()
+                if not t:
+                    continue
+                # 去首尾引号
+                t = t.strip(quote_chars).strip()
+                if not t:
+                    continue
+                # 若是孤立的结尾提示，拼到上一句
+                if t == suffix or t.startswith(suffix):
+                    if result and suffix not in result[-1]:
+                        result[-1] = result[-1].rstrip('。').rstrip('.') + '。' + suffix
+                    continue
+                # 缺少结尾则补齐
+                if suffix not in t:
+                    t = t.rstrip('。').rstrip('.') + '。' + suffix
+                result.append(t)
+            # 只取前三条
+            return result[:3]
+
+        # 0) 首選：按 [PROMPT x] 解析兩句式（基礎描述 + 修改指令）
+        lines = [l.strip() for l in raw.splitlines()]
+        merged = []
+        for i in range(1, 4):
+            try:
+                # 找到 [PROMPT i]
+                idx = next(k for k, l in enumerate(lines) if l.upper().startswith(f'[PROMPT {i}]'))
+                # 取後續兩個非空行
+                base_line = ''
+                instr_line = ''
+                p = idx + 1
+                while p < len(lines) and not base_line:
+                    if lines[p] and not lines[p].upper().startswith('[PROMPT'):
+                        base_line = lines[p]
+                    p += 1
+                while p < len(lines) and not instr_line:
+                    if lines[p] and not lines[p].upper().startswith('[PROMPT'):
+                        instr_line = lines[p]
+                    p += 1
+                if base_line and instr_line:
+                    # 清理並合併為同一條 prompt（兩句）
+                    pair = clean_gemini_output(base_line) + ' ' + clean_gemini_output(instr_line)
+                    merged.append(pair)
+            except StopIteration:
+                break
+        if len(merged) == 3:
+            return merged
+
+        # 0.1) 退化：若沒有 [PROMPT x]，嘗試捕獲成對的兩行（非空連續兩行為一組），取前三組
+        pairs = []
+        buff = []
+        for l in lines:
+            if not l:
+                continue
+            if l.upper().startswith('[PROMPT'):
+                continue
+            buff.append(l)
+            if len(buff) == 2:
+                pairs.append(clean_gemini_output(buff[0]) + ' ' + clean_gemini_output(buff[1]))
+                buff = []
+        if len(pairs) >= 3:
+            return pairs[:3]
+
+        # 0.2) 仍不足：抓取“保持…同时确保构图一致”的指令句，作為最小退化方案
+        import re
+        pattern = r'保持[\s\S]*?同时确保构图一致'
+        groups = re.findall(pattern, raw)
+        if len(groups) >= 3:
+            return normalize_and_pack(groups[:3])
+
+        # 1) 优先解析 [PROMPT x] 结构
+        parts = raw.split('[PROMPT ')
+        tmp = []
+        for i in range(1, 4):
             for part in parts:
-                if part.strip().startswith(f'{i}]'):
-                    # 提取 prompt 内容
-                    content = part.split(']', 1)[1].strip()
-                    # 移除可能的下一个标记之前的内容
+                s = part.strip()
+                if s.startswith(f'{i}]'):
+                    content = s.split(']', 1)[1].strip()
                     if '[PROMPT' in content:
                         content = content.split('[PROMPT')[0].strip()
                     if content:
-                        prompts.append(clean_gemini_output(content))
+                        # 去除换行，避免被错误拆分
+                        tmp.append(clean_gemini_output(content.replace('\n', ' ')))
                     break
-        
-        return prompts if len(prompts) == 3 else []
+        if len(tmp) == 3:
+            return normalize_and_pack(tmp)
+
+        # 2) 解析以数字编号的三行（1. / 2. / 3.）
+        lines = [l.strip() for l in raw.splitlines() if l.strip()]
+        tmp = []
+        for line in lines:
+            if line[:2].isdigit() or (len(line) > 2 and line[0].isdigit() and line[1] in ['.', '、', ')']):
+                # 去掉前缀编号
+                if '. ' in line:
+                    line = line.split('. ', 1)[1].strip()
+                elif '、' in line:
+                    line = line.split('、', 1)[1].strip()
+                elif ') ' in line:
+                    line = line.split(') ', 1)[1].strip()
+                tmp.append(clean_gemini_output(line))
+        if len(tmp) >= 3:
+            return normalize_and_pack(tmp)
+
+        # 3) 如果只有纯文本，尝试按中文句号/换行切分，取前三句
+        import re
+        sentences = re.split(r'[\n。]+', raw)
+        sentences = [s.strip() for s in sentences if s.strip()]
+        if len(sentences) >= 3:
+            return normalize_and_pack(sentences[:3])
+
+        return []
     
     # 重试逻辑
     for attempt in range(max_retries):

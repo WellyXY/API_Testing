@@ -1447,7 +1447,8 @@ def generate_prompts():
             from PIL import Image
             import sys
             sys.path.insert(0, os.path.dirname(__file__))
-            from image_prompt_generator import generate_variant_prompts, generate_video_prompts_for_images
+            from image_prompt_generator import generate_variant_prompts
+            from video_prompt_generator import generate_video_prompts_for_images
             
             # 加載圖片
             image = Image.open(temp_image_path)
@@ -1465,6 +1466,10 @@ def generate_prompts():
                 return jsonify({'error': 'Failed to generate image prompts'}), 500
             
             print(f"✅ 生成了 {len(image_prompts)} 個 image prompts")
+            print(f"\n📋 Image Prompts:")
+            for i, prompt in enumerate(image_prompts, 1):
+                print(f"  [{i}] {prompt}")
+            print()
             
             # 生成 video prompts
             print(f"⏳ 正在生成 video prompts...")
@@ -1474,10 +1479,23 @@ def generate_prompts():
                 parallel=True  # 並行生成
             )
             
-            if not video_prompts:
+            # 後處理：若有空字符串，回退為原始 video_prompt（包含 flags）
+            if video_prompts:
+                fixed_video_prompts = []
+                for idx, vp in enumerate(video_prompts):
+                    if vp and vp.strip():
+                        fixed_video_prompts.append(vp.strip())
+                    else:
+                        print(f"⚠️ Video Prompt {idx+1} 為空，使用回退: 原始 video_prompt")
+                        fixed_video_prompts.append(video_prompt)
+                video_prompts = fixed_video_prompts
+            else:
                 return jsonify({'error': 'Failed to generate video prompts'}), 500
             
             print(f"✅ 生成了 {len(video_prompts)} 個 video prompts")
+            print(f"\n📋 Video Prompts:")
+            for i, prompt in enumerate(video_prompts, 1):
+                print(f"  [{i}] {prompt[:100]}..." if len(prompt) > 100 else f"  [{i}] {prompt}")
             print(f"{'='*70}\n")
             
             return jsonify({

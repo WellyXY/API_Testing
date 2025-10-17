@@ -91,10 +91,10 @@ def generate_video_prompt(image_prompt: str, video_prompt: str, max_retries: int
                 return out
         except Exception:
             continue
-    # 退化：若生成失敗，返回拼接版（保證不為空）
-    fallback = f"{image_prompt}\n{v_clean}".strip()
+    # 退化：若生成失敗，僅返回原始視頻描述（不拼接圖片描述）
+    fallback = (v_clean or (video_prompt or '')).strip()
     if flags:
-        fallback = fallback + ' ' + ' '.join(flags)
+        fallback = (fallback + ' ' + ' '.join(flags)).strip()
     return fallback
 
 def generate_video_prompts_for_images(image_prompts: list[str], video_prompt: str, parallel: bool = True) -> list[str]:

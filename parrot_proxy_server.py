@@ -1344,12 +1344,15 @@ def merge_sticking_videos():
             offset2 = durations[0] + durations[1] - 2 * transition_duration
             
             # 構建複雜的 filter_complex
-            # 使用 xfade 濾鏡在視頻之間添加轉場效果
-            # 為避免 FFmpeg 234（編解碼器或像素格式不兼容），統一轉為 yuv420p 並加上格式濾鏡
+            # 統一解析度/幀率/像素格式，避免 xfade 報錯（如代碼 234）
+            target_w = 1280
+            target_h = 720
+            scale_pad = f"scale=w={target_w}:h={target_h}:force_original_aspect_ratio=decrease,pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color=black"
+            pre = f"{scale_pad},fps=30,format=yuv420p"
             filter_complex = (
-                f"[0:v]scale=iw:ih:flags=bicubic,format=yuv420p[v0];"
-                f"[1:v]scale=iw:ih:flags=bicubic,format=yuv420p[v1];"
-                f"[2:v]scale=iw:ih:flags=bicubic,format=yuv420p[v2];"
+                f"[0:v]{pre}[v0];"
+                f"[1:v]{pre}[v1];"
+                f"[2:v]{pre}[v2];"
                 f"[v0][v1]xfade=transition={transition}:duration={transition_duration}:offset={offset1}[v01];"
                 f"[v01][v2]xfade=transition={transition}:duration={transition_duration}:offset={offset2}[vout]"
             )
@@ -1365,6 +1368,7 @@ def merge_sticking_videos():
                 '-preset', 'medium',
                 '-crf', '23',
                 '-movflags', '+faststart',
+                '-vsync', '2',
                 '-pix_fmt', 'yuv420p',
                 output_file
             ]

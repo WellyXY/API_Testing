@@ -48,6 +48,17 @@ API_PROVIDERS = {
         'supported_versions': {
             'v2.2': '/generate/2.2/i2v'
         }
+    },
+    'candy': {
+        'name': 'Candy (Lipsync)',
+        'base_url': 'https://candy-api.pika.art',
+        'api_key': 'test-api-key-123456',
+        'status_path': '/api/v1/generate/v0/videos',
+        'supported_versions': {
+            'v0': {
+                'audio-to-video': '/api/v1/generate/v0/audio-to-video'
+            }
+        }
     }
 }
 
@@ -611,8 +622,10 @@ def get_video_status(video_id):
             'Accept': 'application/json'
         }
 
+        # Candy provider 使用不同的狀態路徑
+        status_path = provider_config.get('status_path') or '/videos'
         response = requests.get(
-            f"{provider_config['base_url']}/videos/{video_id}",
+            f"{provider_config['base_url']}{status_path}/{video_id}",
             headers=headers,
             timeout=30
         )

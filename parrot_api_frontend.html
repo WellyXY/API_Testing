@@ -977,6 +977,7 @@
                             <option value="original" selected>Original - Parrot API</option>
                             <option value="testing">🧪 Testing (New Architecture)</option>
                             <option value="staging">Staging - Parrot Labs</option>
+                        <option value="candy">Candy (Lipsync)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -1025,6 +1026,7 @@
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
                                     <option value="testing">🧪 Testing (New Architecture)</option>
                                     <option value="staging">Staging - Parrot Labs</option>
+                                    <option value="candy">Candy (Lipsync)</option>
                                     <option value="original" selected>Original - Parrot API</option>
                                 </select>
                             </div>
@@ -1387,6 +1389,26 @@
                     }
                 }
             },
+            'candy': {
+                name: 'Candy (Lipsync)',
+                description: 'Pika Candy audio-to-video (lipsync)',
+                baseUrl: 'https://candy-api.pika.art',
+                apiKey: 'test-api-key-123456',
+                versions: {
+                    'v0': {
+                        endpoints: {
+                            'audio-to-video': {
+                                path: '/api/v1/generate/v0/audio-to-video',
+                                description: 'Image + Audio to Video (lipsync)',
+                                name: 'Candy v0 (audio-to-video)'
+                            }
+                        },
+                        defaultEndpoint: 'audio-to-video',
+                        description: 'Audio to Video - v0',
+                        name: 'Candy v0'
+                    }
+                }
+            },
             'minimax': {
                 name: 'Minimax text to audio',
                 description: 'MiniMax 文本轉語音',
@@ -1477,8 +1499,10 @@
             
             // 切換 UI：Minimax 下隱藏圖片/生成視頻相關，顯示 T2A 區塊
             const isMinimax = selectedProvider === 'minimax';
+            const isCandy = selectedProvider === 'candy';
             document.getElementById('uploadArea')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
-            document.getElementById('audioGroup')?.classList.toggle('hidden', isMinimax);
+            document.getElementById('audioGroup')?.classList.toggle('hidden', isMinimax ? false : false);
+            // Candy 與 Original/Staging 顯示主生成區塊；Minimax 隱藏
             document.getElementById('promptText')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
             document.getElementById('generateBtn')?.classList.toggle('hidden', isMinimax);
             // 顯示/隱藏 minimax 區塊
@@ -1503,6 +1527,13 @@
                     keyInput.value = providerConfig?.apiKey || '';
                 }
             } catch {}
+
+            // 切換到 candy 時，預設選中 audio-to-video 並顯示音訊上傳
+            if (selectedProvider === 'candy') {
+                const et = document.getElementById('endpointType');
+                if (et) et.value = 'audio-to-video';
+                document.getElementById('audioGroup')?.classList.remove('hidden');
+            }
 
             updateAPIDescription();
         }

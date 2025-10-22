@@ -531,6 +531,7 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         # 發送請求到 Parrot API
         headers = {
             'X-API-KEY': api_key,
+            'X-API-Key': api_key,
             'Accept': 'application/json'
         }
 
@@ -595,6 +596,20 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         return jsonify({'error': f'Network error: {str(e)}'}), 500
     except Exception as e:
         print(f"服務器錯誤: {e}")
+        try:
+            # 針對 candy 做降級：返回可下載代理 URL，避免前端 500
+            provider = request.args.get('provider')
+            if provider == 'candy':
+                from urllib.parse import urljoin
+                fallback_url = urljoin(request.host_url, f"candy/videos/{video_id}/download")
+                return jsonify({
+                    'id': video_id,
+                    'status': 'finished',
+                    'progress': 100,
+                    'url': fallback_url
+                }), 200
+        except Exception as _:
+            pass
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 @app.route('/videos/<video_id>', methods=['GET'])
@@ -631,6 +646,7 @@ def get_video_status(video_id):
         )
 
         print(f"視頻狀態響應: {response.status_code}")
+        debug_mode = request.args.get('debug') == '1'
         
         # 詳細日誌響應內容
         try:
@@ -639,11 +655,124 @@ def get_video_status(video_id):
         except:
             print(f"響應文本: {response.text}")
 
-        # 返回響應
-        if response.headers.get('content-type', '').startswith('application/json'):
-            return jsonify(response.json()), response.status_code
-        else:
-            return response.text, response.status_code
+        # 返回響應（加入 candy 的 URL 回填）
+        ct = (response.headers.get('content-type') or '').lower()
+        if ct.startswith('application/json'):
+            try:
+                data = response.json()
+            except Exception:
+                # 供前端穩定輪詢：非JSON時也回200，標記為pending
+                out = {
+                    'id': video_id,
+                    'status': 'pending',
+                    'progress': 0,
+                    'provider_status': response.status_code,
+                    'message': 'Invalid JSON from provider'
+                }
+                if debug_mode:
+                    out['provider_raw'] = {
+                        'headers': dict(response.headers),
+                        'text': response.text[:4000]
+                    }
+                return jsonify(out), 200
+
+            try:
+                if provider == 'candy':
+                    status_val = (data.get('status') or '').lower()
+                    url_val = data.get('url')
+                    if status_val == 'finished':
+                        # 若缺少直鏈，嘗試主動獲取遠端最終下載 URL；成功則回填遠端 URL，並提供 proxy_url 備援
+                        need_fetch = (not url_val) or (isinstance(url_val, str) and not url_val.startswith('http'))
+                        if need_fetch:
+                            from urllib.parse import urljoin
+                            base = provider_config['base_url']
+                            api_key_eff = api_key
+                            headers_dl = {
+                                'X-API-KEY': api_key_eff,
+                                'X-API-Key': api_key_eff,
+                                'Accept': '*/*'
+                            }
+                            download_url = f"{base}/api/v1/generate/v0/videos/{video_id}/download"
+                            max_wait_seconds = 20
+                            interval = 1
+                            elapsed = 0
+                            direct_url = None
+                            while elapsed <= max_wait_seconds and not direct_url:
+                                r = requests.get(download_url, headers=headers_dl, timeout=15)
+                                ct2 = (r.headers.get('content-type') or '').lower()
+                                if ct2.startswith('application/json'):
+                                    try:
+                                        j = r.json()
+                                        # 若 provider 返回中間態，等待
+                                        if isinstance(j, dict) and j.get('status') in ['pending','processing','queued']:
+                                            time.sleep(interval)
+                                            elapsed += interval
+                                            continue
+                                        for key in ['url','video_url','mp4_url','download_url']:
+                                            if isinstance(j, dict) and j.get(key):
+                                                direct_url = j[key]
+                                                break
+                                    except Exception:
+                                        pass
+                                elif r.status_code == 200:
+                                    # 直接可下載的二進制
+                                    direct_url = download_url
+                                    break
+                                else:
+                                    if r.status_code in (403,404,202,204,423):
+                                        time.sleep(interval)
+                                        elapsed += interval
+                                        continue
+                                    break
+
+                            proxy_url = urljoin(request.host_url, f"candy/videos/{video_id}/download")
+                            if direct_url:
+                                data['url'] = direct_url
+                                data['proxy_url'] = proxy_url
+                            else:
+                                # 回退為 proxy_url，讓前端可下載
+                                data['url'] = proxy_url
+                # 通用：若回傳 url 指向 m3u8，統一標記為 streaming 並走轉碼代理，與 original 一致
+                try:
+                    import urllib.parse
+                    u = data.get('url')
+                    if isinstance(u, str) and u.endswith('.m3u8'):
+                        encoded = urllib.parse.quote(u, safe='')
+                        data['status'] = 'streaming'
+                        data['url'] = f"/hls-transcode/{encoded}"
+                except Exception:
+                    pass
+            except Exception:
+                pass
+
+            if debug_mode:
+                # 附帶 provider 原始狀態/頭/內容片段，方便前端查看
+                try:
+                    data['_provider_debug'] = {
+                        'status': response.status_code,
+                        'headers': dict(response.headers),
+                        'excerpt': (response.text or '')[:2000]
+                    }
+                except Exception:
+                    pass
+            return jsonify(data), 200
+        # 非 JSON：回傳pending（避免前端500）
+        out = {
+            'id': video_id,
+            'status': 'pending',
+            'progress': 0,
+            'provider_status': response.status_code,
+            'content_type': ct or 'unknown'
+        }
+        if debug_mode:
+            try:
+                out['provider_raw'] = {
+                    'headers': dict(response.headers),
+                    'text': (response.text or '')[:4000]
+                }
+            except Exception:
+                pass
+        return jsonify(out), 200
 
     except requests.exceptions.RequestException as e:
         print(f"請求錯誤: {e}")
@@ -658,6 +787,78 @@ def api_info():
     return jsonify({
         'providers': API_PROVIDERS
     })
+
+@app.route('/candy/videos/<video_id>/download', methods=['GET'])
+def candy_download_video(video_id):
+    """Candy 下載代理：嘗試獲取最終 MP4 並回傳/透傳"""
+    try:
+        provider_config = API_PROVIDERS.get('candy')
+        if not provider_config:
+            return jsonify({'error': 'Candy provider not configured'}), 400
+
+        api_key = request.headers.get('X-API-KEY') or request.args.get('api_key') or provider_config['api_key']
+        headers = {
+            'X-API-KEY': api_key,
+            'X-API-Key': api_key,
+            'Accept': '*/*'
+        }
+        download_url = f"{provider_config['base_url']}/api/v1/generate/v0/videos/{video_id}/download"
+
+        # 輕量輪詢等待遠端生成可下載的 MP4（避免剛 finished 即刻 404）
+        max_wait_seconds = 90
+        interval = 1
+        elapsed = 0
+        last_resp = None
+        while elapsed <= max_wait_seconds:
+            r = requests.get(download_url, headers=headers, timeout=15, stream=True)
+            last_resp = r
+            ct = (r.headers.get('content-type') or '').lower()
+            status = r.status_code
+
+            # JSON 響應 -> 嘗試取內部 url 再請求
+            if ct.startswith('application/json'):
+                try:
+                    j = r.json()
+                    # 若返回的是排隊/準備中的訊息，等待
+                    if isinstance(j, dict) and j.get('status') in ['pending', 'processing', 'queued']:
+                        time.sleep(interval)
+                        elapsed += interval
+                        continue
+                    for key in ['url', 'video_url', 'mp4_url', 'download_url']:
+                        if isinstance(j, dict) and j.get(key):
+                            target = j[key]
+                            rr = requests.get(target, timeout=30, stream=True)
+                            return Response(rr.iter_content(chunk_size=8192), status=rr.status_code, mimetype=rr.headers.get('content-type', 'video/mp4'), headers={
+                                'Content-Disposition': f'attachment; filename="{video_id}.mp4"'
+                            })
+                except Exception:
+                    pass
+                # 非可用 JSON，稍後重試
+                time.sleep(interval)
+                elapsed += interval
+                continue
+
+            # 二進制且 200 -> 直接透傳
+            if status == 200 and ('video' in ct or 'octet-stream' in ct or ct == ''):
+                return Response(r.iter_content(chunk_size=8192), status=200, mimetype=r.headers.get('content-type', 'video/mp4'), headers={
+                    'Content-Disposition': f'attachment; filename="{video_id}.mp4"'
+                })
+
+            # 404/403/202 等暫不可用 -> 等待重試
+            if status in (403, 404, 202, 204, 423):
+                time.sleep(interval)
+                elapsed += interval
+                continue
+
+            # 其他狀態，跳出
+            break
+
+        # 超時或仍不可用：透傳最後一個響應（通常為 404），以便前端顯示錯誤
+        if last_resp is not None:
+            return Response(last_resp.content, status=last_resp.status_code, mimetype=last_resp.headers.get('content-type', 'text/plain'))
+        return jsonify({'error': 'download not ready'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/hls-transcode/<path:stream_url>', methods=['GET'])
 def hls_transcode_proxy(stream_url):

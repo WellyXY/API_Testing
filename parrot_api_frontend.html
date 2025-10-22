@@ -1501,7 +1501,6 @@
             const isMinimax = selectedProvider === 'minimax';
             const isCandy = selectedProvider === 'candy';
             document.getElementById('uploadArea')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
-            document.getElementById('audioGroup')?.classList.toggle('hidden', isMinimax ? false : false);
             // Candy 與 Original/Staging 顯示主生成區塊；Minimax 隱藏
             document.getElementById('promptText')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
             document.getElementById('generateBtn')?.classList.toggle('hidden', isMinimax);
@@ -1528,14 +1527,30 @@
                 }
             } catch {}
 
-            // 切換到 candy 時，預設選中 audio-to-video 並顯示音訊上傳
-            if (selectedProvider === 'candy') {
+            // 切換到 candy 時：
+            // 1) 強制版本 v0
+            // 2) 強制端點為 audio-to-video
+            // 3) 隱藏端點選單（只有一個端點）
+            // 4) 顯示音訊上傳區塊
+            try {
+                const audioGroupEl = document.getElementById('audioGroup');
                 const et = document.getElementById('endpointType');
-                if (et) et.value = 'audio-to-video';
-                document.getElementById('audioGroup')?.classList.remove('hidden');
-            }
+                if (isCandy) {
+                    if (versionSelect) versionSelect.value = 'v0';
+                    if (et) et.value = 'audio-to-video';
+                    if (endpointTypeGroup) endpointTypeGroup.style.display = 'none';
+                    if (audioGroupEl) audioGroupEl.style.display = 'block';
+                } else {
+                    // 非 candy 交由 refreshAudioVisibility 根據端點決定顯示
+                    if (endpointTypeGroup && providerConfig?.versions?.[versionSelect.value]?.endpoints) {
+                        endpointTypeGroup.style.display = 'block';
+                    }
+                }
+            } catch {}
 
             updateAPIDescription();
+            // 重新依據端點類型刷新音訊可見性
+            try { refreshAudioVisibility(); } catch {}
         }
 
         // Benchmark: 更新 B 路的提供商/版本/端點顯示

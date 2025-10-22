@@ -1029,7 +1029,7 @@ def minimax_t2a():
                 "english_normalization": True
             }
         headers = {
-            'Authorization': api_key,  # 直接使用 JWT token，不加 Bearer 前缀
+            'Authorization': f'Bearer {api_key}',  # Minimax 要求 Authorization: Bearer <token>
             'Content-Type': 'application/json'
         }
 
@@ -1175,7 +1175,7 @@ def minimax_clone():
             print(f"Upload URL: {upload_url}")
             # 测试不同的 Authorization 格式
             headers_upload = {
-                'Authorization': api_key  # 直接使用 JWT token，不加 Bearer 前缀
+                'Authorization': f'Bearer {api_key}'
             }
             print(f"Upload headers: {headers_upload}")
 
@@ -1263,7 +1263,7 @@ def minimax_clone():
             # Step 2: 發起克隆
             clone_url = f'https://api.minimax.io/v1/voice_clone?GroupId={group_id}'
             headers_clone = {
-                'Authorization': api_key,  # 直接使用 JWT token，不加 Bearer 前缀
+                'Authorization': f'Bearer {api_key}',
                 'Content-Type': 'application/json'
             }
             payload_clone = {
@@ -1331,7 +1331,7 @@ def minimax_clone():
                     "language_boost": "auto"
                 }
                 headers_t2a = {
-                    'Authorization': api_key,  # 直接使用 JWT token，不加 Bearer 前缀
+                    'Authorization': f'Bearer {api_key}',
                     'Content-Type': 'application/json'
                 }
                 try:

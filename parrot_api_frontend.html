@@ -4107,25 +4107,23 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 
         async function minimaxTTS() {
             try {
-                const text = document.getElementById('minimaxText').value.trim();
-                const voiceId = document.getElementById('minimaxVoiceId').value.trim();
-                const groupId = document.getElementById('minimaxGroupId').value.trim();
-                const apiKey = document.getElementById('minimaxApiKey').value.trim();
+                const text = document.getElementById('minimaxText')?.value?.trim() || '';
+                const voiceId = document.getElementById('minimaxVoiceId')?.value?.trim() || '';
+                const groupId = document.getElementById('minimaxGroupId')?.value?.trim() || '';
+                const apiKey = document.getElementById('minimaxApiKey')?.value?.trim() || '';
 
                 if (!text) {
                     showError('請先輸入文本');
                     return;
                 }
-                if (!groupId && !apiKey) {
-                    showError('請填寫 MINIMAX_GROUPID 與 MINIMAX_API_KEY，或在服務器設置環境變量');
-                    return;
-                }
+                // 後端已支持從環境或 Header 讀取，這裡不強制輸入 groupId/apiKey
 
                 clearMessages();
                 showSuccess('⏳ 正在生成音頻，請稍候...');
 
                 const body = { text };
-                if (window.minimaxCurrentVoiceId) body.voice_id = window.minimaxCurrentVoiceId;
+                const resolvedVoiceId = voiceId || window.minimaxCurrentVoiceId;
+                if (resolvedVoiceId) body.voice_id = resolvedVoiceId;
 
                 const response = await fetch('/minimax/t2a', {
                     method: 'POST',

@@ -49,8 +49,8 @@ API_PROVIDERS = {
             'v2.2': '/generate/2.2/i2v'
         }
     },
-    'candy': {
-        'name': 'Candy (Lipsync)',
+    'parrot': {
+        'name': 'Parrot (Lipsync)',
         'base_url': 'https://candy-api.pika.art',
         'api_key': 'test-api-key-123456',
         'status_path': '/api/v1/generate/v0/videos',
@@ -599,9 +599,9 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         try:
             # 針對 candy 做降級：返回可下載代理 URL，避免前端 500
             provider = request.args.get('provider')
-            if provider == 'candy':
+            if provider == 'parrot':
                 from urllib.parse import urljoin
-                fallback_url = urljoin(request.host_url, f"candy/videos/{video_id}/download")
+                fallback_url = urljoin(request.host_url, f"parrot/videos/{video_id}/download")
                 return jsonify({
                     'id': video_id,
                     'status': 'finished',
@@ -677,7 +677,7 @@ def get_video_status(video_id):
                 return jsonify(out), 200
 
             try:
-                if provider == 'candy':
+                if provider == 'parrot':
                     status_val = (data.get('status') or '').lower()
                     url_val = data.get('url')
                     if status_val == 'finished':
@@ -725,7 +725,7 @@ def get_video_status(video_id):
                                         continue
                                     break
 
-                            proxy_url = urljoin(request.host_url, f"candy/videos/{video_id}/download")
+                            proxy_url = urljoin(request.host_url, f"parrot/videos/{video_id}/download")
                             if direct_url:
                                 data['url'] = direct_url
                                 data['proxy_url'] = proxy_url
@@ -788,11 +788,11 @@ def api_info():
         'providers': API_PROVIDERS
     })
 
-@app.route('/candy/videos/<video_id>/download', methods=['GET'])
+@app.route('/parrot/videos/<video_id>/download', methods=['GET'])
 def candy_download_video(video_id):
     """Candy 下載代理：嘗試獲取最終 MP4 並回傳/透傳"""
     try:
-        provider_config = API_PROVIDERS.get('candy')
+        provider_config = API_PROVIDERS.get('parrot')
         if not provider_config:
             return jsonify({'error': 'Candy provider not configured'}), 400
 

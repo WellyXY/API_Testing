@@ -977,7 +977,7 @@
                             <option value="original" selected>Original - Parrot API</option>
                             <option value="testing">🧪 Testing (New Architecture)</option>
                             <option value="staging">Staging - Parrot Labs</option>
-                        <option value="candy">Candy (Lipsync)</option>
+                            <option value="parrot">Parrot (Lipsync)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -1026,7 +1026,7 @@
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
                                     <option value="testing">🧪 Testing (New Architecture)</option>
                                     <option value="staging">Staging - Parrot Labs</option>
-                                    <option value="candy">Candy (Lipsync)</option>
+                                    <option value="parrot">Parrot (Lipsync)</option>
                                     <option value="original" selected>Original - Parrot API</option>
                                 </select>
                             </div>
@@ -1389,9 +1389,9 @@
                     }
                 }
             },
-            'candy': {
-                name: 'Candy (Lipsync)',
-                description: 'Pika Candy audio-to-video (lipsync)',
+            'parrot': {
+                name: 'Parrot (Lipsync)',
+                description: 'Pika Parrot audio-to-video (lipsync)',
                 baseUrl: 'https://candy-api.pika.art',
                 apiKey: 'test-api-key-123456',
                 versions: {
@@ -1400,12 +1400,12 @@
                             'audio-to-video': {
                                 path: '/api/v1/generate/v0/audio-to-video',
                                 description: 'Image + Audio to Video (lipsync)',
-                                name: 'Candy v0 (audio-to-video)'
+                                name: 'Parrot v0 (audio-to-video)'
                             }
                         },
                         defaultEndpoint: 'audio-to-video',
                         description: 'Audio to Video - v0',
-                        name: 'Candy v0'
+                        name: 'Parrot v0'
                     }
                 }
             },
@@ -1499,7 +1499,7 @@
             
             // 切換 UI：Minimax 下隱藏圖片/生成視頻相關，顯示 T2A 區塊
             const isMinimax = selectedProvider === 'minimax';
-            const isCandy = selectedProvider === 'candy';
+            const isCandy = selectedProvider === 'parrot';
             document.getElementById('uploadArea')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
             // Candy 與 Original/Staging 顯示主生成區塊；Minimax 隱藏
             document.getElementById('promptText')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
@@ -2989,7 +2989,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
             }
-            statusCheckInterval = setInterval(checkVideoStatus, 3000); // 每3秒檢查一次
+            statusCheckInterval = setInterval(checkVideoStatus, 500); // 每0.5秒檢查一次
             checkVideoStatus(); // 立即檢查一次
         }
 
@@ -3283,7 +3283,10 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     });
                     
                     // 🎯 使用轉碼代理 URL（將 AC-3 轉為 AAC）
-                    const transcodedUrl = `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
+                    // 注意：後端可能已回傳 '/hls-transcode/...'，避免二次包裹
+                    const transcodedUrl = task.streamUrl.startsWith('/hls-transcode/')
+                        ? task.streamUrl
+                        : `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
                     console.log(`🔄 Using transcoded URL: ${transcodedUrl}`);
                     hls.loadSource(transcodedUrl);
                     hls.attachMedia(video);
@@ -3335,9 +3338,11 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     task.hlsInstance = hls;
                 } else if (video && video.canPlayType('application/vnd.apple.mpegurl')) {
                     // 原生支持HLS (Safari) - 也使用轉碼代理
-                    const transcodedUrl = `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
-                    console.log(`🔄 Safari using transcoded URL: ${transcodedUrl}`);
-                    video.src = transcodedUrl;
+                    const safariUrl = task.streamUrl.startsWith('/hls-transcode/')
+                        ? task.streamUrl
+                        : `/hls-transcode/${encodeURIComponent(task.streamUrl)}`;
+                    console.log(`🔄 Safari using transcoded URL: ${safariUrl}`);
+                    video.src = safariUrl;
                     video.muted = true;
                     video.play().then(() => {
                         console.log(`📡 Native HLS streaming started (muted) for task #${task.taskNumber}`);

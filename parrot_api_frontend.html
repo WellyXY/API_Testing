@@ -4125,10 +4125,16 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 const resolvedVoiceId = voiceId || window.minimaxCurrentVoiceId;
                 if (resolvedVoiceId) body.voice_id = resolvedVoiceId;
 
+                // 嘗試從後端獲取憑證，並附加到 Header（避免伺服器端環境變數缺失時 400）
+                let env = {};
+                try { env = await fetch('/minimax/env?full=1').then(r => r.json()); } catch {}
+
                 const response = await fetch('/minimax/t2a', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        ...(env.group_id ? { 'X-Minimax-GroupId': env.group_id } : {}),
+                        ...(env.api_key ? { 'X-Minimax-ApiKey': env.api_key } : {})
                     },
                     body: JSON.stringify(body)
                 });

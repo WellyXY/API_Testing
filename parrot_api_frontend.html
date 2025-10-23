@@ -2158,7 +2158,7 @@
             task.stickingVideoVariant = variantIndex;
             task.imagePrompt = imagePrompt || '';
             task.status = 'submitting';
-            task.submittedAt = Date.now();
+            task.requestedAt = Date.now();
             task.apiProvider = apiConfig.provider;
             task.apiVersion = apiConfig.version;
             task.apiEndpointType = apiConfig.endpointType;
@@ -2585,7 +2585,7 @@
             task.i2iEnabled = i2iEnabled;
             task.i2iPrompt = i2iEnabled ? promptText : '';
             task.status = 'submitting';
-            task.submittedAt = Date.now();
+            task.requestedAt = Date.now();
             // 存儲API配置信息到任務
             task.apiProvider = apiConfig.provider;
             task.apiVersion = apiConfig.version;
@@ -2902,7 +2902,10 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 }
             }
             
-            // 計時：等待時間（submitted -> started）與生成時間（started -> finished）
+            // 計時：等待時間（從首次拿到狀態開始算 -> started）與生成時間（started -> finished）
+            if (!task.submittedAt && (result.status || result.progress != null)) {
+                task.submittedAt = Date.now();
+            }
             if (!task.startedAt && (task.status === 'started' || task.progress > 0)) {
                 task.startedAt = Date.now();
                 if (task.submittedAt) {

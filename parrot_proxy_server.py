@@ -892,7 +892,11 @@ def hls_transcode_proxy(stream_url):
                     else:
                         lines.append(line)
                 
-                return Response('\n'.join(lines), mimetype='application/vnd.apple.mpegurl')
+                resp = Response('\n'.join(lines), mimetype='application/vnd.apple.mpegurl')
+                # 禁用緩存，降低卡頓
+                resp.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+                resp.headers['Pragma'] = 'no-cache'
+                return resp
         
         # 如果是 .ts segment，進行實時轉碼
         elif decoded_url.endswith('.ts'):
@@ -912,10 +916,13 @@ def hls_transcode_proxy(stream_url):
             try:
                 # 使用 ffmpeg 轉碼: AC-3 -> AAC
                 cmd = [
-                    'ffmpeg', '-i', temp_in_path,
+                    'ffmpeg', '-hide_banner', '-loglevel', 'error',
+                    '-fflags', '+genpts',
+                    '-i', temp_in_path,
                     '-c:v', 'copy',  # 視頻不轉碼
                     '-c:a', 'aac',   # 音頻轉為 AAC
                     '-b:a', '128k',  # 音頻比特率
+                    '-muxdelay', '0', '-muxpreload', '0',
                     '-f', 'mpegts',  # 輸出格式
                     '-y',            # 覆蓋輸出
                     temp_out_path
@@ -936,7 +943,9 @@ def hls_transcode_proxy(stream_url):
                     os.remove(temp_in_path)
                     os.remove(temp_out_path)
                     
-                    return Response(transcoded_data, mimetype='video/mp2t')
+                    resp = Response(transcoded_data, mimetype='video/mp2t')
+                    resp.headers['Cache-Control'] = 'no-store'
+                    return resp
                 else:
                     print(f"FFmpeg 錯誤: {result.stderr.decode()}")
                     # 轉碼失敗，返回原始數據
@@ -983,22 +992,29 @@ def minimax_t2a():
     響應: audio/mp3 二進制數據
     """
     try:
-        # 讀取權鑰
-        group_id = (
-            request.headers.get('X-Minimax-GroupId')
-            or request.form.get('MINIMAX_GROUPID')
-            or request.json.get('MINIMAX_GROUPID') if request.is_json else None
-            or os.getenv('MINIMAX_GROUPID')
-        )
-        api_key = (
-            request.headers.get('X-Minimax-ApiKey')
-            or request.form.get('MINIMAX_API_KEY')
-            or request.json.get('MINIMAX_API_KEY') if request.is_json else None
-            or os.getenv('MINIMAX_API_KEY')
-        )
+        # 讀取權鑰（並打印調試資訊）
+        hdr_gid = request.headers.get('X-Minimax-GroupId')
+        hdr_key = request.headers.get('X-Minimax-ApiKey')
+        frm_gid = request.form.get('MINIMAX_GROUPID') if hasattr(request, 'form') else None
+        frm_key = request.form.get('MINIMAX_API_KEY') if hasattr(request, 'form') else None
+        jsn_gid = (request.json.get('MINIMAX_GROUPID') if request.is_json and isinstance(getattr(request, 'json', None), dict) else None)
+        jsn_key = (request.json.get('MINIMAX_API_KEY') if request.is_json and isinstance(getattr(request, 'json', None), dict) else None)
+        env_gid = os.getenv('MINIMAX_GROUPID')
+        env_key = os.getenv('MINIMAX_API_KEY')
+
+        group_id = hdr_gid or frm_gid or jsn_gid or env_gid
+        api_key = hdr_key or frm_key or jsn_key or env_key
+
+        try:
+            print(f"[MiniMax T2A] hdr_gid={bool(hdr_gid)} hdr_key_len={len(hdr_key) if hdr_key else 0} env_gid={bool(env_gid)} env_key_len={len(env_key) if env_key else 0}")
+        except Exception:
+            pass
 
         if not group_id or not api_key:
-            return jsonify({'error': 'MINIMAX_GROUPID and MINIMAX_API_KEY are required'}), 400
+            return jsonify({'error': 'MINIMAX_GROUPID and MINIMAX_API_KEY are required', '_debug': {
+                'has_header_group': bool(hdr_gid), 'has_header_key': bool(hdr_key),
+                'has_env_group': bool(env_gid), 'has_env_key': bool(env_key)
+            }}), 400
 
         # 讀取文本與語音參數
         text = request.form.get('text') if not request.is_json else request.json.get('text')

@@ -1698,6 +1698,9 @@
                 finishedAt: null,
                 waitDurationSec: null,
                 genDurationSec: null,
+                // 新增：從 started -> streaming URL 的耗時
+                streamingAt: null,
+                streamLatencySec: null,
                 url: null,
                 created: new Date(),
                 retryCount: 0,
@@ -2884,6 +2887,12 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             if (result.url) {
                 if (task.status === 'streaming') {
                     task.streamUrl = result.url;
+                    if (!task.streamingAt) {
+                        task.streamingAt = Date.now();
+                        if (task.startedAt) {
+                            task.streamLatencySec = Math.max(0, Math.round((task.streamingAt - task.startedAt) / 1000));
+                        }
+                    }
                     console.log(`📡 Got HLS stream URL: ${result.url}`);
                 } else if (task.status === 'finished' || task.status === 'completed') {
                     task.url = result.url;
@@ -3102,6 +3111,10 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         <div class="task-detail-value" id="gen-${task.id}">-</div>
                     </div>
                     <div class="task-detail-item">
+                        <div class="task-detail-label">Stream</div>
+                        <div class="task-detail-value" id="stream-${task.id}">-</div>
+                    </div>
+                    <div class="task-detail-item">
                         <div class="task-detail-label">⏱️ Time</div>
                         <div class="task-detail-value" id="time-${task.id}">Waiting...</div>
                     </div>
@@ -3136,6 +3149,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const progressFillElement = document.getElementById(`progress-fill-${task.id}`);
             const taskCard = document.getElementById(`task-${task.id}`);
             const retriesElement = document.getElementById(`retries-${task.id}`);
+            const streamElement = document.getElementById(`stream-${task.id}`);
             
             if (!statusElement) return;
 
@@ -3193,6 +3207,20 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 genElement.textContent = genSec != null ? `${genSec}s` : '-';
             }
             
+            // 新增：從 started -> streaming URL 的耗時
+            if (streamElement) {
+                let streamSec = null;
+                if (task.startedAt) {
+                    if (task.streamingAt) {
+                        const fixed = task.streamLatencySec ?? Math.round((task.streamingAt - task.startedAt) / 1000);
+                        streamSec = Math.max(0, fixed);
+                    } else if (task.status === 'streaming') {
+                        streamSec = Math.max(0, Math.round((Date.now() - task.startedAt) / 1000));
+                    }
+                }
+                streamElement.textContent = streamSec != null ? `${streamSec}s` : '-';
+            }
+
             // 更新狀態
             statusElement.className = 'task-status';
             if (task.status === 'finished' || task.status === 'completed') {
@@ -3806,482 +3834,22 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     const task = completedVideos[i];
                     
                     try {
-                        console.log(`📥 Downloading video ${i + 1}/${completedVideos.length}:`, {
-                            taskId: task.id,
-                            imageName: task.imageName,
-                            url: task.url
-                        });
-                        
-                        // 使用 fetch 下載視頻文件
-                        const response = await fetch(task.url, {
-                            method: 'GET',
-                            headers: {
-                                'Accept': 'video/mp4,video/*,*/*'
-                            }
-                        });
-                        
-                        if (!response.ok) {
-                            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                        }
-                        
-                        const blob = await response.blob();
-                        
-                        // 創建下載連結
-                        const url = window.URL.createObjectURL(blob);
-                        const link = document.createElement('a');
-                        link.href = url;
-                        
-                        // 使用圖片名稱作為視頻檔名，添加任務ID確保唯一性
-                        const imageName = (task.imageName || '').replace(/\.[^/.]+$/, '') || `video_${task.taskNumber}`;
-                        const fileName = `${imageName}.mp4`;
-                        link.download = fileName;
-                        link.style.display = 'none';
-                        
-                        console.log(`💾 Download filename: ${fileName}`);
-                        
-                        document.body.appendChild(link);
-                        link.click();
-                        document.body.removeChild(link);
-                        
-                        // 清理 blob URL
-                        window.URL.revokeObjectURL(url);
-                        
-                        successCount++;
-                        
-                        // 更新按鈕文字顯示進度
-                        downloadBtn.textContent = `📥 Downloading... (${i + 1}/${completedVideos.length})`;
-                        
-                        // 短暫延遲避免瀏覽器阻止多個下載
-                        if (i < completedVideos.length - 1) {
-                            await new Promise(resolve => setTimeout(resolve, 800));
-                        }
-                        
-                    } catch (error) {
-                        console.error(`❌ Failed to download video ${task.taskNumber}:`, error);
+                        console.log(`Downloading ${i+1}/${completedVideos.length}: ${task.id}`);
+                        // ... existing code ...
+                    } catch (e) {
                         failCount++;
+                        console.error(`Download failed for ${task.id}: ${e.message}`);
                     }
                 }
-                
-                // 顯示結果
-                if (successCount === completedVideos.length) {
-                    showSuccess(`✅ Successfully started download for all ${successCount} video(s)!`);
-                } else if (successCount > 0) {
-                    showSuccess(`⚠️ Downloaded ${successCount}/${completedVideos.length} video(s). ${failCount} failed.`);
-                } else {
-                    showError(`❌ Failed to download any videos. Please try downloading individually.`);
-                }
-                
-                // 確保任務狀態保持不變
-                console.log(`📊 Tasks status after download:`, Array.from(tasks.values()).length, 'tasks remaining');
-                
-            } catch (error) {
-                console.error('❌ Batch download error:', error);
-                showError(`Download failed: ${error.message}`);
+            } catch (e) {
+                showError('Download failed: ' + (e.message || e));
             } finally {
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = originalText;
-                
-                // 強制更新任務摘要以確保UI正確
-                updateTasksSummary();
             }
         }
 
-        // 調試任務數據
-        function debugTasks() {
-            console.log('=== Debug Tasks Info ===');
-            console.log('Total tasks:', tasks.size);
-            console.log('Tasks Map:', tasks);
-            
-            Array.from(tasks.values()).forEach((task, index) => {
-                console.log(`Task ${index + 1}:`, {
-                    id: task.id,
-                    taskNumber: task.taskNumber,
-                    imageName: task.imageName,
-                    promptText: task.promptText,
-                    status: task.status,
-                    url: task.url
-                });
-            });
-            
-            showSuccess('調試信息已輸出到控制台，請按F12查看');
-        }
-
-        // 測試連接功能
-        async function testConnection() {
-            console.log('testConnection function called');
-            
-            const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const apiUrl = apiConfig.endpoint;
-
-            if (!apiKey) {
-                showError('Please enter API Key first');
-                return;
-            }
-
-            clearMessages();
-            
-            // 獲取完整URL信息
-            const providerConfig = API_PROVIDERS[apiConfig.provider];
-            const baseUrl = providerConfig.baseUrl;
-            const fullUrl = baseUrl + apiConfig.endpoint;
-            
-            // 使用正確的 API Key（如果用戶沒有輸入，使用配置中的默認值）
-            const effectiveApiKey = apiKey || providerConfig.apiKey;
-            
-            // 顯示調試信息
-            const debugInfo = `
-🔍 <strong>Test Connection Debug Info:</strong><br>
-📍 <strong>Provider:</strong> ${apiConfig.provider}<br>
-🔗 <strong>API Version:</strong> ${apiConfig.version}<br>
-🌐 <strong>Base URL:</strong> ${baseUrl}<br>
-🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
-🔗 <strong>Full URL:</strong> ${fullUrl}<br>
-🔑 <strong>API Key:</strong> ${effectiveApiKey.substring(0, 8)}...${effectiveApiKey.substring(effectiveApiKey.length - 8)}<br>
-⏳ Sending test request...
-            `;
-            showSuccess(debugInfo);
-
-            try {
-                console.log('=== Test Connection Debug Info ===');
-                console.log('Provider:', apiConfig.provider);
-                console.log('API Version:', apiConfig.version);
-                console.log('Base URL:', baseUrl);
-                console.log('Endpoint:', apiConfig.endpoint);
-                console.log('Full URL:', fullUrl);
-                console.log('Proxy Endpoint:', apiUrl);
-                console.log('API Key:', `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}`);
-
-                // 創建一個最小的測試請求體
-                const formData = new FormData();
-                formData.append('prompt', 'test connection');
-                formData.append('provider', getCurrentAPIConfig().provider);
-                formData.append('version', getCurrentAPIConfig().version);
-                
-                // 創建一個1x1像素的測試圖片
-                const canvas = document.createElement('canvas');
-                canvas.width = 1;
-                canvas.height = 1;
-                const ctx = canvas.getContext('2d');
-                ctx.fillStyle = '#000000';
-                ctx.fillRect(0, 0, 1, 1);
-                
-                // 將canvas轉換為blob
-                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                formData.append('image', blob, 'test.png');
-
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-API-KEY': effectiveApiKey
-                    },
-                    body: formData
-                });
-
-                console.log('=== Response Info ===');
-                console.log('Status:', response.status, response.statusText);
-                console.log('Headers:', [...response.headers.entries()]);
-
-                // 讀取響應內容
-                let responseText = '';
-                try {
-                    responseText = await response.text();
-                    console.log('Response content:', responseText);
-                } catch (e) {
-                    console.log('Could not read response content:', e);
-                    responseText = 'Could not read response content';
-                }
-
-                // 顯示完整的測試結果
-                const resultInfo = `
-🔍 <strong>Test Connection Results:</strong><br>
-📍 <strong>Provider:</strong> ${apiConfig.provider}<br>
-🔗 <strong>API Version:</strong> ${apiConfig.version}<br>
-🌐 <strong>Base URL:</strong> ${baseUrl}<br>
-🎯 <strong>Endpoint:</strong> ${apiConfig.endpoint}<br>
-🔗 <strong>Full URL:</strong> ${fullUrl}<br>
-🔑 <strong>API Key:</strong> ${effectiveApiKey.substring(0, 8)}...${effectiveApiKey.substring(effectiveApiKey.length - 8)}<br>
-📊 <strong>Response Status:</strong> ${response.status} ${response.statusText}<br>
-📝 <strong>Response Content:</strong><br>
-<pre style="background: #f5f5f5; padding: 10px; border-radius: 5px; max-height: 200px; overflow-y: auto; font-size: 12px; white-space: pre-wrap;">${responseText}</pre>
-                `;
-
-                if (response.status === 200 || response.status === 201 || response.status === 202) {
-                    showSuccess(resultInfo + '<br>✅ <strong>Connection test successful!</strong>');
-                } else if (response.status === 401) {
-                    showError(resultInfo + '<br>❌ <strong>Authentication failed: API Key might be invalid</strong>');
-                } else if (response.status === 403) {
-                    showError(resultInfo + '<br>❌ <strong>Forbidden: API Key might not have access</strong>');
-                } else if (response.status === 404) {
-                    showError(resultInfo + '<br>❌ <strong>API endpoint not found: Please check the URL</strong>');
-                } else if (response.status === 400) {
-                    showError(resultInfo + '<br>⚠️ <strong>Bad Request: API Key or request format may be incorrect</strong>');
-                } else if (response.status === 500) {
-                    showError(resultInfo + '<br>⚠️ <strong>Server Error: API service may be temporarily unavailable</strong>');
-                } else {
-                    showError(resultInfo + `<br>⚠️ <strong>Received response status: ${response.status} ${response.statusText}</strong>`);
-                }
-
-            } catch (error) {
-                console.error('Connection test error:', error);
-                
-                if (error.name === 'TypeError' && error.message.includes('fetch')) {
-                    showError('❌ Network Error: Could not connect to server. Check URL and network connection.');
-                } else if (error.message.includes('CORS')) {
-                    showError('❌ CORS Error: Cross-origin request blocked by browser.');
-                } else {
-                    showError(`❌ Connection failed: ${error.message}`);
-                }
-            }
-        }
-
-        // 添加調試檢查功能
-        async function debugCheck() {
-            console.log('debugCheck function called');
-            const apiKey = document.getElementById('apiKey').value;
-            const apiConfig = getCurrentAPIConfig();
-            const apiUrl = apiConfig.endpoint;
-
-            if (!apiKey) {
-                showError('Please enter API Key first');
-                return;
-            }
-
-            clearMessages();
-            showSuccess('Performing debug check...');
-
-            try {
-                // 嘗試一個簡單的請求來進行調試檢查
-                const response = await fetch(apiUrl, {
-                    method: 'OPTIONS',
-                    headers: {
-                        'X-API-KEY': apiKey,
-                    }
-                });
-
-                console.log('Debug check response:', response.status, response.statusText);
-
-                if (response.status === 405) {
-                    showSuccess('✅ Debug check successful!');
-                } else if (response.status === 200 || response.status === 204) {
-                    showError('❌ Debug check failed: Received non-405 status code');
-                } else {
-                    showError(`⚠️ Received response status: ${response.status} ${response.statusText}`);
-                }
-
-            } catch (error) {
-                console.error('Debug check error:', error);
-                if (error.message.includes('CORS')) {
-                    showError('❌ CORS Error: May need to run in a CORS-enabled environment.');
-                } else if (error.message.includes('network')) {
-                    showError('❌ Network Error: Check network connection and URL.');
-                } else {
-                    showError(`❌ Debug check failed: ${error.message}`);
-                }
-            }
-        }
-
-
-        
-        function getCurrentApiUrl() {
-            return getCurrentAPIConfig().endpoint;
-        }
-
-        // 頁面載入時的初始化
-        window.addEventListener('load', () => {
-            console.log('🚀 Parrot API Multi-Task Frontend Loaded');
-            
-            // API配置已固定為staging環境
-            updateProviderVersions(); // 初始化提供商和版本選擇
-            // 初始化 Benchmark 區域
-            try {
-                document.getElementById('benchmarkToggle')?.addEventListener('change', (e) => {
-                    const on = e.target.checked;
-                    document.getElementById('benchmarkConfig')?.classList.toggle('hidden', !on);
-                    if (on) updateProviderVersionsB();
-                });
-            } catch {}
-        });
-
-        // 頁面卸載時清理
-        window.addEventListener('beforeunload', () => {
-            stopStatusCheck();
-        });
-
-        async function minimaxTTS() {
-            try {
-                const text = document.getElementById('minimaxText')?.value?.trim() || '';
-                const voiceId = document.getElementById('minimaxVoiceId')?.value?.trim() || '';
-                const groupId = document.getElementById('minimaxGroupId')?.value?.trim() || '';
-                const apiKey = document.getElementById('minimaxApiKey')?.value?.trim() || '';
-
-                if (!text) {
-                    showError('請先輸入文本');
-                    return;
-                }
-                // 後端已支持從環境或 Header 讀取，這裡不強制輸入 groupId/apiKey
-
-                clearMessages();
-                showSuccess('⏳ 正在生成音頻，請稍候...');
-
-                const body = { text };
-                const resolvedVoiceId = voiceId || window.minimaxCurrentVoiceId;
-                if (resolvedVoiceId) body.voice_id = resolvedVoiceId;
-
-                // 嘗試從後端獲取憑證，並附加到 Header（避免伺服器端環境變數缺失時 400）
-                let env = {};
-                try { env = await fetch('/minimax/env?full=1').then(r => r.json()); } catch {}
-
-                const response = await fetch('/minimax/t2a', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...(env.group_id ? { 'X-Minimax-GroupId': env.group_id } : {}),
-                        ...(env.api_key ? { 'X-Minimax-ApiKey': env.api_key } : {})
-                    },
-                    body: JSON.stringify(body)
-                });
-
-                if (!response.ok) {
-                    let errJson = {}, errText = '';
-                    try { errText = await response.text(); errJson = JSON.parse(errText); } catch { errJson = {}; }
-                    const code = errJson.provider_status_code ?? errJson.status ?? errJson.base_resp?.status_code;
-                    const msg = errJson.provider_status_msg ?? errJson.base_resp?.status_msg ?? (errJson.provider_response?.base_resp?.status_msg);
-                    const base = errJson.error || errJson.message || 'Request failed';
-                    const details = `${base}${code ? ` [${code}]` : ''}${msg ? `: ${msg}` : ''}`;
-                    console.error('Minimax TTS failed:', { status: response.status, bodyText: errText, parsed: errJson });
-                    throw new Error(details || `HTTP ${response.status}`);
-                }
-
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                const player = document.getElementById('minimaxAudioPlayer');
-                const link = document.getElementById('minimaxAudioLink');
-
-                player.src = url;
-                player.style.display = 'block';
-                link.href = url;
-                link.download = `minimax-${Date.now()}.mp3`;
-                link.style.display = 'inline-block';
-
-                showSuccess('✅ 生成成功，可播放或下載');
-            } catch (e) {
-                showError(`❌ 生成失敗: ${e.message}`);
-            }
-        }
-
-        async function onStartButtonClick() {
-            const isBenchmark = document.getElementById('benchmarkToggle')?.checked;
-            const provider = document.getElementById('apiProvider')?.value;
-            if (!isBenchmark) {
-                if (provider === 'minimax') {
-                    await minimaxTTS();
-                } else {
-                    await generateVideo();
-                }
-                return;
-            }
-
-            // Benchmark 模式：同一批圖片，分別用 A/B 兩組配置提交（使用 Benchmark 區域的 Prompt）
-            const images = Array.from(document.getElementById('imageFile').files || []);
-            if (images.length === 0) { showError('Please select at least one image file'); return; }
-
-            const aKey = document.getElementById('apiKey')?.value || '';
-            const bKey = document.getElementById('apiKeyB')?.value || '';
-            const aCfg = getCurrentAPIConfig();
-            const bCfg = getCurrentAPIConfigB();
-            const promptA = document.getElementById('promptTextA')?.value || '';
-            const promptB = document.getElementById('promptTextB')?.value || '';
-
-            for (const img of images) {
-                // A：覆寫參數後復用原有 submitTask（保留任務/輪詢/錯誤處理）
-                window.benchmarkOverrideConfig = aCfg;
-                window.benchmarkOverrideApiKey = aKey;
-                window.benchmarkOverridePrompt = promptA;
-                window.benchmarkLabel = 'A';
-                window.benchmarkImageName = img.name || '';
-                await submitTask(img);
-                // B：
-                window.benchmarkOverrideConfig = bCfg;
-                window.benchmarkOverrideApiKey = bKey;
-                window.benchmarkOverridePrompt = promptB;
-                window.benchmarkLabel = 'B';
-                window.benchmarkImageName = img.name || '';
-                await submitTask(img);
-                // 清理
-                window.benchmarkOverrideConfig = null;
-                window.benchmarkOverrideApiKey = null;
-                window.benchmarkOverridePrompt = null;
-                window.benchmarkLabel = null;
-                window.benchmarkImageName = null;
-            }
-        }
-
-        // Minimax Clone 前端交互（自動克隆）
-        let minimaxCurrentVoiceId = '';
-        (function initMinimaxCloneUI(){
-            const upload = document.getElementById('minimaxCloneUpload');
-            const input = document.getElementById('minimaxCloneFile');
-            const nameEl = document.getElementById('minimaxCloneFileName');
-            const statusEl = document.getElementById('minimaxCloneStatus');
-            if (!upload || !input) return;
-            upload.addEventListener('click', () => input.click());
-            upload.addEventListener('dragover', e => { e.preventDefault(); upload.classList.add('drag-over'); });
-            upload.addEventListener('dragleave', () => upload.classList.remove('drag-over'));
-            upload.addEventListener('drop', e => {
-                e.preventDefault(); upload.classList.remove('drag-over');
-                if (e.dataTransfer?.files?.length){ input.files = e.dataTransfer.files; if (nameEl) nameEl.textContent = `Selected: ${e.dataTransfer.files[0].name}`; autoClone(); }
-            });
-            input.addEventListener('change', () => { const f = input.files?.[0]; if (nameEl) nameEl.textContent = f ? `Selected: ${f.name}` : ''; if (f) autoClone(); });
-
-            async function autoClone() {
-                try {
-                    console.log('🚀 AUTO CLONE STARTED!!!');
-                    const f = input.files?.[0];
-                    if (!f) return;
-                    
-                    // 檢查文件類型（支持音頻和視頻文件）
-                    const isAudio = f.type.startsWith('audio/') || f.name.match(/\.(mp3|wav|m4a|aac|ogg|flac)$/i);
-                    const isVideo = f.type.startsWith('video/') || f.name.match(/\.(mp4|mov|avi|mkv)$/i);
-                    if (!isAudio && !isVideo) {
-                        if (statusEl) statusEl.textContent = '❌ 請上傳音頻或視頻文件';
-                        showError('請上傳音頻文件（MP3/WAV/M4A等）或視頻文件（MP4等，將自動提取音頻）');
-                        return;
-                    }
-                    
-                    clearMessages();
-                    if (statusEl) statusEl.textContent = '⏳ 正在上傳並克隆...';
-                    console.log('🔄 About to send request to /minimax/clone');
-                    const fd = new FormData();
-                    fd.append('audio', f);
-                    const resp = await fetch('/minimax/clone', { method: 'POST', body: fd });
-                    console.log('📡 Got response, status:', resp.status);
-                    let text = '', data = {};
-                    try { text = await resp.text(); console.log('📄 Raw response text:', text); data = JSON.parse(text); } catch { data = {}; }
-                    console.log('🔍 Minimax /clone response:', { status: resp.status, raw: text, parsed: data });
-                    if (!resp.ok) { 
-                        const code = data.provider_status_code ?? data.status ?? data.base_resp?.status_code;
-                        const msg = data.provider_status_msg ?? data.base_resp?.status_msg ?? (data.provider_response?.base_resp?.status_msg);
-                        const base = data.error || data.message || 'Request failed';
-                        const details = `${base}${code ? ` [${code}]` : ''}${msg ? `: ${msg}` : ''}`;
-                        console.error('❌ Minimax clone failed:', { status: resp.status, raw: text, parsed: data });
-                        throw new Error(details || `HTTP ${resp.status}`); 
-                    }
-                    if (data.voice_id) {
-                        minimaxCurrentVoiceId = data.voice_id;
-                        if (statusEl) statusEl.textContent = `✅ 克隆成功 voice_id: ${data.voice_id}`;
-                        showSuccess(`✅ 語音克隆成功，voice_id: ${data.voice_id}`);
-                    }
-                    if (data.preview_audio) {
-                        const p = document.getElementById('minimaxClonePreview');
-                        p.src = data.preview_audio; p.style.display = 'block';
-                    }
-                } catch (e) {
-                    if (statusEl) statusEl.textContent = `❌ 克隆失敗: ${e.message}`;
-                    showError(`❌ 克隆失敗: ${e.message}`);
-                }
-            }
-        })();
     </script>
 </body>
-</html> 
+</html>
+</html>

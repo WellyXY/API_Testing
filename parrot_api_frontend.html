@@ -3118,8 +3118,12 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                         <div class="task-detail-value" id="gen-${task.id}">-</div>
                     </div>
                     <div class="task-detail-item">
+                        <div class="task-detail-label">Streaming</div>
+                        <div class="task-detail-value" id="stream-${task.id}">-</div>
+                    </div>
+                    <div class="task-detail-item">
                         <div class="task-detail-label">⏱️ Time</div>
-                        <div class="task-detail-value" id="time-${task.id}">Waiting...</div>
+                        <div class="task-detail-value" id="time-${task.id}">-</div>
                     </div>
                     <div class="task-detail-item">
                         <div class="task-detail-label">🔁 Retries</div>
@@ -3152,6 +3156,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             const progressFillElement = document.getElementById(`progress-fill-${task.id}`);
             const taskCard = document.getElementById(`task-${task.id}`);
             const retriesElement = document.getElementById(`retries-${task.id}`);
+            const streamElement = document.getElementById(`stream-${task.id}`);
             
             if (!statusElement) return;
 
@@ -3208,6 +3213,19 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 }
                 genElement.textContent = genSec != null ? `${genSec}s` : '-';
             }
+
+            // Streaming latency 顯示
+            if (streamElement) {
+                let streamSec = null;
+                if (task.startedAt) {
+                    if (task.streamLatencySec != null) {
+                        streamSec = Math.max(0, task.streamLatencySec);
+                    } else if (task.status === 'streaming' && task.streamPlaybackStarted) {
+                        streamSec = Math.max(0, Math.round((task.streamPlaybackStarted - task.startedAt) / 1000));
+                    }
+                }
+                streamElement.textContent = streamSec != null ? `${streamSec}s` : '-';
+            }
             
             // 更新狀態
             statusElement.className = 'task-status';
@@ -3217,7 +3235,13 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                 taskCard.classList.add('completed');
                 
                 if (task.url) {
-                    showTaskVideo(task);
+                    // 若 HLS 已經開始播放且尚未結束，暫不切換，等待播放完畢後再替換
+                    if (task.streamPlaybackStarted && !task.streamEnded) {
+                        task.pendingMp4Url = task.url;
+                        console.log(`⏳ MP4 ready but streaming in progress for #${task.taskNumber}, will swap after end`);
+                    } else {
+                        showTaskVideo(task);
+                    }
                 }
             } else if (task.status === 'streaming') {
                 statusElement.classList.add('processing');
@@ -3318,6 +3342,13 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                             console.log(`📡 Streaming started (muted) for task #${task.taskNumber}`);
                             // 標記實際開始播放，用於 stream latency
                             if (!task.streamPlaybackStarted) task.streamPlaybackStarted = Date.now();
+                            // 監聽播放結束，若已取得 MP4 則在結束時切換
+                            video.addEventListener('ended', () => {
+                                task.streamEnded = true;
+                                if (task.pendingMp4Url) {
+                                    try { swapToMp4(task); } catch {}
+                                }
+                            }, { once: true });
                             setTimeout(() => {
                                 video.muted = false;
                                 video.volume = 1.0;
@@ -3368,6 +3399,12 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     video.play().then(() => {
                         console.log(`📡 Native HLS streaming started (muted) for task #${task.taskNumber}`);
                         if (!task.streamPlaybackStarted) task.streamPlaybackStarted = Date.now();
+                        video.addEventListener('ended', () => {
+                            task.streamEnded = true;
+                            if (task.pendingMp4Url) {
+                                try { swapToMp4(task); } catch {}
+                            }
+                        }, { once: true });
                         setTimeout(() => {
                             video.muted = false;
                             video.volume = 1.0;
@@ -3376,6 +3413,24 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     }).catch(e => console.log('Autoplay prevented:', e));
                     console.log(`📡 Native HLS for task #${task.taskNumber}`);
                 }
+            }
+        }
+
+        function swapToMp4(task){
+            try {
+                if (task.hlsInstance) {
+                    task.hlsInstance.destroy();
+                    task.hlsInstance = null;
+                }
+                if (task.pendingMp4Url) {
+                    task.url = task.pendingMp4Url;
+                    task.pendingMp4Url = null;
+                }
+                task._currentVideoUrl = null; // 允許重新渲染 MP4
+                showTaskVideo(task);
+                console.log(`✅ Switched to MP4 for task #${task.taskNumber}`);
+            } catch (e) {
+                console.error('swapToMp4 error:', e);
             }
         }
 

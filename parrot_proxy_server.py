@@ -59,6 +59,17 @@ API_PROVIDERS = {
                 'audio-to-video': '/api/v1/generate/v0/audio-to-video'
             }
         }
+    },
+    'parrot_test': {
+        'name': 'Parrot (Lipsync Test)',
+        'base_url': 'https://candy-api.pika.art',
+        'api_key': 'pika_gmN0MIUkzJGGUCth42ZGowH4PGUpl5RfN-yBJRnj7vY',
+        'status_path': '/test/api/v1/generate/v0/videos',
+        'supported_versions': {
+            'v0': {
+                'audio-to-video-test': '/test/api/v1/generate/v0/audio-to-video-test'
+            }
+        }
     }
 }
 
@@ -374,7 +385,7 @@ def generate_video_flexible():
     provider = request.form.get('provider', 'staging')
     version = request.form.get('version', 'v2.2')
     endpoint_type = request.form.get('endpoint_type')
-    expect_audio = endpoint_type == 'audio-to-video'
+    expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test')
     return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
 
 def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None, expect_audio=False):
@@ -677,7 +688,7 @@ def get_video_status(video_id):
                 return jsonify(out), 200
 
             try:
-                if provider == 'parrot':
+                if provider in ('parrot', 'parrot_test'):
                     status_val = (data.get('status') or '').lower()
                     url_val = data.get('url')
                     if status_val == 'finished':
@@ -692,7 +703,12 @@ def get_video_status(video_id):
                                 'X-API-Key': api_key_eff,
                                 'Accept': '*/*'
                             }
-                            download_url = f"{base}/api/v1/generate/v0/videos/{video_id}/download"
+                            # 測試環境使用 /test 前綴
+                            download_url = (
+                                f"{base}/test/api/v1/generate/v0/videos/{video_id}/download"
+                                if provider == 'parrot_test' else
+                                f"{base}/api/v1/generate/v0/videos/{video_id}/download"
+                            )
                             max_wait_seconds = 20
                             interval = 1
                             elapsed = 0
@@ -725,7 +741,9 @@ def get_video_status(video_id):
                                         continue
                                     break
 
-                            proxy_url = urljoin(request.host_url, f"parrot/videos/{video_id}/download")
+                            proxy_url = urljoin(request.host_url, (
+                                f"parrot-test/videos/{video_id}/download" if provider == 'parrot_test' else f"parrot/videos/{video_id}/download"
+                            ))
                             if direct_url:
                                 data['url'] = direct_url
                                 data['proxy_url'] = proxy_url
@@ -854,6 +872,71 @@ def candy_download_video(video_id):
             break
 
         # 超時或仍不可用：透傳最後一個響應（通常為 404），以便前端顯示錯誤
+        if last_resp is not None:
+            return Response(last_resp.content, status=last_resp.status_code, mimetype=last_resp.headers.get('content-type', 'text/plain'))
+        return jsonify({'error': 'download not ready'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/parrot-test/videos/<video_id>/download', methods=['GET'])
+def parrot_test_download_video(video_id):
+    """Parrot Test 下載代理：嘗試獲取最終 MP4 並回傳/透傳"""
+    try:
+        provider_config = API_PROVIDERS.get('parrot_test')
+        if not provider_config:
+            return jsonify({'error': 'Parrot test provider not configured'}), 400
+
+        api_key = request.headers.get('X-API-KEY') or request.args.get('api_key') or provider_config['api_key']
+        headers = {
+            'X-API-KEY': api_key,
+            'X-API-Key': api_key,
+            'Accept': '*/*'
+        }
+        download_url = f"{provider_config['base_url']}/test/api/v1/generate/v0/videos/{video_id}/download"
+
+        max_wait_seconds = 90
+        interval = 1
+        elapsed = 0
+        last_resp = None
+        while elapsed <= max_wait_seconds:
+            r = requests.get(download_url, headers=headers, timeout=15, stream=True)
+            last_resp = r
+            ct = (r.headers.get('content-type') or '').lower()
+            status = r.status_code
+
+            if ct.startswith('application/json'):
+                try:
+                    j = r.json()
+                    if isinstance(j, dict) and j.get('status') in ['pending', 'processing', 'queued']:
+                        time.sleep(interval)
+                        elapsed += interval
+                        continue
+                    for key in ['url', 'video_url', 'mp4_url', 'download_url']:
+                        if isinstance(j, dict) and j.get(key):
+                            target = j[key]
+                            rr = requests.get(target, timeout=30, stream=True)
+                            return Response(rr.iter_content(chunk_size=8192), status=rr.status_code, mimetype=rr.headers.get('content-type', 'video/mp4'), headers={
+                                'Content-Disposition': f'attachment; filename="{video_id}.mp4"'
+                            })
+                except Exception:
+                    pass
+                time.sleep(interval)
+                elapsed += interval
+                continue
+
+            if status == 200 and ('video' in ct or 'octet-stream' in ct or ct == ''):
+                return Response(r.iter_content(chunk_size=8192), status=200, mimetype=r.headers.get('content-type', 'video/mp4'), headers={
+                    'Content-Disposition': f'attachment; filename="{video_id}.mp4"'
+                })
+
+            if status in (403, 404, 202, 204, 423):
+                time.sleep(interval)
+                elapsed += interval
+                continue
+
+            break
+
         if last_resp is not None:
             return Response(last_resp.content, status=last_resp.status_code, mimetype=last_resp.headers.get('content-type', 'text/plain'))
         return jsonify({'error': 'download not ready'}), 404

@@ -977,6 +977,7 @@
                             <option value="original" selected>Original - Parrot API</option>
                             <option value="testing">🧪 Testing (New Architecture)</option>
                             <option value="staging">Staging - Parrot Labs</option>
+                            <option value="parrot-test">Parrot (Lipsync Test)</option>
                             <option value="parrot">Parrot (Lipsync)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
@@ -1026,6 +1027,7 @@
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
                                     <option value="testing">🧪 Testing (New Architecture)</option>
                                     <option value="staging">Staging - Parrot Labs</option>
+                                    <option value="parrot-test">Parrot (Lipsync Test)</option>
                                     <option value="parrot">Parrot (Lipsync)</option>
                                     <option value="original" selected>Original - Parrot API</option>
                                 </select>
@@ -1409,6 +1411,27 @@
                     }
                 }
             },
+            'parrot-test': {
+                name: 'Parrot (Lipsync Test)',
+                description: 'Parrot lipsync test endpoint',
+                baseUrl: 'https://candy-api.pika.art',
+                apiKey: 'pika_gmN0MIUkzJGGUCth42ZGowH4PGUpl5RfN-yBJRnj7vY',
+                versions: {
+                    'v0': {
+                        endpoints: {
+                            'audio-to-video-test': {
+                                path: '/test/api/v1/generate/v0/audio-to-video-test',
+                                description: 'Image + Audio to Video (test)',
+                                name: 'Parrot v0 (audio-to-video-test)',
+                                queryPath: '/test/api/v1/generate/v0/videos'
+                            }
+                        },
+                        defaultEndpoint: 'audio-to-video-test',
+                        description: 'Audio to Video - v0 (test)',
+                        name: 'Parrot v0 (test)'
+                    }
+                }
+            },
             'minimax': {
                 name: 'Minimax text to audio',
                 description: 'MiniMax 文本轉語音',
@@ -1499,7 +1522,7 @@
             
             // 切換 UI：Minimax 下隱藏圖片/生成視頻相關，顯示 T2A 區塊
             const isMinimax = selectedProvider === 'minimax';
-            const isCandy = selectedProvider === 'parrot';
+            const isParrot = selectedProvider === 'parrot' || selectedProvider === 'parrot-test';
             document.getElementById('uploadArea')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
             // Candy 與 Original/Staging 顯示主生成區塊；Minimax 隱藏
             document.getElementById('promptText')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
@@ -1527,21 +1550,21 @@
                 }
             } catch {}
 
-            // 切換到 candy 時：
+            // 切換到 parrot/parrot-test 時：
             // 1) 強制版本 v0
-            // 2) 強制端點為 audio-to-video
+            // 2) 強制端點為 audio-to-video / audio-to-video-test
             // 3) 隱藏端點選單（只有一個端點）
             // 4) 顯示音訊上傳區塊
             try {
                 const audioGroupEl = document.getElementById('audioGroup');
                 const et = document.getElementById('endpointType');
-                if (isCandy) {
+                if (isParrot) {
                     if (versionSelect) versionSelect.value = 'v0';
-                    if (et) et.value = 'audio-to-video';
+                    if (et) et.value = (selectedProvider === 'parrot-test') ? 'audio-to-video-test' : 'audio-to-video';
                     if (endpointTypeGroup) endpointTypeGroup.style.display = 'none';
                     if (audioGroupEl) audioGroupEl.style.display = 'block';
                 } else {
-                    // 非 candy 交由 refreshAudioVisibility 根據端點決定顯示
+                    // 非 parrot 類交由 refreshAudioVisibility 根據端點決定顯示
                     if (endpointTypeGroup && providerConfig?.versions?.[versionSelect.value]?.endpoints) {
                         endpointTypeGroup.style.display = 'block';
                     }
@@ -2608,7 +2631,7 @@
             showTasksArea();
 
             // audio-to-video 需要音頻文件，無則直接失敗並返回
-            if (apiConfig.endpointType === 'audio-to-video') {
+            if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test') {
                 const audioInputPre = document.getElementById('audioFile');
                 const audioFilePre = audioInputPre?.files?.[0];
                 if (!audioFilePre) {
@@ -2638,8 +2661,8 @@
                     formData.append('provider', apiConfig.provider);
                     formData.append('version', apiConfig.version);
                     if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
-                    // 如果選擇的是 audio-to-video，附帶音頻文件
-                    if (apiConfig.endpointType === 'audio-to-video') {
+                    // 如果選擇的是 audio-to-video(-test)，附帶音頻文件
+                    if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test') {
                         const audioInput = document.getElementById('audioFile');
                         const audioFile = audioInput?.files?.[0];
                         if (!audioFile) {

@@ -1560,7 +1560,10 @@
                 const et = document.getElementById('endpointType');
                 if (isParrot) {
                     if (versionSelect) versionSelect.value = 'v0';
-                    if (et) et.value = (selectedProvider === 'parrot-test') ? 'audio-to-video-test' : 'audio-to-video';
+                    // 注意：下拉選單沒有 'audio-to-video-test' 這個值，
+                    // 設為 'audio-to-video' 以便 refreshAudioVisibility 正確顯示音訊；
+                    // submit 時因為 endpoints 映射缺少該鍵會自動回落到 defaultEndpoint（即 test 路徑）。
+                    if (et) et.value = 'audio-to-video';
                     if (endpointTypeGroup) endpointTypeGroup.style.display = 'none';
                     if (audioGroupEl) audioGroupEl.style.display = 'block';
                 } else {
@@ -1663,10 +1666,12 @@
 
         // 根據端點類型顯示/隱藏音頻上傳
         function refreshAudioVisibility() {
+            const provider = document.getElementById('apiProvider')?.value;
             const endpointType = document.getElementById('endpointType')?.value;
             const audioGroup = document.getElementById('audioGroup');
             if (!audioGroup) return;
-            if (endpointType === 'audio-to-video' || endpointType === 'audio-to-video-test') {
+            // parrot / parrot-test 一律顯示音訊上傳
+            if (provider === 'parrot' || provider === 'parrot-test' || endpointType === 'audio-to-video' || endpointType === 'audio-to-video-test') {
                 audioGroup.style.display = 'block';
             } else {
                 audioGroup.style.display = 'none';

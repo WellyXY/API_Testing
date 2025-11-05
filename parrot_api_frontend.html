@@ -1666,7 +1666,7 @@
             const endpointType = document.getElementById('endpointType')?.value;
             const audioGroup = document.getElementById('audioGroup');
             if (!audioGroup) return;
-            if (endpointType === 'audio-to-video') {
+            if (endpointType === 'audio-to-video' || endpointType === 'audio-to-video-test') {
                 audioGroup.style.display = 'block';
             } else {
                 audioGroup.style.display = 'none';

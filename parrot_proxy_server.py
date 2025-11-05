@@ -383,6 +383,8 @@ def generate_audio_to_video_v0():
 def generate_video_flexible():
     """靈活的生成端點，支持多提供商"""
     provider = request.form.get('provider', 'staging')
+    if isinstance(provider, str):
+        provider = provider.replace('-', '_')
     version = request.form.get('version', 'v2.2')
     endpoint_type = request.form.get('endpoint_type')
     expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test')
@@ -629,6 +631,8 @@ def get_video_status(video_id):
     try:
         # 獲取提供商參數，默認為 staging
         provider = request.args.get('provider', 'staging')
+        if isinstance(provider, str):
+            provider = provider.replace('-', '_')
         
         if provider not in API_PROVIDERS:
             return jsonify({'error': f'Unsupported provider: {provider}'}), 400

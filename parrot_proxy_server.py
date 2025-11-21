@@ -79,6 +79,10 @@ API_PROVIDERS = {
         'supported_versions': {
             'v0': {
                 'image-to-video': '/api/v1/generate/v0/image-to-video',
+                'image-to-video-new': '/api/v1/generate/v0/image-to-video-new',
+                'image-to-video-inner': '/api/v1/generate/v0/image-to-video-inner',
+                'image-to-video-nmd': '/api/v1/generate/v0/image-to-video-nmd',
+                'image-to-video-v2': '/api/v1/generate/v0/image-to-video-v2',
                 'audio-to-video': '/api/v1/generate/v0/audio-to-video'
             }
         }

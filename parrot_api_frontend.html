@@ -979,6 +979,7 @@
                             <option value="staging">Staging - Parrot Labs</option>
                             <option value="parrot-test">Parrot (Lipsync Test)</option>
                             <option value="parrot">Parrot (Lipsync)</option>
+                            <option value="parrot_qb">Parrot (QB Production)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -1029,6 +1030,7 @@
                                     <option value="staging">Staging - Parrot Labs</option>
                                     <option value="parrot-test">Parrot (Lipsync Test)</option>
                                     <option value="parrot">Parrot (Lipsync)</option>
+                                    <option value="parrot_qb">Parrot (QB Production)</option>
                                     <option value="original" selected>Original - Parrot API</option>
                                 </select>
                             </div>
@@ -1429,6 +1431,31 @@
                         defaultEndpoint: 'audio-to-video-test',
                         description: 'Audio to Video - v0 (test)',
                         name: 'Parrot v0 (test)'
+                    }
+                }
+            },
+            'parrot_qb': {
+                name: 'Parrot (QB Production)',
+                description: 'Parrot QB Production Environment',
+                baseUrl: 'https://parrot.pika.art',
+                apiKey: 'pika_qb8yQnbfbCTvzmaExJ16I_dG_xSPtdLcAbNmjAmHZcM',
+                versions: {
+                    'v0': {
+                        endpoints: {
+                            'image-to-video': {
+                                path: '/api/v1/generate/v0/image-to-video',
+                                description: 'Image to Video - v0',
+                                name: 'QB v0 (image-to-video)'
+                            },
+                            'audio-to-video': {
+                                path: '/api/v1/generate/v0/audio-to-video',
+                                description: 'Image + Audio to Video - v0',
+                                name: 'QB v0 (audio-to-video)'
+                            }
+                        },
+                        defaultEndpoint: 'image-to-video',
+                        description: 'Image to Video - v0',
+                        name: 'QB v0'
                     }
                 }
             },
@@ -2841,7 +2868,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             // 允許未輸入 API Key 時仍輪詢，後端會使用預設 key（若有）
             
             const activeTasks = Array.from(tasks.values()).filter(task => 
-                !['finished', 'completed', 'failed', 'error'].includes(task.status)
+                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status)
             );
             
             if (activeTasks.length === 0) {

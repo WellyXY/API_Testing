@@ -70,6 +70,18 @@ API_PROVIDERS = {
                 'audio-to-video-test': '/test/api/v1/generate/v0/audio-to-video-test'
             }
         }
+    },
+    'parrot_qb': {
+        'name': 'Parrot (QB Production)',
+        'base_url': 'https://parrot.pika.art',
+        'api_key': 'pika_qb8yQnbfbCTvzmaExJ16I_dG_xSPtdLcAbNmjAmHZcM',
+        'status_path': '/api/v1/generate/v0/videos',
+        'supported_versions': {
+            'v0': {
+                'image-to-video': '/api/v1/generate/v0/image-to-video',
+                'audio-to-video': '/api/v1/generate/v0/audio-to-video'
+            }
+        }
     }
 }
 
@@ -382,13 +394,22 @@ def generate_audio_to_video_v0():
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
     """靈活的生成端點，支持多提供商"""
-    provider = request.form.get('provider', 'staging')
-    if isinstance(provider, str):
-        provider = provider.replace('-', '_')
-    version = request.form.get('version', 'v2.2')
-    endpoint_type = request.form.get('endpoint_type')
-    expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test')
-    return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
+    try:
+        print("DEBUG: Entering generate_video_flexible")
+        provider = request.form.get('provider', 'staging')
+        print(f"DEBUG: Provider raw: {provider}")
+        if isinstance(provider, str):
+            provider = provider.replace('-', '_')
+        print(f"DEBUG: Provider processed: {provider}")
+        version = request.form.get('version', 'v2.2')
+        endpoint_type = request.form.get('endpoint_type')
+        expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test')
+        return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
+    except Exception as e:
+        print(f"CRITICAL ERROR in generate_video_flexible: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e), 'trace': traceback.format_exc()}), 500
 
 def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_type=None, expect_audio=False):
     """內部圖片轉視頻處理函數"""
@@ -1997,14 +2018,14 @@ if __name__ == '__main__':
     host = os.getenv('HOST', '0.0.0.0')
     try:
         # 關閉自動重載，以避免請求中途重啟導致 connection reset
-        app.run(host=host, port=port, debug=False, use_reloader=False)
+        app.run(host=host, port=port, debug=True, use_reloader=False)
     except OSError as e:
         if "Address already in use" in str(e):
             print(f"⚠️ Port {port} is in use. Trying to find a free port...")
             try:
                 free_port = find_free_port()
                 print(f"✅ Found free port: {free_port}. Starting server...")
-                app.run(host=host, port=free_port, debug=False, use_reloader=False)
+                app.run(host=host, port=free_port, debug=True, use_reloader=False)
             except Exception as e_new:
                 print(f"❌ Could not start server on a free port. Error: {e_new}")
         else:

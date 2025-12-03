@@ -974,12 +974,12 @@
                     <div class="select-row">
                         <label for="apiProvider">Provider:</label>
                         <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                            <option value="original" selected>Original - Parrot API</option>
+                            <option value="original">Original - Parrot API</option>
                             <option value="testing">🧪 Testing (New Architecture)</option>
                             <option value="staging">Staging - Parrot Labs</option>
                             <option value="parrot-test">Parrot (Lipsync Test)</option>
                             <option value="parrot">Parrot (Lipsync)</option>
-                            <option value="parrot_qb">Parrot (QB Production)</option>
+                            <option value="parrot_qb" selected>Parrot (QB Production)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -1209,6 +1209,24 @@
                     <textarea id="promptText" class="form-control" rows="3" placeholder="E.g., a beautiful sunset scene with gentle waves..."></textarea>
                 </div>
 
+                <!-- Video settings -->
+                <div class="form-row" style="display:flex; flex-wrap:wrap; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                    <div class="form-group" style="flex:1; min-width:200px;">
+                        <label for="videoDuration">⏱️ Duration (seconds)</label>
+                        <input type="number" id="videoDuration" class="form-control" min="3" max="10" step="1" value="5" placeholder="e.g., 5">
+                        <small style="font-size:12px; color: var(--text-secondary); display:block; margin-top:4px;">新 API 支持 3-10 秒，留空則使用預設</small>
+                    </div>
+                    <div class="form-group" style="flex:1; min-width:200px;">
+                        <label for="videoResolution">🖥️ Resolution</label>
+                        <select id="videoResolution" class="form-control">
+                            <option value="480p" selected>480p</option>
+                            <option value="720p">720p</option>
+                            <option value="1080p">1080p</option>
+                        </select>
+                        <small style="font-size:12px; color: var(--text-secondary); display:block; margin-top:4px;">選擇輸出解析度（默認 480p）</small>
+                    </div>
+                </div>
+
                 <div class="btn-group">
                     <button class="btn btn-outline btn-sm" onclick="clearAllImages()">
                         🗑️ Clear Images
@@ -1329,7 +1347,7 @@
                                 queryPath: '/api/v1/generate/v0/videos' // 查询路径
                             }
                         },
-                        defaultEndpoint: 'image-to-video-v2',
+                        defaultEndpoint: 'image-to-video',
                         description: 'Image to Video - v1 (新测试架构)',
                         name: 'Testing v1'
                     }
@@ -1438,7 +1456,7 @@
                 name: 'Parrot (QB Production)',
                 description: 'Parrot QB Production Environment',
                 baseUrl: 'https://parrot.pika.art',
-                apiKey: 'pika_qb8yQnbfbCTvzmaExJ16I_dG_xSPtdLcAbNmjAmHZcM',
+                apiKey: 'pika_xLWFM5GJc69IoMJkAlKVSHlOWUSg9jIoCoYJRd1N-YE',
                 versions: {
                     'v0': {
                         endpoints: {
@@ -1497,29 +1515,38 @@
         function getCurrentAPIConfig() {
             const provider = document.getElementById('apiProvider')?.value || 'staging';
             const apiVersion = document.getElementById('apiVersion')?.value || 'v2.2';
-            const endpointType = document.getElementById('endpointType')?.value;
+            const endpointTypeRaw = document.getElementById('endpointType')?.value;
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
             let endpoint = '/generate/2.2/i2v'; // 默認
+            let resolvedEndpointType = endpointTypeRaw;
             
             if (versionConfig) {
                 if (versionConfig.endpoints) {
-                    // Original API v0 支持多個端點
-                    const selectedEndpoint = endpointType && versionConfig.endpoints[endpointType] 
-                        ? versionConfig.endpoints[endpointType] 
-                        : versionConfig.endpoints[versionConfig.defaultEndpoint];
-                    endpoint = selectedEndpoint.path;
-                } else {
+                    // Original / Testing 等 API 支持多個端點
+                    const endpoints = versionConfig.endpoints || {};
+                    const fallbackKey = (versionConfig.defaultEndpoint && endpoints[versionConfig.defaultEndpoint])
+                        ? versionConfig.defaultEndpoint
+                        : Object.keys(endpoints)[0];
+                    const chosenKey = (endpointTypeRaw && endpoints[endpointTypeRaw])
+                        ? endpointTypeRaw
+                        : fallbackKey;
+                    const selectedEndpoint = endpoints[chosenKey];
+                    if (selectedEndpoint?.path) {
+                        endpoint = selectedEndpoint.path;
+                    }
+                    resolvedEndpointType = chosenKey || endpointTypeRaw;
+                } else if (versionConfig.endpoint) {
                     // 單一端點（Staging 或 Minimax）
                     endpoint = versionConfig.endpoint;
                 }
             }
             
             return {
-                provider: provider,
+                provider,
                 version: apiVersion,
-                endpoint: endpoint,
-                endpointType: endpointType
+                endpoint,
+                endpointType: resolvedEndpointType
             };
         }
 
@@ -1764,6 +1791,8 @@
                 progress: 0,
                 promptText: promptText || '',
                 imageName: imageName || '',
+                videoDuration: '',
+                videoResolution: '',
                 startTime: null,
                 endTime: null,
                 duration: 0,
@@ -2089,6 +2118,27 @@
             }
         }
 
+        function getVideoSettings() {
+            const durationInput = document.getElementById('videoDuration');
+            let duration = durationInput?.value?.trim() || '';
+            if (duration) {
+                const parsed = Number(duration);
+                if (Number.isFinite(parsed) && parsed > 0) {
+                    duration = String(Math.round(parsed));
+                } else {
+                    duration = '';
+                }
+            }
+
+            const resolutionSelect = document.getElementById('videoResolution');
+            const resolution = (resolutionSelect?.value || '').trim();
+
+            return {
+                duration,
+                resolution
+            };
+        }
+
         // Process Sticking Video - Generate prompts and create multiple variants
         async function processStickingVideo(imageFile, videoPrompt) {
             console.log('🎬 Starting Sticking Video process...');
@@ -2220,6 +2270,7 @@
         async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName, imagePrompt) {
             const apiKey = document.getElementById('apiKey').value || '';
             const apiConfig = getCurrentAPIConfig();
+            const { duration: requestedDuration, resolution: requestedResolution } = getVideoSettings();
             const MAX_RETRIES = 20;
             const RETRY_DELAY = 8000;
             
@@ -2229,6 +2280,8 @@
             const tempId = `sticking-${Date.now()}-${Math.random()}`;
             const displayName = `[Sticking ${variantIndex}] ${originalImageName}`;
             const task = createTask(tempId, videoPrompt, displayName);
+            task.videoDuration = requestedDuration || '';
+            task.videoResolution = requestedResolution || '';
             task.stickingVideoMode = true;
             task.stickingVideoVariant = variantIndex;
             task.imagePrompt = imagePrompt || '';
@@ -2260,6 +2313,8 @@
                     formData.append('version', apiConfig.version);
                     if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
                     if (videoPrompt.trim()) formData.append('promptText', videoPrompt.trim());
+                    if (requestedDuration) formData.append('duration', requestedDuration);
+                    if (requestedResolution) formData.append('resolution', requestedResolution);
                     
                     const headers = {};
                     if (apiKey) headers['X-API-KEY'] = apiKey;
@@ -2275,6 +2330,8 @@
                     }
                     
                     console.log(`📤 Submitting sticking video variant ${variantIndex} to API...`);
+                    console.log('⏱️ Duration:', requestedDuration || 'API default');
+                    console.log('🖥️ Resolution:', requestedResolution || 'API default');
                     const response = await fetch(requestUrl, { method: 'POST', headers, body: formData });
                     const result = await response.json().catch(() => ({}));
                     
@@ -2603,6 +2660,7 @@
             
             // Get the unified prompt
             const promptText = (window.benchmarkOverridePrompt ?? document.getElementById('promptText').value) || '';
+            const { duration: requestedDuration, resolution: requestedResolution } = getVideoSettings();
             
             // Handle Sticking Video Mode
             if (stickingVideoEnabled && !window.benchmarkOverridePrompt) {
@@ -2657,6 +2715,8 @@
             const tempId = `submitting-${Date.now()}-${Math.random()}`;
             const displayName = i2iEnabled ? `[i2i] ${imageFile.name}` : imageFile.name;
             const task = createTask(tempId, promptText, displayName);
+            task.videoDuration = requestedDuration || '';
+            task.videoResolution = requestedResolution || '';
             task.i2iEnabled = i2iEnabled;
             task.i2iPrompt = i2iEnabled ? promptText : '';
             task.status = 'submitting';
@@ -2724,6 +2784,8 @@
                         formData.append('audio', audioFile);
                     }
                     if (promptText.trim()) formData.append('promptText', promptText.trim());
+                    if (requestedDuration) formData.append('duration', requestedDuration);
+                    if (requestedResolution) formData.append('resolution', requestedResolution);
                     const headers = {};
                     if (apiKey) headers['X-API-KEY'] = apiKey; // 如果用户提供了API Key就使用，否则使用服务器默认的
                     
@@ -2742,6 +2804,8 @@
                     console.log('🚀 Proxy Endpoint:', '/api/generate');
                     console.log('🔑 API Key:', apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Using default from server');
                     console.log('📝 Prompt:', promptText.trim() || 'No prompt');
+                    console.log('⏱️ Duration:', requestedDuration || 'API default');
+                    console.log('🖥️ Resolution:', requestedResolution || 'API default');
                     console.log('📎 Image:', processedImageFile.name, `(${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i processed]' : ''}`);
                     if (i2iEnabled) {
                         console.log('🎨 Original Image:', imageFile.name, `(${(imageFile.size / 1024).toFixed(2)} KB)`);
@@ -2782,6 +2846,8 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 🔗 Full URL: ${fullUrl}
 🔑 API Key: ${apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Server Default'}
 📝 Prompt: ${(window.benchmarkOverridePrompt ?? promptText).trim() || 'No prompt provided'}
+${requestedDuration ? `⏱️ Duration: ${requestedDuration}s` : ''}
+${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
 📎 Image: ${processedImageFile.name} (${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i processed from ' + imageFile.name + ']' : ''}
 🏗️ Worker: ${result.worker || 'Not specified'}
 📊 Status: ${result.status || 'pending'}
@@ -2812,6 +2878,8 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                             fullUrl: fullUrl,
                             apiKey: apiKey ? `${apiKey.substring(0, 8)}...${apiKey.substring(apiKey.length - 8)}` : 'Server Default',
                             prompt: promptText.trim() || 'No prompt provided',
+                            duration: requestedDuration || null,
+                            resolution: requestedResolution || null,
                             imageInfo: `${processedImageFile.name} (${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i]' : ''}`,
                             originalImageInfo: i2iEnabled ? `${imageFile.name} (${(imageFile.size / 1024).toFixed(2)} KB)` : null,
                             worker: result.worker || 'Not specified',
@@ -3165,6 +3233,10 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 
         function createTaskCard(task) {
             const tasksList = document.getElementById('tasksList');
+            const settingsSummary = [
+                task.videoDuration ? `⏱️ ${task.videoDuration}s` : '',
+                task.videoResolution ? `🖥️ ${task.videoResolution}` : ''
+            ].filter(Boolean).join(' | ');
             
             const taskCard = document.createElement('div');
             taskCard.className = 'task-card';
@@ -3209,6 +3281,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
                     🖼️ Image: ${task.imageName} | 💬 Prompt: ${task.promptText || 'None'}
                     ${task.stickingVideoMode && task.imagePrompt ? `<div style="margin-top:6px; font-size:12px; color:#444; background:#f1f3f5; padding:6px; border-radius:4px;">🖊️ Image Prompt: ${task.imagePrompt.replaceAll('<','&lt;').replaceAll('>','&gt;')}</div>` : ''}
                 </div>
+                ${settingsSummary ? `<div style="font-size:12px; color:#555; margin-bottom:8px;">⚙️ Settings: ${settingsSummary}</div>` : ''}
                 <div style="font-size: 12px; color: #888; margin-bottom: 10px; padding: 5px; background: #f8f9fa; border-radius: 3px;" id="api-info-${task.id}">
                     📍 API: Loading... | 🔗 Version: Loading... | 🔑 Key: Loading...
                 </div>

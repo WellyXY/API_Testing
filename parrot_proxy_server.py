@@ -74,7 +74,7 @@ API_PROVIDERS = {
     'parrot_qb': {
         'name': 'Parrot (QB Production)',
         'base_url': 'https://parrot.pika.art',
-        'api_key': 'pika_qb8yQnbfbCTvzmaExJ16I_dG_xSPtdLcAbNmjAmHZcM',
+        'api_key': 'pika_xLWFM5GJc69IoMJkAlKVSHlOWUSg9jIoCoYJRd1N-YE',
         'status_path': '/api/v1/generate/v0/videos',
         'supported_versions': {
             'v0': {
@@ -565,6 +565,16 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
             
         if 'negativePrompt' in request.form and request.form['negativePrompt'].strip():
             data['negativePrompt'] = request.form['negativePrompt']
+        
+        duration_val = request.form.get('duration', '').strip()
+        if duration_val:
+            data['duration'] = duration_val
+            print(f"⏱️ Duration: {duration_val}s")
+
+        resolution_val = request.form.get('resolution', '').strip()
+        if resolution_val:
+            data['resolution'] = resolution_val
+            print(f"🖥️ Resolution: {resolution_val}")
 
         # 發送請求到 Parrot API
         headers = {

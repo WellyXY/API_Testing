@@ -77,6 +77,23 @@ python3 parrot_proxy_server.py
 - `version` - API 版本 ('v0' 或 'v2.2')
 - `endpoint_type` - 端點類型 (僅 Original API v0: 'image-to-video', 'image-to-video-new', 'image-to-video-inner')
  - `audio` - 音頻文件 (僅 `audio-to-video` 端點必需)
+- `duration` - 視頻時長 (可選，QB Production 端點支持 3-10 秒，默認 5 秒)
+- `resolution` - 視頻解析度 (可選，QB Production 端點支持 `480p`、`720p`、`1080p`)
+
+### QB Production：自定義解析度與時長
+
+對於最新的 QB Production 端點 `https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2`，可以額外透過 `duration` 與 `resolution` 參數控制輸出，示例：
+
+```bash
+curl -X POST "https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2" \
+  -H "X-API-KEY: <your_qb_api_key>" \
+  -F "image=@/path/to/your/image.jpg;type=image/jpeg" \
+  -F "promptText=Make this person move, blink eyes and smile" \
+  -F "duration=5" \
+  -F "resolution=720p"
+```
+
+> `duration` 未指定時默認 5 秒；`resolution` 留空時將套用 480p。
 
 ## 🛠️ 技術棧
 

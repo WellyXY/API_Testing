@@ -1398,7 +1398,9 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
             if (!apiKey) return;
             
             const activeTasks = Array.from(tasks.values()).filter(task => 
-                !['finished', 'completed', 'failed', 'error'].includes(task.status)
+                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status) &&
+                !task.status.startsWith('retrying') &&
+                !task.id.startsWith('submitting-')
             );
             
             if (activeTasks.length === 0) {

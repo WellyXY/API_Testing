@@ -2956,7 +2956,9 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             // 允許未輸入 API Key 時仍輪詢，後端會使用預設 key（若有）
             
             const activeTasks = Array.from(tasks.values()).filter(task => 
-                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status)
+                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status) &&
+                !task.status.startsWith('retrying') &&
+                !task.id.startsWith('submitting-')
             );
             
             if (activeTasks.length === 0) {

@@ -974,12 +974,9 @@
                     <div class="select-row">
                         <label for="apiProvider">Provider:</label>
                         <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                            <option value="original">Original - Parrot API</option>
-                            <option value="testing">🧪 Testing (New Architecture)</option>
-                            <option value="staging">Staging - Parrot Labs</option>
-                            <option value="parrot-test">Parrot (Lipsync Test)</option>
-                            <option value="parrot">Parrot (Lipsync)</option>
                             <option value="parrot_qb" selected>Parrot (QB Production)</option>
+                            <option value="parrot">Parrot (Lipsync)</option>
+                            <option value="parrot-test">Parrot (Lipsync Test)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -995,6 +992,7 @@
                         <label for="endpointType">Endpoint:</label>
                         <select id="endpointType" class="form-control" onchange="updateAPIDescription()">
                             <option value="image-to-video-v2" selected>image-to-video-v2 (default)</option>
+                            <option value="image-to-video-fast">image-to-video-fast</option>
                             <option value="image-to-video">image-to-video</option>
                             <option value="image-to-video-new">image-to-video-new</option>
                             <option value="image-to-video-inner">image-to-video-inner</option>
@@ -1026,12 +1024,9 @@
                             <div class="form-group">
                                 <label for="apiProviderB">Provider</label>
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
-                                    <option value="testing">🧪 Testing (New Architecture)</option>
-                                    <option value="staging">Staging - Parrot Labs</option>
+                                    <option value="parrot_qb">Parrot (QB Production)</option>
                                     <option value="parrot-test">Parrot (Lipsync Test)</option>
                                     <option value="parrot">Parrot (Lipsync)</option>
-                                    <option value="parrot_qb">Parrot (QB Production)</option>
-                                    <option value="original" selected>Original - Parrot API</option>
                                 </select>
                             </div>
                             
@@ -1043,11 +1038,12 @@
                             <div class="form-group" id="endpointTypeGroupB" style="display:none;">
                                 <label for="endpointTypeB">Endpoint</label>
                                 <select id="endpointTypeB" class="form-control" onchange="updateAPIDescriptionB()">
-                                    <option value="image-to-video">image-to-video (default)</option>
+                                    <option value="image-to-video-v2">image-to-video-v2 (default)</option>
+                                    <option value="image-to-video-fast">image-to-video-fast</option>
+                                    <option value="image-to-video">image-to-video</option>
                                     <option value="image-to-video-new">image-to-video-new</option>
                                     <option value="image-to-video-inner">image-to-video-inner</option>
                                     <option value="image-to-video-nmd">image-to-video-nmd</option>
-                                    <option value="image-to-video-v2">image-to-video-v2</option>
                                     <option value="audio-to-video">audio-to-video</option>
                                 </select>
                             </div>
@@ -1332,85 +1328,6 @@
         
         // API Provider and version configuration
         const API_PROVIDERS = {
-            'testing': {
-                name: 'Testing (New Architecture)',
-                description: '新测试架构 - 需要 SSH 隧道',
-                baseUrl: 'http://localhost:9580',
-                apiKey: 'test-api-key-123456',
-                versions: {
-                    'v1': {
-                        endpoints: {
-                            'image-to-video': {
-                                path: '/api/v1/generate/v0/image-to-video',
-                                description: 'Image to Video - v1 (新架构)',
-                                name: 'Testing v1 (image-to-video)',
-                                queryPath: '/api/v1/generate/v0/videos' // 查询路径
-                            }
-                        },
-                        defaultEndpoint: 'image-to-video',
-                        description: 'Image to Video - v1 (新测试架构)',
-                        name: 'Testing v1'
-                    }
-                }
-            },
-            'original': {
-                name: 'Original',
-                description: 'Original Parrot API Server',
-                baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
-                apiKey: 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
-                versions: {
-                    'v0': {
-                        endpoints: {
-                            'image-to-video': {
-                                path: '/generate/v0/image-to-video',
-                                description: 'Image to Video - v0 (default)',
-                                name: 'Original v0 (default)'
-                            },
-                            'image-to-video-new': {
-                                path: '/generate/v0/image-to-video-new',
-                                description: 'Image to Video - v0 (new endpoint)',
-                                name: 'Original v0 (new)'
-                            },
-                            'image-to-video-inner': {
-                                path: '/generate/v0/image-to-video-inner',
-                                description: 'Image to Video - v0 (internal endpoint)',
-                                name: 'Original v0 (internal)'
-                            },
-                            'image-to-video-nmd': {
-                                path: '/generate/v0/image-to-video-nmd',
-                                description: 'Image to Video - v0 (NMD endpoint)',
-                                name: 'Original v0 (nmd)'
-                            },
-                            'image-to-video-v2': {
-                                path: '/generate/v0/image-to-video-v2',
-                                description: 'Image to Video - v2 (new version)',
-                                name: 'Original v0 (v2)'
-                            },
-                            'audio-to-video': {
-                                path: '/generate/v0/audio-to-video',
-                                description: 'Image + Audio to Video - v0',
-                                name: 'Original v0 (audio-to-video)'
-                            }
-                        },
-                        defaultEndpoint: 'image-to-video',
-                        description: 'Image to Video - v0',
-                        name: 'Original v0'
-                    }
-                }
-            },
-            'staging': {
-                name: 'Staging',
-                description: 'Parrot Labs API Server',
-                baseUrl: 'https://089e99349ace.pikalabs.app',
-                apiKey: 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
-                versions: {
-                    'v2.2': {
-                        endpoint: '/generate/2.2/i2v',
-                        description: '圖片轉視頻 - v2.2 版本',
-                        name: 'Staging v2.2'
-                    }
-                }
-            },
             'parrot': {
                 name: 'Parrot (Lipsync)',
                 description: 'Pika Parrot audio-to-video (lipsync)',
@@ -1485,6 +1402,11 @@
                                 description: 'Image to Video - v2 (new version)',
                                 name: 'QB v0 (v2)'
                             },
+                            'image-to-video-fast': {
+                                path: '/api/v1/generate/v0/image-to-video-fast',
+                                description: 'Image to Video - v0 (fast endpoint)',
+                                name: 'QB v0 (fast)'
+                            },
                             'audio-to-video': {
                                 path: '/api/v1/generate/v0/audio-to-video',
                                 description: 'Image + Audio to Video - v0',
@@ -1513,12 +1435,12 @@
 
         // 獲取當前API配置 - 現在支持動態選擇
         function getCurrentAPIConfig() {
-            const provider = document.getElementById('apiProvider')?.value || 'staging';
-            const apiVersion = document.getElementById('apiVersion')?.value || 'v2.2';
+            const provider = document.getElementById('apiProvider')?.value || 'parrot_qb';
+            const apiVersion = document.getElementById('apiVersion')?.value || 'v0';
             const endpointTypeRaw = document.getElementById('endpointType')?.value;
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
-            let endpoint = '/generate/2.2/i2v'; // 默認
+            let endpoint = '/api/v1/generate/v0/image-to-video-v2'; // 默認
             let resolvedEndpointType = endpointTypeRaw;
             
             if (versionConfig) {

@@ -26,29 +26,6 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100MB
 
 # API 提供商配置
 API_PROVIDERS = {
-    'original': {
-        'name': 'Original',
-        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
-        'api_key': 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
-        'supported_versions': {
-            'v0': {
-                'image-to-video': '/generate/v0/image-to-video',
-                'image-to-video-new': '/generate/v0/image-to-video-new',
-                'image-to-video-inner': '/generate/v0/image-to-video-inner',
-                'image-to-video-nmd': '/generate/v0/image-to-video-nmd',
-                'image-to-video-v2': '/generate/v0/image-to-video-v2',
-                'audio-to-video': '/generate/v0/audio-to-video'
-            }
-        }
-    },
-    'staging': {
-        'name': 'Staging',
-        'base_url': 'https://089e99349ace.pikalabs.app',
-        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
-        'supported_versions': {
-            'v2.2': '/generate/2.2/i2v'
-        }
-    },
     'parrot': {
         'name': 'Parrot (Lipsync)',
         'base_url': 'https://candy-api.pika.art',
@@ -83,6 +60,7 @@ API_PROVIDERS = {
                 'image-to-video-inner': '/api/v1/generate/v0/image-to-video-inner',
                 'image-to-video-nmd': '/api/v1/generate/v0/image-to-video-nmd',
                 'image-to-video-v2': '/api/v1/generate/v0/image-to-video-v2',
+                'image-to-video-fast': '/api/v1/generate/v0/image-to-video-fast',
                 'audio-to-video': '/api/v1/generate/v0/audio-to-video'
             }
         }
@@ -105,30 +83,6 @@ def test_endpoints():
     """提供端點測試頁面"""
     return send_from_directory('.', 'test_endpoints.html')
 
-@app.route('/generate/v0/image-to-video', methods=['POST'])
-def generate_video_v0():
-    """代理圖片轉視頻請求 - 使用original環境"""
-    return _generate_video_internal('original', 'v0', 'image-to-video')
-
-@app.route('/generate/v0/image-to-video-new', methods=['POST'])
-def generate_video_v0_new():
-    """代理圖片轉視頻請求 - 使用original環境 (new端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-new')
-
-@app.route('/generate/v0/image-to-video-inner', methods=['POST'])
-def generate_video_v0_inner():
-    """代理圖片轉視頻請求 - 使用original環境 (inner端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-inner')
-
-@app.route('/generate/v0/image-to-video-nmd', methods=['POST'])
-def generate_video_v0_nmd():
-    """代理圖片轉視頻請求 - 使用original環境 (nmd端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-nmd')
-
-@app.route('/generate/v0/image-to-video-v2', methods=['POST'])
-def generate_video_v0_v2():
-    """代理圖片轉視頻請求 - 使用original環境 (v2端點)"""
-    return _generate_video_internal('original', 'v0', 'image-to-video-v2')
 
 @app.route('/benchmark/merge', methods=['POST'])
 def benchmark_merge():
@@ -385,15 +339,6 @@ def benchmark_merge_batch():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/generate/2.2/i2v', methods=['POST'])
-def generate_video_v22():
-    """代理圖片轉視頻請求 - 使用staging環境"""
-    return _generate_video_internal('staging', 'v2.2')
-
-@app.route('/generate/v0/audio-to-video', methods=['POST'])
-def generate_audio_to_video_v0():
-    """代理圖片+音頻轉視頻請求 - 使用original環境 (v0)"""
-    return _generate_video_internal('original', 'v0', 'audio-to-video', expect_audio=True)
 
 @app.route('/api/generate', methods=['POST'])
 def generate_video_flexible():
@@ -432,15 +377,15 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         if not api_key:
             api_key = provider_config['api_key']  # 使用配置中的默認 API Key
         # 防呆：若選擇的 provider 與傳入的 key 不匹配，糾正為對應 provider 的默認 key
-        try:
-            original_key = API_PROVIDERS['original']['api_key']
-            staging_key = API_PROVIDERS['staging']['api_key']
-            if provider == 'original' and api_key == staging_key:
-                api_key = original_key
-            elif provider == 'staging' and api_key == original_key:
-                api_key = staging_key
-        except Exception:
-            pass
+        # try:
+        #     original_key = API_PROVIDERS['original']['api_key']
+        #     staging_key = API_PROVIDERS['staging']['api_key']
+        #     if provider == 'original' and api_key == staging_key:
+        #         api_key = original_key
+        #     elif provider == 'staging' and api_key == original_key:
+        #         api_key = staging_key
+        # except Exception:
+        #     pass
 
         print("=" * 60)
         print(f"🚀 收到圖片轉視頻請求")

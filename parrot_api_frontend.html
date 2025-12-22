@@ -977,6 +977,7 @@
                             <option value="parrot_qb" selected>Parrot (QB Production)</option>
                             <option value="parrot">Parrot (Lipsync)</option>
                             <option value="parrot-test">Parrot (Lipsync Test)</option>
+                            <option value="staging">Staging</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -1416,6 +1417,19 @@
                         defaultEndpoint: 'image-to-video-v2',
                         description: 'Image to Video - v0',
                         name: 'QB v0'
+                    }
+                }
+            },
+            'staging': {
+                name: 'Staging',
+                description: 'Parrot Labs API Server',
+                baseUrl: 'https://089e99349ace.pikalabs.app',
+                apiKey: 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
+                versions: {
+                    'v2.2': {
+                        endpoint: '/generate/2.2/i2v',
+                        description: '圖片轉視頻 - v2.2 版本',
+                        name: 'Staging v2.2'
                     }
                 }
             },

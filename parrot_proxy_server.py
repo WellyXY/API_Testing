@@ -64,6 +64,18 @@ API_PROVIDERS = {
                 'audio-to-video': '/api/v1/generate/v0/audio-to-video'
             }
         }
+    },
+    'staging': {
+        'name': 'Staging',
+        'base_url': 'https://089e99349ace.pikalabs.app',
+        'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
+        'status_path': '/generate/2.2/videos',
+        'supported_versions': {
+            'v2.2': {
+                # 單端點版本
+                'default': '/generate/2.2/i2v'
+            }
+        }
     }
 }
 

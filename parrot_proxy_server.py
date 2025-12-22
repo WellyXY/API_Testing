@@ -71,10 +71,8 @@ API_PROVIDERS = {
         'api_key': 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
         'status_path': '/generate/2.2/videos',
         'supported_versions': {
-            'v2.2': {
-                # 單端點版本
-                'default': '/generate/2.2/i2v'
-            }
+            # 單端點版本（i2v）
+            'v2.2': '/generate/2.2/i2v'
         }
     }
 }

@@ -74,6 +74,20 @@ API_PROVIDERS = {
             # 單端點版本（i2v）
             'v2.2': '/generate/2.2/i2v'
         }
+    },
+    'parrot_audio_v2': {
+        'name': 'Parrot (Lipsync v2)',
+        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
+        'api_key': 'pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPFmU2AlaF',
+        # 該 host 的狀態查詢路徑不穩定，先用較通用的 /videos，並在 get_video_status 做 fallback
+        'status_path': '/videos',
+        'supported_versions': {
+            'v0': {
+                # 註：該 host 上 /generate/v0/audio-to-video-v2 會回 404；實際可用的是 /generate/v0/audio-to-video
+                # 仍保留 endpoint_type 名稱為 audio-to-video-v2 以便前端區分
+                'audio-to-video-v2': '/generate/v0/audio-to-video'
+            }
+        }
     }
 }
 
@@ -362,7 +376,7 @@ def generate_video_flexible():
         print(f"DEBUG: Provider processed: {provider}")
         version = request.form.get('version', 'v2.2')
         endpoint_type = request.form.get('endpoint_type')
-        expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test')
+        expect_audio = endpoint_type in ('audio-to-video', 'audio-to-video-test', 'audio-to-video-v2')
         return _generate_video_internal(provider, version, endpoint_type, expect_audio=expect_audio)
     except Exception as e:
         print(f"CRITICAL ERROR in generate_video_flexible: {e}")
@@ -636,19 +650,55 @@ def get_video_status(video_id):
 
         print(f"查詢視頻狀態: {video_id} (使用 {provider} 提供商)")
 
-        # 轉發請求到 Parrot API
+        # 轉發請求到 Parrot API（部分 provider 需要 fallback）
         headers = {
             'X-API-KEY': api_key,
             'Accept': 'application/json'
         }
 
-        # Candy provider 使用不同的狀態路徑
         status_path = provider_config.get('status_path') or '/videos'
-        response = requests.get(
-            f"{provider_config['base_url']}{status_path}/{video_id}",
-            headers=headers,
-            timeout=30
-        )
+        def _fetch_status(path: str):
+            return requests.get(
+                f"{provider_config['base_url']}{path}/{video_id}",
+                headers=headers,
+                timeout=30
+            )
+
+        response = _fetch_status(status_path)
+
+        # 針對 staging / parrot_audio_v2：若 404，嘗試多個備用狀態路徑；仍 404 則回 pending 避免前端顯示 Not Found
+        if provider in ('staging', 'parrot_audio_v2') and response.status_code == 404:
+            try:
+                candidate_paths = [
+                    status_path,
+                    '/videos',
+                    '/generate/v0/videos',
+                    '/api/v1/generate/v0/videos',
+                    '/generate/2.2/videos'
+                ]
+                for p in candidate_paths:
+                    r2 = _fetch_status(p)
+                    if r2.status_code != 404:
+                        response = r2
+                        break
+            except Exception:
+                pass
+
+            if response.status_code == 404:
+                out = {
+                    'id': video_id,
+                    'status': 'pending',
+                    'progress': 0,
+                    'provider_status': 404,
+                    'message': f'{provider} status not ready (404), will retry'
+                }
+                if request.args.get('debug') == '1':
+                    out['_provider_debug'] = {
+                        'status': response.status_code,
+                        'headers': dict(response.headers),
+                        'excerpt': (response.text or '')[:2000]
+                    }
+                return jsonify(out), 200
 
         print(f"視頻狀態響應: {response.status_code}")
         debug_mode = request.args.get('debug') == '1'
@@ -682,7 +732,7 @@ def get_video_status(video_id):
                 return jsonify(out), 200
 
             try:
-                if provider in ('parrot', 'parrot_test'):
+                if provider in ('parrot', 'parrot_test', 'parrot_audio_v2'):
                     status_val = (data.get('status') or '').lower()
                     url_val = data.get('url')
                     if status_val == 'finished':
@@ -767,6 +817,16 @@ def get_video_status(video_id):
                     }
                 except Exception:
                     pass
+            # 若 staging 未返回 message，補充一個簡單提示，方便前端顯示
+            try:
+                if provider == 'staging' and isinstance(data, dict) and not data.get('message'):
+                    fallback_msg = data.get('status') or data.get('detail') or data.get('error')
+                    if not fallback_msg:
+                        txt_excerpt = (response.text or '').strip()
+                        fallback_msg = txt_excerpt[:200] if txt_excerpt else f"status {response.status_code}"
+                    data['message'] = str(fallback_msg)
+            except Exception:
+                pass
             return jsonify(data), 200
         # 非 JSON：回傳pending（避免前端500）
         out = {

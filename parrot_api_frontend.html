@@ -977,7 +977,6 @@
                             <option value="parrot_qb" selected>Parrot (QB Production)</option>
                             <option value="parrot">Parrot (Lipsync)</option>
                             <option value="parrot-test">Parrot (Lipsync Test)</option>
-                            <option value="parrot_audio_v2">Parrot (Lipsync v2)</option>
                             <option value="staging">Staging</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
@@ -1001,6 +1000,7 @@
                             <option value="image-to-video-nmd">image-to-video-nmd</option>
                             <option value="image-to-video-v2">image-to-video-v2</option>
                             <option value="audio-to-video">audio-to-video</option>
+                            <option value="audio-to-video-v2">audio-to-video-v2</option>
                         </select>
                     </div>
                 </div>
@@ -1028,7 +1028,6 @@
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
                                     <option value="parrot_qb">Parrot (QB Production)</option>
                                     <option value="parrot-test">Parrot (Lipsync Test)</option>
-                                    <option value="parrot_audio_v2">Parrot (Lipsync v2)</option>
                                     <option value="parrot">Parrot (Lipsync)</option>
                                 </select>
                             </div>
@@ -1048,6 +1047,7 @@
                                     <option value="image-to-video-inner">image-to-video-inner</option>
                                     <option value="image-to-video-nmd">image-to-video-nmd</option>
                                     <option value="audio-to-video">audio-to-video</option>
+                                    <option value="audio-to-video-v2">audio-to-video-v2</option>
                                 </select>
                             </div>
                             
@@ -1372,28 +1372,6 @@
                     }
                 }
             },
-            'parrot_audio_v2': {
-                name: 'Parrot (Lipsync v2)',
-                description: 'Parrot lipsync v2 audio-to-video',
-                baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
-                apiKey: 'pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPFmU2AlaF',
-                versions: {
-                    'v0': {
-                        endpoints: {
-                            'audio-to-video-v2': {
-                                // 註：該 host 上 /generate/v0/audio-to-video-v2 會回 404；實際可用的是 /generate/v0/audio-to-video
-                                path: '/generate/v0/audio-to-video',
-                                description: 'Image + Audio to Video (v2 label)',
-                                name: 'Parrot v0 (audio-to-video-v2)',
-                                queryPath: '/generate/v0/videos'
-                            }
-                        },
-                        defaultEndpoint: 'audio-to-video-v2',
-                        description: 'Audio to Video - v0 (v2)',
-                        name: 'Parrot v0 (audio-to-video-v2)'
-                    }
-                }
-            },
             'parrot_qb': {
                 name: 'Parrot (QB Production)',
                 description: 'Parrot QB Production Environment',
@@ -1436,6 +1414,11 @@
                                 path: '/api/v1/generate/v0/audio-to-video',
                                 description: 'Image + Audio to Video - v0',
                                 name: 'QB v0 (audio-to-video)'
+                            },
+                            'audio-to-video-v2': {
+                                path: '/api/v1/generate/v0/audio-to-video-v2',
+                                description: 'Image + Audio to Video - v2',
+                                name: 'QB v0 (audio-to-video-v2)'
                             }
                         },
                         defaultEndpoint: 'image-to-video-v2',
@@ -1502,11 +1485,6 @@
                 }
             }
 
-            // Lipsync v2：強制 endpoint_type，確保後端 expect_audio 生效
-            if (provider === 'parrot_audio_v2') {
-                resolvedEndpointType = 'audio-to-video-v2';
-            }
-            
             return {
                 provider,
                 version: apiVersion,
@@ -1564,7 +1542,7 @@
             
             // 切換 UI：Minimax 下隱藏圖片/生成視頻相關，顯示 T2A 區塊
             const isMinimax = selectedProvider === 'minimax';
-            const isParrot = selectedProvider === 'parrot' || selectedProvider === 'parrot-test' || selectedProvider === 'parrot_audio_v2';
+            const isParrot = selectedProvider === 'parrot' || selectedProvider === 'parrot-test';
             document.getElementById('uploadArea')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
             // Candy 與 Original/Staging 顯示主生成區塊；Minimax 隱藏
             document.getElementById('promptText')?.closest('.form-group')?.classList.toggle('hidden', isMinimax);
@@ -1606,8 +1584,6 @@
                     if (et) {
                         if (selectedProvider === 'parrot-test') {
                             et.value = 'audio-to-video'; // fallback，實際會用 defaultEndpoint test
-                        } else if (selectedProvider === 'parrot_audio_v2') {
-                            et.value = 'audio-to-video-v2';
                         } else {
                             et.value = 'audio-to-video';
                         }
@@ -1725,7 +1701,6 @@
             if (
                 provider === 'parrot' ||
                 provider === 'parrot-test' ||
-                provider === 'parrot_audio_v2' ||
                 endpointType === 'audio-to-video' ||
                 endpointType === 'audio-to-video-test' ||
                 endpointType === 'audio-to-video-v2'

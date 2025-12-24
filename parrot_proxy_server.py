@@ -61,7 +61,8 @@ API_PROVIDERS = {
                 'image-to-video-nmd': '/api/v1/generate/v0/image-to-video-nmd',
                 'image-to-video-v2': '/api/v1/generate/v0/image-to-video-v2',
                 'image-to-video-fast': '/api/v1/generate/v0/image-to-video-fast',
-                'audio-to-video': '/api/v1/generate/v0/audio-to-video'
+                'audio-to-video': '/api/v1/generate/v0/audio-to-video',
+                'audio-to-video-v2': '/api/v1/generate/v0/audio-to-video-v2'
             }
         }
     },
@@ -73,20 +74,6 @@ API_PROVIDERS = {
         'supported_versions': {
             # 單端點版本（i2v）
             'v2.2': '/generate/2.2/i2v'
-        }
-    },
-    'parrot_audio_v2': {
-        'name': 'Parrot (Lipsync v2)',
-        'base_url': 'https://qazwsxedcrf3g5h.pika.art',
-        'api_key': 'pk_90P0M3mYLYL0Dp5MkPcHc26ZHjkNrsEKlHPFmU2AlaF',
-        # 該 host 的狀態查詢路徑不穩定，先用較通用的 /videos，並在 get_video_status 做 fallback
-        'status_path': '/videos',
-        'supported_versions': {
-            'v0': {
-                # 註：該 host 上 /generate/v0/audio-to-video-v2 會回 404；實際可用的是 /generate/v0/audio-to-video
-                # 仍保留 endpoint_type 名稱為 audio-to-video-v2 以便前端區分
-                'audio-to-video-v2': '/generate/v0/audio-to-video'
-            }
         }
     }
 }
@@ -666,8 +653,8 @@ def get_video_status(video_id):
 
         response = _fetch_status(status_path)
 
-        # 針對 staging / parrot_audio_v2：若 404，嘗試多個備用狀態路徑；仍 404 則回 pending 避免前端顯示 Not Found
-        if provider in ('staging', 'parrot_audio_v2') and response.status_code == 404:
+        # 針對 staging：若 404，嘗試多個備用狀態路徑；仍 404 則回 pending 避免前端顯示 Not Found
+        if provider in ('staging',) and response.status_code == 404:
             try:
                 candidate_paths = [
                     status_path,
@@ -732,7 +719,7 @@ def get_video_status(video_id):
                 return jsonify(out), 200
 
             try:
-                if provider in ('parrot', 'parrot_test', 'parrot_audio_v2'):
+                if provider in ('parrot', 'parrot_test'):
                     status_val = (data.get('status') or '').lower()
                     url_val = data.get('url')
                     if status_val == 'finished':

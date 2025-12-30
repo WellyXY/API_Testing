@@ -2875,6 +2875,40 @@
                         console.log('🎨 Original Image:', realImageFile.name, `(${(realImageFile.size / 1024).toFixed(2)} KB)`);
                     }
                     console.log('📋 Headers:', headers);
+
+                    // 打印等價的 cURL（呼叫本地 proxy /api/generate），方便你對照 KF 是否真的用 keyFrames 送出
+                    try {
+                        const proxyUrl = `${location.origin}/api/generate`;
+                        const curlParts = [
+                            `curl -X POST "${proxyUrl}"`,
+                            ...(apiKey ? [`  -H "X-API-KEY: ${apiKey}"`] : []),
+                            `  -F "provider=${apiConfig.provider}"`,
+                            `  -F "version=${apiConfig.version}"`,
+                            ...(apiConfig.endpointType ? [`  -F "endpoint_type=${apiConfig.endpointType}"`] : []),
+                            ...(promptText.trim() ? [`  -F "promptText=${promptText.trim().replaceAll('"', '\\"')}"`] : []),
+                            ...(requestedDuration ? [`  -F "duration=${requestedDuration}"`] : []),
+                            ...(requestedResolution ? [`  -F "resolution=${requestedResolution}"`] : []),
+                        ];
+
+                        if (isKfTask) {
+                            curlParts.push(`  -F "keyFrames=@${kfFirst?.name || 'first_frame.jpg'}"`);
+                            curlParts.push(`  -F "keyFrames=@${kfLast?.name || 'last_frame.jpg'}"`);
+                        } else {
+                            curlParts.push(`  -F "image=@${processedImageFile?.name || 'image.jpg'}"`);
+                        }
+
+                        if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test' || apiConfig.endpointType === 'audio-to-video-v2') {
+                            const audioInput = document.getElementById('audioFile');
+                            const audioFile = audioInput?.files?.[0];
+                            if (audioFile) curlParts.push(`  -F "audio=@${audioFile.name}"`);
+                        }
+
+                        const curlCmd = curlParts.join(" \\\n");
+                        console.log('=== cURL (proxy) ===');
+                        console.log(curlCmd);
+                    } catch (e) {
+                        console.warn('Failed to build cURL preview:', e);
+                    }
                     
                     // 根据 provider 决定请求 URL
                     let requestUrl;

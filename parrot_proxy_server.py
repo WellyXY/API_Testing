@@ -428,20 +428,34 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         print(f"🔗 Full URL: {full_url}")
         print("=" * 60)
 
-        # 準備請求數據
-        files = {}
+        # 準備請求數據（requests 支援 list-of-tuples 以便同名欄位多次上傳）
+        files_payload = []
         data = {}
         
-        # 處理圖片文件
-        if 'image' in request.files:
-            image_file = request.files['image']
-            if image_file.filename:
-                files['image'] = (
-                    image_file.filename,
-                    image_file.stream,
-                    image_file.content_type
-                )
-                print(f"收到圖片文件: {image_file.filename}")
+        # 處理 KeyFrames（QB 新版：同一個欄位 keyFrames 上傳多張圖片）
+        keyframes = []
+        try:
+            keyframes = [f for f in request.files.getlist('keyFrames') if getattr(f, 'filename', '')]
+        except Exception:
+            keyframes = []
+
+        if keyframes:
+            for f in keyframes:
+                files_payload.append((
+                    'keyFrames',
+                    (f.filename, f.stream, f.content_type)
+                ))
+            print(f"收到 KeyFrames: {[f.filename for f in keyframes]}")
+        else:
+            # 回退：單張圖片（舊版）
+            if 'image' in request.files:
+                image_file = request.files['image']
+                if image_file.filename:
+                    files_payload.append((
+                        'image',
+                        (image_file.filename, image_file.stream, image_file.content_type)
+                    ))
+                    print(f"收到圖片文件: {image_file.filename}")
 
         # 處理音頻文件（僅當端點需要音頻時）
         if expect_audio:
@@ -486,11 +500,10 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                 if audio_ct.startswith('video/') or audio_file.filename.lower().endswith('.mp4'):
                     try:
                         converted_path, converted_mime, converted_name = _convert_mp4_to_audio(audio_file)
-                        files['audio'] = (
-                            converted_name,
-                            open(converted_path, 'rb'),
-                            converted_mime
-                        )
+                        files_payload.append((
+                            'audio',
+                            (converted_name, open(converted_path, 'rb'), converted_mime)
+                        ))
                         # 記錄轉檔路徑，稍後請求完嘗試清理
                         data['_temp_audio_path'] = converted_path
                         print(f"已轉換音訊: {converted_name} (mime: {converted_mime})")
@@ -500,11 +513,10 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                         return jsonify({'error': f'Could not extract audio from mp4: {str(e)}'}), 400
                 else:
                     # 已是音訊，直接透傳
-                    files['audio'] = (
-                        audio_file.filename,
-                        audio_file.stream,
-                        audio_ct or 'audio/mpeg'
-                    )
+                    files_payload.append((
+                        'audio',
+                        (audio_file.filename, audio_file.stream, audio_ct or 'audio/mpeg')
+                    ))
             else:
                 return jsonify({'error': 'audio file is required for audio-to-video endpoint'}), 400
 
@@ -534,6 +546,8 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
 
         # 發送請求到 Parrot API
         headers = {
+            # 兼容不同的鑑權方式：部分新接口使用 Authorization: Bearer
+            'Authorization': f'Bearer {api_key}',
             'X-API-KEY': api_key,
             'X-API-Key': api_key,
             'Accept': 'application/json'
@@ -542,13 +556,13 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
         print(f"📤 發送請求到 Parrot API...")
         print(f"📋 Request Headers: {headers}")
         print(f"📋 Request Data: {data}")
-        if files:
-            print(f"📎 Files: {list(files.keys())}")
+        if files_payload:
+            print(f"📎 Files: {[k for (k, _) in files_payload]}")
         
         response = requests.post(
             full_url,
             headers=headers,
-            files=files,
+            files=files_payload,
             data={k:v for k,v in data.items() if not k.startswith('_temp_')},
             timeout=60
         )
@@ -579,8 +593,8 @@ def _generate_video_internal(provider='staging', api_version='v2.2', endpoint_ty
                 print(f"🌐 Base URL: {base_url}")
                 print(f"🎯 Endpoint: {endpoint}")
                 print(f"📝 Prompt: {data.get('promptText', 'No prompt')}")
-                if files:
-                    print(f"📎 Image Files: {list(files.keys())}")
+                if files_payload:
+                    print(f"📎 File Fields: {[k for (k, _) in files_payload]}")
             except:
                 print("⚠️ Could not parse JSON response for detailed logging")
         

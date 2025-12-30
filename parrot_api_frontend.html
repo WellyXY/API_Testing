@@ -1159,7 +1159,7 @@
                         </label>
                     </div>
                     <div id="kfHint" class="description-box" style="display:none;">
-                        KeyFrames mode will send <strong>exactly 2 images</strong> as <code>keyFrames</code> (first + last frame) in a single request.
+                        KeyFrames mode will send images as pairs of <code>keyFrames</code> in a single request (1&2, 3&4, ...). Each pair is treated as (first + last frame).
                     </div>
                 </div>
                 
@@ -2557,10 +2557,16 @@
                 return;
             }
 
-            // KeyFrames（QB image-to-video-v2）：一次請求傳兩張圖
-            if (kfEnabled && imageFiles.length !== 2) {
-                showError('KeyFrames mode requires exactly 2 images (first + last frame). Please select 2 images.');
-                return;
+            // KeyFrames（QB image-to-video-v2）：一次請求傳兩張圖（支援 batch：1&2, 3&4...）
+            if (kfEnabled) {
+                if (imageFiles.length < 2) {
+                    showError('KeyFrames mode requires at least 2 images.');
+                    return;
+                }
+                if (imageFiles.length % 2 !== 0) {
+                    showError('KeyFrames mode requires an even number of images (pairs: 1&2, 3&4, ...).');
+                    return;
+                }
             }
 
             // 初始化
@@ -2568,9 +2574,12 @@
             setButtonLoading(true);
             showBatchProgress();
             
-            // 將任務放入隊列：KeyFrames 模式下只放一個 pair 任務
+            // 將任務放入隊列：KeyFrames 模式下兩兩配對（1&2, 3&4...）
             if (kfEnabled) {
-                imageQueue = [{ __kf: true, frames: [imageFiles[0], imageFiles[1]] }];
+                imageQueue = [];
+                for (let i = 0; i < imageFiles.length; i += 2) {
+                    imageQueue.push({ __kf: true, frames: [imageFiles[i], imageFiles[i + 1]] });
+                }
             } else {
                 imageQueue = [...imageFiles];
             }
@@ -2581,7 +2590,10 @@
             console.log('Concurrency Limit:', concurrencyLimit);
             console.log('====================================');
             
-            showSuccess(`🚀 Queued ${totalTasks} image(s) for generation...`);
+            showSuccess(kfEnabled
+                ? `🚀 Queued ${totalTasks} KeyFrames task(s) from ${imageFiles.length} image(s)...`
+                : `🚀 Queued ${totalTasks} image(s) for generation...`
+            );
             
             // 啟動隊列管理器
             if (processingInterval) clearInterval(processingInterval);

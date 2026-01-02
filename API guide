@@ -1,146 +1,220 @@
-# Parrot QB KeyFrames API 接入指引
+# Parrot API 接入指引
 
-## 概述
-KeyFrames 功能允許你在一次請求中傳入 **兩張圖片**（first frame + last frame），API 會生成從第一幀過渡到最後一幀的視頻。
-
----
-
-## 端點信息
-
-| 項目 | 值 |
-|------|-----|
-| Base URL | `https://parrot.pika.art` |
-| Endpoint | `/api/v1/generate/v0/image-to-video-v2` |
-| Method | `POST` |
-| Content-Type | `multipart/form-data` |
+本文檔說明各 Provider 的 API 呼叫方式，包括新版 **KeyFrames** 多圖上傳。
 
 ---
 
-## 請求參數
+## 目錄
 
-### Headers
+1. [QB Production - KeyFrames (image-to-video-v2)](#qb-production---keyframes-image-to-video-v2)
+2. [QB Production - 單張圖片 (image-to-video)](#qb-production---單張圖片-image-to-video)
+3. [Original API](#original-api)
+4. [Staging API](#staging-api)
+5. [狀態查詢](#狀態查詢)
 
-| Header | 必填 | 說明 |
-|--------|------|------|
-| `Authorization` | ✅ | `Bearer <token>` 格式 |
+---
 
-### Form Data
+## QB Production - KeyFrames (image-to-video-v2)
+
+> **新版 API**：一次請求上傳 **兩張圖片**（首幀 + 尾幀），模型會生成從第一幀過渡到第二幀的視頻。
+
+### 端點
+
+```
+POST https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2
+```
+
+### 請求格式
 
 | 欄位 | 類型 | 必填 | 說明 |
 |------|------|------|------|
-| `keyFrames` | File | ✅ | 第一張圖片（first frame） |
-| `keyFrames` | File | ✅ | 第二張圖片（last frame）<br>**注意：同一個欄位名上傳兩次** |
+| `keyFrames` | File (multipart) | ✅ | 第一張圖片（首幀） |
+| `keyFrames` | File (multipart) | ✅ | 第二張圖片（尾幀）—— **同名欄位重複上傳** |
 | `promptText` | String | ❌ | 描述視頻效果的提示詞 |
+| `duration` | String | ❌ | 視頻時長（秒），如 `"5"` |
+| `resolution` | String | ❌ | 解析度，如 `"480p"` / `"720p"` / `"1080p"` |
 
----
+### 鑑權
 
-## cURL 示例
+使用 **Bearer Token** 或 **X-API-KEY** header：
+
+```
+Authorization: Bearer <your_api_key>
+```
+
+或
+
+```
+X-API-KEY: <your_api_key>
+```
+
+### cURL 範例
 
 ```bash
 curl -X POST "https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2" \
-    -H "Authorization: Bearer <YOUR_API_KEY>" \
-    -F "keyFrames=@first_frame.jpg" \
-    -F "keyFrames=@last_frame.jpg" \
-    -F "promptText=A smooth transition between frames"
+  -H "Authorization: Bearer <your_api_key>" \
+  -F "keyFrames=@first_frame.jpg" \
+  -F "keyFrames=@last_frame.jpg" \
+  -F "promptText=A smooth transition between frames"
 ```
 
----
-
-## 響應格式
-
-### 成功（HTTP 200）
-
-```json
-{
-  "video_id": "20747bda-639f-4ac0-9929-a8e66fe914cd"
-}
-```
-
-### 錯誤
-
-| HTTP Code | 說明 |
-|-----------|------|
-| 400 | 參數錯誤（缺少 keyFrames / 格式不正確） |
-| 401 | 認證失敗（API Key 無效） |
-| 429 | 請求過於頻繁 |
-| 500 | 服務器內部錯誤 |
-
----
-
-## 查詢視頻狀態
-
-```bash
-curl -X GET "https://parrot.pika.art/api/v1/generate/v0/videos/<VIDEO_ID>" \
-    -H "Authorization: Bearer <YOUR_API_KEY>"
-```
-
-### 狀態響應
+### 成功回應
 
 ```json
 {
   "video_id": "20747bda-639f-4ac0-9929-a8e66fe914cd",
-  "status": "finished",
-  "url": "https://..."
+  "status": "pending"
 }
 ```
+
+### 與舊版單圖 API 的差別
+
+| 項目 | 舊版 (image-to-video) | 新版 (image-to-video-v2 KeyFrames) |
+|------|----------------------|-----------------------------------|
+| 圖片欄位 | `image` (單張) | `keyFrames` (連續上傳兩張) |
+| Prompt 欄位 | `promptText` | `promptText` |
+| 用途 | 單圖延展生成 | 首尾幀過渡動畫 |
+
+---
+
+## QB Production - 單張圖片 (image-to-video)
+
+> 傳統單張圖片生成視頻。
+
+### 端點
+
+```
+POST https://parrot.pika.art/api/v1/generate/v0/image-to-video
+```
+
+### cURL 範例
+
+```bash
+curl -X POST "https://parrot.pika.art/api/v1/generate/v0/image-to-video" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -F "image=@your_image.jpg" \
+  -F "promptText=A beautiful sunset scene"
+```
+
+### 成功回應
+
+```json
+{
+  "video_id": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "status": "pending"
+}
+```
+
+---
+
+## Original API
+
+### Base URL
+
+```
+https://qazwsxedcrf3g5h.pika.art
+```
+
+### 端點
+
+| 端點 | 說明 |
+|------|------|
+| `/generate/v0/image-to-video` | 標準 i2v |
+| `/generate/v0/image-to-video-new` | 新版 i2v |
+| `/generate/v0/image-to-video-v2` | v2 版本 |
+| `/generate/v0/audio-to-video` | 音頻驅動 |
+
+### cURL 範例
+
+```bash
+curl -X POST "https://qazwsxedcrf3g5h.pika.art/generate/v0/image-to-video" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -F "image=@your_image.jpg" \
+  -F "promptText=Your prompt here"
+```
+
+---
+
+## Staging API
+
+### Base URL
+
+```
+https://089e99349ace.pikalabs.app
+```
+
+### 端點
+
+```
+POST /generate/2.2/i2v
+```
+
+### cURL 範例
+
+```bash
+curl -X POST "https://089e99349ace.pikalabs.app/generate/2.2/i2v" \
+  -H "Authorization: Bearer <your_api_key>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "a cute corgi running on the beach"
+  }'
+```
+
+---
+
+## 狀態查詢
+
+### QB Production
+
+```
+GET https://parrot.pika.art/api/v1/generate/v0/videos/<video_id>
+```
+
+### Original API
+
+```
+GET https://qazwsxedcrf3g5h.pika.art/generate/v0/videos/<video_id>
+```
+
+### Staging API
+
+```
+GET https://089e99349ace.pikalabs.app/generate/2.2/videos/<video_id>
+```
+
+### cURL 範例
+
+```bash
+curl -X GET "https://parrot.pika.art/api/v1/generate/v0/videos/<video_id>" \
+  -H "Authorization: Bearer <your_api_key>"
+```
+
+### 狀態回應範例
+
+```json
+{
+  "id": "20747bda-639f-4ac0-9929-a8e66fe914cd",
+  "status": "finished",
+  "progress": 100,
+  "url": "https://cdn.example.com/video.mp4"
+}
+```
+
+### 常見狀態值
 
 | status | 說明 |
 |--------|------|
 | `pending` | 排隊中 |
 | `processing` | 生成中 |
-| `finished` | 完成，`url` 欄位有下載連結 |
-| `failed` | 失敗 |
-
----
-
-## 本地測試（通過 Proxy）
-
-如果你使用本地代理服務器 (`parrot_proxy_server.py`)：
-
-### 啟動服務
-```bash
-python3 parrot_proxy_server.py --port 5005
-```
-
-### 通過 Proxy 發送 KeyFrames 請求
-```bash
-curl -X POST "http://127.0.0.1:5005/api/generate" \
-    -F "provider=parrot_qb" \
-    -F "version=v0" \
-    -F "endpoint_type=image-to-video-v2" \
-    -F "keyFrames=@first_frame.jpg" \
-    -F "keyFrames=@last_frame.jpg" \
-    -F "promptText=A smooth transition between frames"
-```
-
----
-
-## 前端 UI 使用方式
-
-1. **Provider** 選擇 `Parrot (QB Production)`
-2. **Endpoint** 選擇 `image-to-video-v2`
-3. 打開 **Enable KeyFrames** 開關
-4. 上傳 **偶數張圖片**（2/4/6...），系統會自動兩兩配對
-   - 圖片 1 + 2 → 第一個 KF 任務
-   - 圖片 3 + 4 → 第二個 KF 任務
-   - ...
-5. 點擊 **Generate Videos**
-
----
-
-## 與傳統 i2v 的差異
-
-| 項目 | 傳統 i2v | KeyFrames |
-|------|----------|-----------|
-| 圖片數量 | 1 張 | 2 張（first + last） |
-| 欄位名 | `image` | `keyFrames`（重複 2 次） |
-| Prompt 欄位 | `prompt` / `promptText` | `promptText` |
-| 效果 | 單張圖延展生成動態 | 兩幀之間過渡動畫 |
+| `finished` / `completed` | 完成 |
+| `failed` / `error` | 失敗 |
 
 ---
 
 ## 注意事項
 
-- `keyFrames` 欄位必須上傳 **恰好兩張**圖片
-- 兩張圖片的尺寸/比例建議一致，以獲得最佳過渡效果
-- 支持 JPG / PNG / GIF 格式
+1. **KeyFrames 必須上傳兩張圖**：順序為首幀、尾幀
+2. **同名欄位多次上傳**：`-F "keyFrames=@..." -F "keyFrames=@..."`
+3. **API Key 格式**：通常以 `pk_` 或 `pika_` 開頭
+4. **圖片格式**：支援 JPG、PNG、GIF
+5. **超時**：建議設定 60 秒以上

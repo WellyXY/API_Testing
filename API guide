@@ -1,0 +1,880 @@
+## 📋 Table of Contents
+
+1. [API Overview](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+2. [Authentication](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+3. [API Endpoints](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+4. [Usage Examples](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+5. [Error Handling](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+6. [Best Practices](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+7. [FAQ](https://www.notion.so/Parrot-API-Complete-Usage-Guide-27623e1d26f480c0b718edee887c81b2?pvs=21)
+
+---
+
+## 🌟 API Overview
+
+The Pika.art API is a powerful image-to-video generation service that allows developers to convert static images into dynamic video content with optional audio synchronization.
+
+### Basic Information
+
+- **API Base URL**: `https://parrot.pika.art/api/v1/generate/v0`
+- **Supported Formats**: Image files (JPEG, PNG, WebP), Audio files (MP3, WAV, AAC)
+- **Concurrency Limit**: 4 concurrent requests
+- **API Version**: v2
+
+---
+
+## 🔐 Authentication
+
+All API requests require authentication using the `X-API-KEY` header.
+
+### Authentication Method
+
+```
+X-API-KEY: your_api_key_here
+
+```
+
+### API Key Format
+
+🔑 **API Key Format**: `pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+
+> ⚠️ Note: Please contact Pika.art official team to obtain your dedicated API Key.
+> 
+
+---
+
+## 🛠 API Endpoints
+
+### 1. Image to Video Generation (POST)
+
+Convert a static image into a dynamic video.
+
+### Endpoint Information
+
+- **URL**: `https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2`
+- **Method**: POST
+- **Content-Type**: `multipart/form-data`
+
+### Request Parameters
+
+| 
+Parameter
+ | 
+Type
+ | 
+Required
+ | 
+Description
+ |
+| --- | --- | --- | --- |
+| 
+image
+ | 
+File
+ | 
+✅
+ | 
+Source image file
+ |
+| 
+promptText
+ | 
+String
+ | 
+❌
+ | 
+Video generation prompt text
+ |
+| 
+resolution
+ | 
+String
+ | 
+❌
+ | Video output resolution. Supported values: 480p / 720p  |
+
+### Request Example
+
+```bash
+curl -X POST '<https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2>' \\
+  -H 'X-API-KEY: your_api_key_here' \\
+  -H 'Accept: application/json' \\
+  -F 'image=@/path/to/your/image.jpg;type=image/jpeg' \\
+  -F 'promptText=Make this person move, blink eyes and smile' \\
+   -F 'resolution=480p'
+```
+
+---
+
+### 1.1 Image to Video (QB KeyFrames / KF) Generation (POST)
+
+使用 **KeyFrames（KF）** 模式時，你可以在 **同一次請求**中傳入 **兩張或多張**圖片作為關鍵幀（同名欄位 `keyFrames` 重複上傳）。服務端會按順序把第一張當作 first frame、第二張當作 last frame（若傳更多張則按序處理）。
+
+> ✅ 目前 QB 的 KF 走的仍是 `image-to-video-v2` 端點，差異在於上傳欄位從 `image` 改為 `keyFrames`（可重複）。
+
+#### Endpoint Information
+
+- **URL**: `https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2`
+- **Method**: POST
+- **Content-Type**: `multipart/form-data`
+
+#### Authentication
+
+KF 新版示例使用 `Authorization: Bearer <token>`；同時我們也兼容舊的 `X-API-KEY`。
+
+- **推薦**：`Authorization: Bearer <token>`
+- **兼容**：`X-API-KEY: <token>`
+
+#### Request Parameters（KF）
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `keyFrames` | File (repeatable) | ✅ | KeyFrame images. Upload the field multiple times to pass 2+ frames. |
+| `promptText` | String | ✅ | Prompt text for KF transition (QB sample uses `promptText`) |
+| `resolution` | String | ❌ | 480p / 720p / 1080p |
+
+#### Request Example（KF：2 張）
+
+```bash
+curl -X POST "https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -F "keyFrames=@first_frame.jpg" \
+  -F "keyFrames=@last_frame.jpg" \
+  -F "promptText=A smooth transition between frames" \
+  -F "resolution=480p"
+```
+
+#### Request Example（KF：多張）
+
+```bash
+curl -X POST "https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2" \
+  -H "Authorization: Bearer <token>" \
+  -H "Accept: application/json" \
+  -F "keyFrames=@frame_1.jpg" \
+  -F "keyFrames=@frame_2.jpg" \
+  -F "keyFrames=@frame_3.jpg" \
+  -F "promptText=Camera moves smoothly across keyframes"
+```
+
+#### Response Example
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+#### 本專案（本地 Proxy）如何呼叫 KF（推薦用於測試）
+
+如果你用的是本 repo 的 `parrot_proxy_server.py`（避免 CORS、統一 Provider 配置），請改呼叫本地 proxy：
+
+1) 先起服務（例：5005）  
+`python3 parrot_proxy_server.py --port 5005`
+
+2) 用 proxy 提交（重點：`endpoint_type=image-to-video-v2` + 兩個 `keyFrames`）
+
+```bash
+curl -X POST "http://127.0.0.1:5005/api/generate" \
+  -H "X-API-KEY: <token>" \
+  -F "provider=parrot_qb" \
+  -F "version=v0" \
+  -F "endpoint_type=image-to-video-v2" \
+  -F "promptText=A smooth transition between frames" \
+  -F "keyFrames=@first_frame.jpg" \
+  -F "keyFrames=@last_frame.jpg"
+```
+
+### Response Example
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+```
+
+---
+
+### 2. Audio to Video (Lipsync) Generation (POST)
+
+Generate a video with synchronized lip movements based on audio input.
+
+### Endpoint Information
+
+- **URL**: `https://parrot.pika.art/api/v1/generate/v0/audio-to-video`
+- **Method**: POST
+- **Content-Type**: `multipart/form-data`
+
+### Request Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `image` | File | ✅ | Portrait image file |
+| `audio` | File | ✅ | Audio file for lipsync |
+| `promptText` | String | ❌ | Video generation prompt text (optional) |
+
+### Request Example
+
+```bash
+curl -X POST '<https://parrot.pika.art/api/v1/generate/v0/audio-to-video>' \\
+  -H 'X-API-KEY: your_api_key_here' \\
+  -H 'Accept: application/json' \\
+  -F 'image=@/path/to/portrait.jpg;type=image/jpeg' \\
+  -F 'audio=@/path/to/speech.mp3;type=audio/mpeg' \\
+  -F 'promptText=professional speaker presenting'
+
+```
+
+### Response Example
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+```
+
+---
+
+### 3. Check Video Status (GET)
+
+Check the status of a video generation job.
+
+### Endpoint Information
+
+- **URL**: `https://parrot.pika.art/api/v1/generate/v0/videos/{video_id}`
+- **Method**: GET
+
+### Path Parameters
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `video_id` | String | ✅ | Video job ID returned from generation endpoint |
+
+### Request Example
+
+```bash
+curl -X GET '<https://parrot.pika.art/api/v1/generate/v0/videos/550e8400-e29b-41d4-a716-446655440000>' \\
+  -H 'X-API-KEY: your_api_key_here' \\
+  -H 'Accept: application/json'
+
+```
+
+### Response Status
+
+| Status | Description |
+| --- | --- |
+| `queued` | Job is queued and waiting to be processed |
+| `started` | Job is currently being processed |
+| `streaming` | Partial video is ready for streaming (HLS format) |
+| `finished` | Job completed successfully, final video is ready |
+| `failed` | Job failed (check error message) |
+
+### Response Examples
+
+**Queued:**
+
+```json
+{
+  "status": "queued",
+  "progress": 0,
+  "url": null
+}
+
+```
+
+**Processing:**
+
+```json
+{
+  "status": "started",
+  "progress": 45,
+  "url": null
+}
+
+```
+
+**Streaming Ready:**
+
+```json
+{
+  "status": "streaming",
+  "progress": 65,
+  "url": "<https://example.com/stream/playlist.m3u8>"
+}
+
+```
+
+**Completed:**
+
+```json
+{
+  "status": "finished",
+  "progress": 100,
+  "url": "<https://cdn.pika.art/videos/550e8400-e29b-41d4-a716-446655440000.mp4>"
+}
+
+```
+
+**Failed:**
+
+```json
+{
+  "status": "failed",
+  "progress": 0,
+  "error": "Invalid image format"
+}
+
+```
+
+---
+
+## 💡 Usage Examples
+
+### 🎬 Complete Workflow: Image to Video
+
+### Step 1: Create an Image-to-Video Job
+
+```bash
+curl -X POST '<https://parrot.pika.art/api/v1/generate/v0/image-to-video-v2>' \\
+  -H 'X-API-KEY: your_api_key_here' \\
+  -H 'Accept: application/json' \\
+  -F 'image=@./portrait.jpg' \\
+  -F 'promptText=Make this person blink and smile'
+
+```
+
+**Response:**
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+```
+
+### Step 2: Check Job Status
+
+```bash
+curl -X GET '<https://parrot.pika.art/api/v1/generate/v0/videos/550e8400-e29b-41d4-a716-446655440000>' \\
+  -H 'X-API-KEY: your_api_key_here'
+
+```
+
+### Step 3: Download the Video
+
+Once status is `finished`, use the provided URL to download the video.
+
+---
+
+### 🎬 Complete Workflow: Lipsync (Audio to Video)
+
+### Step 1: Create a Lipsync Job
+
+```bash
+curl -X POST '<https://parrot.pika.art/api/v1/generate/v0/audio-to-video>' \\
+  -H 'X-API-KEY: your_api_key_here' \\
+  -H 'Accept: application/json' \\
+  -F 'image=@./portrait.jpg' \\
+  -F 'audio=@./speech.mp3' \\
+  -F 'promptText=professional speaker presenting'
+
+```
+
+**Response:**
+
+```json
+{
+  "video_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+
+```
+
+### Step 2: Check Job Status
+
+```bash
+curl -X GET '<https://parrot.pika.art/api/v1/generate/v0/videos/550e8400-e29b-41d4-a716-446655440000>' \\
+  -H 'X-API-KEY: your_api_key_here'
+
+```
+
+**Response (while processing):**
+
+```json
+{
+  "status": "started",
+  "progress": 45,
+  "url": null
+}
+
+```
+
+**Response (streaming ready):**
+
+```json
+{
+  "status": "streaming",
+  "progress": 65,
+  "url": "<https://example.com/stream/playlist.m3u8>"
+}
+
+```
+
+**Response (completed):**
+
+```json
+{
+  "status": "finished",
+  "progress": 100,
+  "url": "<https://cdn.pika.art/videos/550e8400-e29b-41d4-a716-446655440000.mp4>"
+}
+
+```
+
+### Step 3: Download or Stream the Video
+
+Once the job is completed, use the provided URL to download or stream the video.
+
+---
+
+### Python Example
+
+```python
+import requests
+import time
+
+# API Configuration
+API_KEY = "your_api_key_here"
+BASE_URL = "<https://parrot.pika.art/api/v1/generate/v0>"
+
+headers = {
+    "X-API-KEY": API_KEY,
+    "Accept": "application/json"
+}
+
+def generate_video_from_image(image_path, prompt_text=None):
+    """Generate video from image"""
+    url = f"{BASE_URL}/image-to-video-v2"
+
+    with open(image_path, 'rb') as image_file:
+        files = {
+            'image': (image_path, image_file, 'image/jpeg')
+        }
+        data = {}
+        if prompt_text:
+            data['promptText'] = prompt_text
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+        return response.json()
+
+def generate_lipsync_video(image_path, audio_path, prompt_text=None):
+    """Generate lipsync video from audio and image"""
+    url = f"{BASE_URL}/audio-to-video"
+
+    with open(image_path, 'rb') as image_file, open(audio_path, 'rb') as audio_file:
+        files = {
+            'image': (image_path, image_file, 'image/jpeg'),
+            'audio': (audio_path, audio_file, 'audio/mpeg')
+        }
+        data = {}
+        if prompt_text:
+            data['promptText'] = prompt_text
+
+        response = requests.post(url, headers=headers, files=files, data=data)
+        return response.json()
+
+def check_video_status(video_id):
+    """Check video generation status"""
+    url = f"{BASE_URL}/videos/{video_id}"
+    response = requests.get(url, headers=headers)
+    return response.json()
+
+def wait_for_completion(video_id, max_wait=300):
+    """Wait for video generation to complete"""
+    start_time = time.time()
+
+    while time.time() - start_time < max_wait:
+        status_response = check_video_status(video_id)
+        status = status_response.get('status')
+        progress = status_response.get('progress', 0)
+
+        print(f"Status: {status}, Progress: {progress}%")
+
+        if status == 'finished':
+            return status_response
+        elif status == 'failed':
+            raise Exception(f"Video generation failed: {status_response}")
+        elif status == 'streaming':
+            print(f"Streaming available at: {status_response.get('url')}")
+
+        time.sleep(5)
+
+    raise TimeoutError("Video generation timed out")
+
+# Usage Example
+if __name__ == "__main__":
+    # Example 1: Generate video from image
+    print("=== Image to Video ===")
+    result1 = generate_video_from_image("./image.jpg", "Make this person blink")
+    video_id1 = result1['video_id']
+    print(f"Video ID: {video_id1}")
+
+    try:
+        final_result1 = wait_for_completion(video_id1)
+        print(f"Video completed! URL: {final_result1['url']}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+    # Example 2: Generate lipsync video
+    print("\\n=== Lipsync Video ===")
+    result2 = generate_lipsync_video("./portrait.jpg", "./speech.mp3", "professional speaker")
+    video_id2 = result2['video_id']
+    print(f"Video ID: {video_id2}")
+
+    try:
+        final_result2 = wait_for_completion(video_id2)
+        print(f"Lipsync video completed! URL: {final_result2['url']}")
+    except Exception as e:
+        print(f"Error: {e}")
+
+```
+
+---
+
+### JavaScript (Node.js) Example
+
+```jsx
+const fetch = require('node-fetch');
+const FormData = require('form-data');
+const fs = require('fs');
+
+const API_KEY = 'your_api_key_here';
+const BASE_URL = '<https://parrot.pika.art/api/v1/generate/v0>';
+
+async function generateVideoFromImage(imagePath, promptText = null) {
+    const formData = new FormData();
+    formData.append('image', fs.createReadStream(imagePath));
+    if (promptText) {
+        formData.append('promptText', promptText);
+    }
+
+    const response = await fetch(`${BASE_URL}/image-to-video-v2`, {
+        method: 'POST',
+        headers: {
+            'X-API-KEY': API_KEY,
+            'Accept': 'application/json',
+            ...formData.getHeaders()
+        },
+        body: formData
+    });
+
+    return await response.json();
+}
+
+async function generateLipsyncVideo(imagePath, audioPath, promptText = null) {
+    const formData = new FormData();
+    formData.append('image', fs.createReadStream(imagePath));
+    formData.append('audio', fs.createReadStream(audioPath));
+    if (promptText) {
+        formData.append('promptText', promptText);
+    }
+
+    const response = await fetch(`${BASE_URL}/audio-to-video`, {
+        method: 'POST',
+        headers: {
+            'X-API-KEY': API_KEY,
+            'Accept': 'application/json',
+            ...formData.getHeaders()
+        },
+        body: formData
+    });
+
+    return await response.json();
+}
+
+async function checkVideoStatus(videoId) {
+    const response = await fetch(`${BASE_URL}/videos/${videoId}`, {
+        headers: {
+            'X-API-KEY': API_KEY,
+            'Accept': 'application/json'
+        }
+    });
+
+    return await response.json();
+}
+
+async function waitForCompletion(videoId, maxWait = 300000) {
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < maxWait) {
+        const statusResponse = await checkVideoStatus(videoId);
+        const status = statusResponse.status;
+        const progress = statusResponse.progress || 0;
+
+        console.log(`Status: ${status}, Progress: ${progress}%`);
+
+        if (status === 'finished') {
+            return statusResponse;
+        } else if (status === 'failed') {
+            throw new Error(`Video generation failed: ${JSON.stringify(statusResponse)}`);
+        } else if (status === 'streaming') {
+            console.log(`Streaming available at: ${statusResponse.url}`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+
+    throw new Error('Video generation timed out');
+}
+
+// Usage Example
+async function main() {
+    try {
+        // Example 1: Image to Video
+        console.log('=== Image to Video ===');
+        const result1 = await generateVideoFromImage('./image.jpg', 'Make this person blink');
+        const videoId1 = result1.video_id;
+        console.log(`Video ID: ${videoId1}`);
+
+        const finalResult1 = await waitForCompletion(videoId1);
+        console.log(`Video completed! URL: ${finalResult1.url}`);
+
+        // Example 2: Lipsync Video
+        console.log('\\n=== Lipsync Video ===');
+        const result2 = await generateLipsyncVideo('./portrait.jpg', './speech.mp3', 'professional speaker');
+        const videoId2 = result2.video_id;
+        console.log(`Video ID: ${videoId2}`);
+
+        const finalResult2 = await waitForCompletion(videoId2);
+        console.log(`Lipsync video completed! URL: ${finalResult2.url}`);
+
+    } catch (error) {
+        console.error('Error:', error.message);
+    }
+}
+
+main();
+
+```
+
+---
+
+## ❌ Error Handling
+
+### Common Error Codes
+
+| Status Code | Error Type | Description | Solution |
+| --- | --- | --- | --- |
+| 400 | Bad Request | Invalid request parameters | Check request format and content |
+| 401 | Unauthorized | Invalid API Key | Verify API Key is correct |
+| 413 | Payload Too Large | Image/audio file too large | Compress file size |
+| 429 | Too Many Requests | Exceeded concurrency limit | Reduce concurrent requests |
+| 500 | Internal Server Error | Server internal error | Retry later |
+
+### Error Response Examples
+
+**Authentication Error (401)**
+
+```json
+{
+  "message": "Invalid API key"
+}
+
+```
+
+**Validation Error (422)**
+
+```json
+{
+  "detail": [
+    {
+      "loc": ["body", "image"],
+      "msg": "field required",
+      "type": "value_error.missing"
+    }
+  ]
+}
+
+```
+
+**Rate Limit Error (429)**
+
+```json
+{
+  "message": "Too many requests. Maximum 4 concurrent requests allowed."
+}
+
+```
+
+---
+
+## 🚀 Best Practices
+
+### 1. Concurrency Control
+
+- **Max Concurrent Requests**: 4 requests
+- **Recommendation**: Implement queue mechanism for request management
+- **Monitoring**: Regular checks for 429 errors
+
+### 2. File Optimization
+
+### Image Requirements
+
+- **Recommended Resolution**: 512x512 to 1024x1024
+- **File Size**: Recommended under 10MB
+- **Format**: JPEG (best compatibility), PNG, WebP
+- **Aspect Ratio**: Portrait orientation recommended for lipsync
+
+### Audio Requirements (for Lipsync)
+
+- **Format**: MP3, WAV, AAC
+- **File Size**: Recommended under 50MB
+- **Duration**: Recommended under 30 seconds
+- **Quality**: Clear speech, minimal background noise
+
+### 3. Polling Strategy
+
+- **Polling Interval**: 5-10 seconds
+- **Timeout Setting**: 5 minutes
+- **Error Retry**: Maximum 3 attempts
+- **Streaming Support**: Check for `streaming` status for early preview
+
+### 4. Error Handling Best Practices
+
+```python
+import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
+def create_session_with_retries():
+    session = requests.Session()
+    retry_strategy = Retry(
+        total=3,
+        backoff_factor=1,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+    session.mount("http://", adapter)
+    session.mount("https://", adapter)
+    return session
+
+# Usage
+session = create_session_with_retries()
+response = session.post(url, headers=headers, files=files)
+
+```
+
+### 5. Prompt Engineering Tips
+
+- **Be Specific**: Describe the desired motion clearly
+- **Keep It Simple**: Avoid overly complex prompts
+- **Natural Language**: Use conversational descriptions
+- **Examples**:
+    - ✅ "Make the person blink and smile naturally"
+    - ✅ "Professional speaker presenting to audience"
+    - ❌ "Complex multi-stage animation with 10 different movements"
+
+---
+
+## ❓ FAQ
+
+### Q1: What file formats are supported?
+
+**A**:
+
+- **Images**: JPEG, PNG, WebP formats
+- **Audio**: MP3, WAV, AAC formats
+
+JPEG images and MP3 audio are recommended for best compatibility.
+
+### Q2: How long does video generation take?
+
+**A**:
+
+- **Image to Video**: Usually 30-60 seconds
+- **Lipsync**: Usually 60-120 seconds, depending on audio length and complexity
+- Time varies based on queue length and system load
+
+### Q3: How many concurrent requests are supported?
+
+**A**: Currently supports up to 4 concurrent requests. Exceeding this limit will return a 429 error.
+
+### Q4: What are the video specifications?
+
+**A**:
+
+- **Duration**: Typically 3-5 seconds for I2V, matches audio length for lipsync
+- **Format**: MP4
+- **Resolution**: Related to input image resolution
+- **Frame Rate**: 24-30 fps
+
+### Q5: How to obtain an API Key?
+
+**A**: Please contact Pika.art official team to obtain your dedicated API Key.
+
+### Q6: What's the difference between the two endpoints?
+
+**A**:
+
+- **Image to Video (`image-to-video-v2`)**: Generates motion from a static image based on prompt
+- **Audio to Video (`audio-to-video`)**: Generates lipsync video where the person's lips move in sync with the audio
+
+### Q7: Can I use both endpoints together?
+
+**A**: No, these are separate generation methods. Choose based on your use case:
+
+- Use `image-to-video-v2` for general motion generation
+- Use `audio-to-video` for speech/lipsync scenarios
+
+### Q8: What happens during the "streaming" status?
+
+**A**: When status is `streaming`, a partial video is available as an HLS stream (`.m3u8`). This allows you to preview the video before final rendering is complete. The final MP4 will be available when status becomes `finished`.
+
+### Q9: Does it support batch processing?
+
+**A**: The API itself doesn't support batch upload, but batch effects can be achieved through client-side concurrent processing (up to 4 requests).
+
+### Q10: What should I do if generation fails?
+
+**A**:
+
+1. Check the error message in the response
+2. Verify image/audio format and size
+3. Ensure API key is valid
+4. Check if files are corrupted
+5. Retry with different parameters
+6. Contact support if issue persists
+
+### Q11: Are there any content restrictions?
+
+**A**: Please refer to Pika.art's Terms of Service and Content Policy. Ensure your content complies with applicable laws and platform guidelines.
+
+---
+
+## 📞 Technical Support
+
+If you encounter issues during usage, please:
+
+1. Check the FAQ section in this document
+2. Review API documentation
+3. Contact the technical support team
+4. [support position](https://www.notion.so/Parrot-v2-0-28723e1d26f48098bdf1d7252c134799?pvs=21)s
+
+---
+
+## 📝 Changelog
+
+- **2025-11-21**: Major Update
+    - Updated Base URL to `https://parrot.pika.art/api/v1/generate/v0`
+    - Simplified to 2 main endpoints: `image-to-video-v2` and `audio-to-video`
+    - Removed deprecated endpoints and special flags
+    - Added streaming status support
+    - Updated all code examples and documentation
+- **2025-09-22**: Initial release
+    - Support for image-to-video functionality
+    - Complete API documentation and examples
+
+---
+
+*Last updated: November 21, 2025*

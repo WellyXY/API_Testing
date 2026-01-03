@@ -1,0 +1,4 @@
+[phases.setup]
+# Install ffmpeg so /merge-sticking-videos works on Railway/Railpack
+nixPkgs = ["ffmpeg"]
+

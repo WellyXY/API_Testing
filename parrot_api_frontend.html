@@ -4032,6 +4032,14 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 showSuccess('✅ Sticking merge ready (fade). Click to download.');
             } catch (e) {
                 console.error('❌ Auto-merge failed:', e);
+                try {
+                    const msg = (e && e.message) ? e.message : String(e);
+                    if (String(msg).includes('FFmpeg not available')) {
+                        showError('❌ Auto-merge failed: FFmpeg not available on server. If you are on Railway, install ffmpeg (e.g. add nixpacks.toml with ffmpeg) and redeploy.');
+                    } else {
+                        showError(`❌ Auto-merge failed: ${msg}`);
+                    }
+                } catch {}
                 stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: null });
             }
         }

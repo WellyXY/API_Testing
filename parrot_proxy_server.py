@@ -1530,8 +1530,19 @@ def seedream_generate():
     響應: JSON { data: [{ url: "...", base64: "..." }] }
     """
     try:
-        SEEDREAM_API_KEY = "70f23192-0f0c-47d2-9bbf-961f70a17a92"
+        # Seedream Key: 請用環境變數提供（避免把金鑰寫死在 repo）
+        # export SEEDREAM_API_KEY="xxxx"
+        SEEDREAM_API_KEY = (
+            os.environ.get('SEEDREAM_API_KEY')
+            or os.environ.get('SEEDREAM_KEY')
+            or os.environ.get('ARK_API_KEY')
+        )
         SEEDREAM_BASE_URL = "https://ark.ap-southeast.bytepluses.com/api/v3"
+
+        if not SEEDREAM_API_KEY:
+            return jsonify({
+                'error': 'Missing SEEDREAM_API_KEY. Please set env var SEEDREAM_API_KEY and restart the server.'
+            }), 500
         
         data = request.get_json()
         
@@ -1559,8 +1570,26 @@ def seedream_generate():
             timeout=120
         )
         print(f"📊 Seedream API 响应状态: {seedream_response.status_code}")
-        
-        result = seedream_response.json()
+
+        # Seedream 有時會回非 JSON（或 JSON 解析失敗），這裡做保護並保留原始回應
+        raw_text = seedream_response.text
+        try:
+            result = seedream_response.json()
+        except Exception:
+            result = {'error': {'message': raw_text}}
+
+        # 對 401 做更友善的錯誤提示
+        if seedream_response.status_code == 401:
+            msg = None
+            try:
+                msg = (result.get('error') or {}).get('message')
+            except Exception:
+                msg = None
+            return jsonify({
+                'error': 'Seedream unauthorized (invalid/deleted API key). Please update SEEDREAM_API_KEY.',
+                'provider_response': result,
+                'provider_message': msg,
+            }), 401
         
         if seedream_response.ok and result.get('data'):
             print(f"✅ Seedream 生成成功!")

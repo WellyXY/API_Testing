@@ -3,4 +3,5 @@ Flask-CORS
 requests
 zipfile36
 Pillow
-google-cloud-aiplatform 
+google-cloud-aiplatform
+gunicorn

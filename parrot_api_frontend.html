@@ -2486,9 +2486,10 @@
         // 取得併發上限（若UI已移除，提供安全默認值）
         function getConcurrencyLimit() {
             const el = document.getElementById('concurrencyLimit');
-            const n = parseInt(el?.value || '10', 10);
-            if (Number.isNaN(n) || n <= 0) return 10;
-            return Math.min(n, 20);
+            // 你要求：圖片(i2i) / 影片(i2v) 併發上限最多 8
+            const n = parseInt(el?.value || '8', 10);
+            if (Number.isNaN(n) || n <= 0) return 8;
+            return Math.min(n, 8);
         }
 
         // 生成視頻 - 使用智能隊列和併發控制
@@ -2561,9 +2562,7 @@
         // 隊列管理器
         function queueManager(_limit, totalTasks) {
             // 每次動態取得併發上限（UI可能已隱藏）
-            // Sticking Video 的 i2i 很耗時，若同時跑多張圖會把後端/Seedream 打爆；因此強制序列化提交
-            const stickingEnabled = document.getElementById('stickingVideoToggle')?.checked || false;
-            const concurrencyLimit = stickingEnabled ? 1 : getConcurrencyLimit();
+            const concurrencyLimit = getConcurrencyLimit();
             const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
             const effectiveActive = activeTasks + pendingSubmissions; // 把尚未加入 Map 的提交也算進去
             const canSubmitCount = concurrencyLimit - effectiveActive;

@@ -1203,16 +1203,12 @@
                 <!-- Sticking inputs (manual prompts) -->
                 <div id="stickingInputs" class="section hidden" style="margin-bottom: var(--spacing-md);">
                     <div class="description-box" style="margin-bottom: var(--spacing-sm);">
-                        <strong>Sticking inputs</strong>: Provide 2 image prompts for i2i variants. The main <strong>Prompt</strong> below is used as the shared video prompt for all 3 i2v jobs.
+                        <strong>Sticking inputs</strong>: Provide 1 image prompt for i2i. We will generate 2 variants using the same prompt. The main <strong>Prompt</strong> below is used as the shared video prompt for all 3 i2v jobs.
                     </div>
                     <div class="form-row" style="display:flex; flex-wrap:wrap; gap: var(--spacing-md);">
                         <div class="form-group" style="flex:1; min-width:260px;">
-                            <label for="stickingImagePrompt1">Image Prompt 1 (i2i)</label>
-                            <textarea id="stickingImagePrompt1" class="form-control" rows="2" placeholder="Describe how to transform the reference image (variant 1)..."></textarea>
-                        </div>
-                        <div class="form-group" style="flex:1; min-width:260px;">
-                            <label for="stickingImagePrompt2">Image Prompt 2 (i2i)</label>
-                            <textarea id="stickingImagePrompt2" class="form-control" rows="2" placeholder="Describe how to transform the reference image (variant 2)..."></textarea>
+                            <label for="stickingImagePrompt1">Image Prompt (i2i)</label>
+                            <textarea id="stickingImagePrompt1" class="form-control" rows="2" placeholder="Describe how to transform the reference image (we will generate 2 variants)..."></textarea>
                         </div>
                     </div>
                 </div>
@@ -2168,14 +2164,13 @@
             
             try {
                 const imgPrompt1 = (document.getElementById('stickingImagePrompt1')?.value || '').trim();
-                const imgPrompt2 = (document.getElementById('stickingImagePrompt2')?.value || '').trim();
                 const sharedVideoPrompt = (videoPrompt || '').trim();
 
                 if (!sharedVideoPrompt) {
                     throw new Error('Sticking Video requires a video prompt (shared) in the main Prompt box.');
                 }
-                if (!imgPrompt1 || !imgPrompt2) {
-                    throw new Error('Sticking Video requires 2 image prompts (Image Prompt 1/2).');
+                if (!imgPrompt1) {
+                    throw new Error('Sticking Video requires an image prompt (i2i).');
                 }
 
                 const stickingRunId = `run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -2188,7 +2183,7 @@
                 // Step 1: 2x i2i in parallel
                 const [variantImg1, variantImg2] = await Promise.all([
                     processI2I(imageFile, imgPrompt1, STICKING_I2I_MODEL),
-                    processI2I(imageFile, imgPrompt2, STICKING_I2I_MODEL),
+                    processI2I(imageFile, imgPrompt1, STICKING_I2I_MODEL),
                 ]);
 
                 showSuccess(`🎬 Submitting 3 video jobs (original + 2 variants)...`);
@@ -2197,7 +2192,7 @@
                 const submitPromises = [
                     submitTaskForStickingVideo(imageFile, sharedVideoPrompt, 1, imageFile.name, '(original)', stickingRunId),
                     submitTaskForStickingVideo(variantImg1, sharedVideoPrompt, 2, imageFile.name, imgPrompt1, stickingRunId),
-                    submitTaskForStickingVideo(variantImg2, sharedVideoPrompt, 3, imageFile.name, imgPrompt2, stickingRunId),
+                    submitTaskForStickingVideo(variantImg2, sharedVideoPrompt, 3, imageFile.name, `${imgPrompt1} (variant 2)`, stickingRunId),
                 ];
 
                 const realIds = await Promise.all(submitPromises);

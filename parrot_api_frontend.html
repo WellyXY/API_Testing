@@ -974,10 +974,12 @@
                     <div class="select-row">
                         <label for="apiProvider">Provider:</label>
                         <select id="apiProvider" class="form-control" onchange="updateProviderVersions()">
-                            <option value="parrot_qb" selected>Parrot (QB Production)</option>
-                            <option value="parrot">Parrot (Lipsync)</option>
+                            <option value="original">Original - Parrot API</option>
+                            <option value="testing">🧪 Testing (New Architecture)</option>
+                            <option value="staging">Staging - Parrot Labs</option>
                             <option value="parrot-test">Parrot (Lipsync Test)</option>
-                            <option value="staging">Staging</option>
+                            <option value="parrot">Parrot (Lipsync)</option>
+                            <option value="parrot_qb" selected>Parrot (QB Production)</option>
                             <option value="minimax">Minimax TTS</option>
                         </select>
                     </div>
@@ -993,14 +995,12 @@
                         <label for="endpointType">Endpoint:</label>
                         <select id="endpointType" class="form-control" onchange="updateAPIDescription()">
                             <option value="image-to-video-v2" selected>image-to-video-v2 (default)</option>
-                            <option value="image-to-video-fast">image-to-video-fast</option>
                             <option value="image-to-video">image-to-video</option>
                             <option value="image-to-video-new">image-to-video-new</option>
                             <option value="image-to-video-inner">image-to-video-inner</option>
                             <option value="image-to-video-nmd">image-to-video-nmd</option>
                             <option value="image-to-video-v2">image-to-video-v2</option>
                             <option value="audio-to-video">audio-to-video</option>
-                            <option value="audio-to-video-v2">audio-to-video-v2</option>
                         </select>
                     </div>
                 </div>
@@ -1026,9 +1026,12 @@
                             <div class="form-group">
                                 <label for="apiProviderB">Provider</label>
                                 <select id="apiProviderB" class="form-control" onchange="updateProviderVersionsB()">
-                                    <option value="parrot_qb">Parrot (QB Production)</option>
+                                    <option value="testing">🧪 Testing (New Architecture)</option>
+                                    <option value="staging">Staging - Parrot Labs</option>
                                     <option value="parrot-test">Parrot (Lipsync Test)</option>
                                     <option value="parrot">Parrot (Lipsync)</option>
+                                    <option value="parrot_qb">Parrot (QB Production)</option>
+                                    <option value="original" selected>Original - Parrot API</option>
                                 </select>
                             </div>
                             
@@ -1040,14 +1043,12 @@
                             <div class="form-group" id="endpointTypeGroupB" style="display:none;">
                                 <label for="endpointTypeB">Endpoint</label>
                                 <select id="endpointTypeB" class="form-control" onchange="updateAPIDescriptionB()">
-                                    <option value="image-to-video-v2">image-to-video-v2 (default)</option>
-                                    <option value="image-to-video-fast">image-to-video-fast</option>
-                                    <option value="image-to-video">image-to-video</option>
+                                    <option value="image-to-video">image-to-video (default)</option>
                                     <option value="image-to-video-new">image-to-video-new</option>
                                     <option value="image-to-video-inner">image-to-video-inner</option>
                                     <option value="image-to-video-nmd">image-to-video-nmd</option>
+                                    <option value="image-to-video-v2">image-to-video-v2</option>
                                     <option value="audio-to-video">audio-to-video</option>
-                                    <option value="audio-to-video-v2">audio-to-video-v2</option>
                                 </select>
                             </div>
                             
@@ -1069,7 +1070,7 @@
                 <!-- API Key -->
                 <div class="form-group">
                     <label for="apiKey">API Key</label>
-                    <input type="text" id="apiKey" class="form-control" value="" placeholder="pk-xxxxx" readonly>
+                    <input type="password" id="apiKey" class="form-control" value="" placeholder="pk-xxxxx">
                     <small style="color: var(--text-secondary); margin-top: 6px; display: block; font-size: 12px;">
                         💡 Usually starts with "pk-" prefix
                     </small>
@@ -1146,22 +1147,6 @@
                     <input type="file" id="imageFile" accept="image/*" multiple>
                     <div id="imagePreview"></div>
                 </div>
-
-                <!-- KeyFrames Toggle (QB image-to-video-v2 only) -->
-                <div id="kfGroup" style="display: none; margin-top: var(--spacing-md);">
-                    <div class="form-group" style="display:flex; align-items:center; gap: 12px; padding: 12px; background: var(--bg-secondary); border-radius: var(--radius-md); margin-bottom: var(--spacing-sm);">
-                        <label style="margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                            🧩 Enable KeyFrames (2 images in one request)
-                        </label>
-                        <label class="switch" style="margin-left: auto;">
-                            <input type="checkbox" id="kfToggle" onchange="updateKfHint()">
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                    <div id="kfHint" class="description-box" style="display:none;">
-                        KeyFrames mode will send images as pairs of <code>keyFrames</code> in a single request (1&2, 3&4, ...). Each pair is treated as (first + last frame).
-                    </div>
-                </div>
                 
                 <!-- Audio Upload (for audio-to-video) -->
                 <div id="audioGroup" style="display: none; margin-top: var(--spacing-md);">
@@ -1204,7 +1189,7 @@
                 <!-- Sticking Video Toggle -->
                 <div class="form-group" style="display: flex; align-items: center; gap: 12px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: var(--radius-md); margin-bottom: var(--spacing-md); color: white;">
                     <label style="margin: 0; font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                        🎬 Sticking Video (AI Prompt Generation)
+                        🎬 Sticking Video
                     </label>
                     <label class="switch" style="margin-left: auto;">
                         <input type="checkbox" id="stickingVideoToggle" onchange="toggleStickingVideoMode()">
@@ -1212,7 +1197,24 @@
                     </label>
                 </div>
                 <div id="stickingVideoHint" class="description-box" style="display: none; margin-bottom: var(--spacing-md);">
-                    ⚡ <strong>Sticking Video Mode:</strong> AI will generate 3 image variants from your reference, then create videos for each variant. This will produce 3 final videos.
+                    ⚡ <strong>Sticking Video Mode:</strong> Generates 2 image variants (i2i) and then generates 3 videos (original + 2 variants). Finally merges them into one video.
+                </div>
+
+                <!-- Sticking inputs (manual prompts) -->
+                <div id="stickingInputs" class="section hidden" style="margin-bottom: var(--spacing-md);">
+                    <div class="description-box" style="margin-bottom: var(--spacing-sm);">
+                        <strong>Sticking inputs</strong>: Provide 2 image prompts for i2i variants. The main <strong>Prompt</strong> below is used as the shared video prompt for all 3 i2v jobs.
+                    </div>
+                    <div class="form-row" style="display:flex; flex-wrap:wrap; gap: var(--spacing-md);">
+                        <div class="form-group" style="flex:1; min-width:260px;">
+                            <label for="stickingImagePrompt1">Image Prompt 1 (i2i)</label>
+                            <textarea id="stickingImagePrompt1" class="form-control" rows="2" placeholder="Describe how to transform the reference image (variant 1)..."></textarea>
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:260px;">
+                            <label for="stickingImagePrompt2">Image Prompt 2 (i2i)</label>
+                            <textarea id="stickingImagePrompt2" class="form-control" rows="2" placeholder="Describe how to transform the reference image (variant 2)..."></textarea>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Prompt (unified for both i2i and i2v) -->
@@ -1344,9 +1346,90 @@
         let globalTaskCounter = 0;
         let statusCheckInterval = null;
         let pendingSubmissions = 0; // Pending submissions not yet added to tasks Map
+        // Sticking merge state per run
+        const stickingMergeStateByRunId = new Map(); // runId -> { merging: boolean, mergedBlobUrl: string|null }
         
         // API Provider and version configuration
         const API_PROVIDERS = {
+            'testing': {
+                name: 'Testing (New Architecture)',
+                description: '新测试架构 - 需要 SSH 隧道',
+                baseUrl: 'http://localhost:9580',
+                apiKey: 'test-api-key-123456',
+                versions: {
+                    'v1': {
+                        endpoints: {
+                            'image-to-video': {
+                                path: '/api/v1/generate/v0/image-to-video',
+                                description: 'Image to Video - v1 (新架构)',
+                                name: 'Testing v1 (image-to-video)',
+                                queryPath: '/api/v1/generate/v0/videos' // 查询路径
+                            }
+                        },
+                        defaultEndpoint: 'image-to-video',
+                        description: 'Image to Video - v1 (新测试架构)',
+                        name: 'Testing v1'
+                    }
+                }
+            },
+            'original': {
+                name: 'Original',
+                description: 'Original Parrot API Server',
+                baseUrl: 'https://qazwsxedcrf3g5h.pika.art',
+                apiKey: 'pk_GW7ITxUVnC271AoJaasgdATrmzjl4OnQKTmD2j6tLZM',
+                versions: {
+                    'v0': {
+                        endpoints: {
+                            'image-to-video': {
+                                path: '/generate/v0/image-to-video',
+                                description: 'Image to Video - v0 (default)',
+                                name: 'Original v0 (default)'
+                            },
+                            'image-to-video-new': {
+                                path: '/generate/v0/image-to-video-new',
+                                description: 'Image to Video - v0 (new endpoint)',
+                                name: 'Original v0 (new)'
+                            },
+                            'image-to-video-inner': {
+                                path: '/generate/v0/image-to-video-inner',
+                                description: 'Image to Video - v0 (internal endpoint)',
+                                name: 'Original v0 (internal)'
+                            },
+                            'image-to-video-nmd': {
+                                path: '/generate/v0/image-to-video-nmd',
+                                description: 'Image to Video - v0 (NMD endpoint)',
+                                name: 'Original v0 (nmd)'
+                            },
+                            'image-to-video-v2': {
+                                path: '/generate/v0/image-to-video-v2',
+                                description: 'Image to Video - v2 (new version)',
+                                name: 'Original v0 (v2)'
+                            },
+                            'audio-to-video': {
+                                path: '/generate/v0/audio-to-video',
+                                description: 'Image + Audio to Video - v0',
+                                name: 'Original v0 (audio-to-video)'
+                            }
+                        },
+                        defaultEndpoint: 'image-to-video',
+                        description: 'Image to Video - v0',
+                        name: 'Original v0'
+                    }
+                }
+            },
+            'staging': {
+                name: 'Staging',
+                description: 'Parrot Labs API Server',
+                baseUrl: 'https://089e99349ace.pikalabs.app',
+                apiKey: 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
+                versions: {
+                    'v2.2': {
+                        endpoint: '/generate/2.2/i2v',
+                        description: '圖片轉視頻 - v2.2 版本',
+                        name: 'Staging v2.2'
+                    }
+                }
+            },
             'parrot': {
                 name: 'Parrot (Lipsync)',
                 description: 'Pika Parrot audio-to-video (lipsync)',
@@ -1421,38 +1504,15 @@
                                 description: 'Image to Video - v2 (new version)',
                                 name: 'QB v0 (v2)'
                             },
-                            'image-to-video-fast': {
-                                path: '/api/v1/generate/v0/image-to-video-fast',
-                                description: 'Image to Video - v0 (fast endpoint)',
-                                name: 'QB v0 (fast)'
-                            },
                             'audio-to-video': {
                                 path: '/api/v1/generate/v0/audio-to-video',
                                 description: 'Image + Audio to Video - v0',
                                 name: 'QB v0 (audio-to-video)'
-                            },
-                            'audio-to-video-v2': {
-                                path: '/api/v1/generate/v0/audio-to-video-v2',
-                                description: 'Image + Audio to Video - v2',
-                                name: 'QB v0 (audio-to-video-v2)'
                             }
                         },
                         defaultEndpoint: 'image-to-video-v2',
                         description: 'Image to Video - v0',
                         name: 'QB v0'
-                    }
-                }
-            },
-            'staging': {
-                name: 'Staging',
-                description: 'Parrot Labs API Server',
-                baseUrl: 'https://089e99349ace.pikalabs.app',
-                apiKey: 'pk_fnOLPQFrhk96QscYG9hIUSw-Jn5ygl_ehSUWa9PvwZM',
-                versions: {
-                    'v2.2': {
-                        endpoint: '/generate/2.2/i2v',
-                        description: '圖片轉視頻 - v2.2 版本',
-                        name: 'Staging v2.2'
                     }
                 }
             },
@@ -1472,12 +1532,12 @@
 
         // 獲取當前API配置 - 現在支持動態選擇
         function getCurrentAPIConfig() {
-            const provider = document.getElementById('apiProvider')?.value || 'parrot_qb';
-            const apiVersion = document.getElementById('apiVersion')?.value || 'v0';
+            const provider = document.getElementById('apiProvider')?.value || 'staging';
+            const apiVersion = document.getElementById('apiVersion')?.value || 'v2.2';
             const endpointTypeRaw = document.getElementById('endpointType')?.value;
             const versionConfig = API_PROVIDERS[provider]?.versions[apiVersion];
             
-            let endpoint = '/api/v1/generate/v0/image-to-video-v2'; // 默認
+            let endpoint = '/generate/2.2/i2v'; // 默認
             let resolvedEndpointType = endpointTypeRaw;
             
             if (versionConfig) {
@@ -1500,7 +1560,7 @@
                     endpoint = versionConfig.endpoint;
                 }
             }
-
+            
             return {
                 provider,
                 version: apiVersion,
@@ -1517,7 +1577,7 @@
             
             if (!providerSelect || !versionSelect) return;
             
-            const selectedProvider = providerSelect.value || 'parrot_qb';
+            const selectedProvider = providerSelect.value || 'original';
             const providerConfig = API_PROVIDERS[selectedProvider];
             
             // 清空版本選項
@@ -1532,9 +1592,6 @@
                     option.textContent = version.name || versionKey;
                     versionSelect.appendChild(option);
                 });
-                if (!versionSelect.value && versionSelect.options.length > 0) {
-                    versionSelect.value = versionSelect.options[0].value;
-                }
             }
             
             // 若為 original，強制選擇 v0
@@ -1596,14 +1653,10 @@
                 const et = document.getElementById('endpointType');
                 if (isParrot) {
                     if (versionSelect) versionSelect.value = 'v0';
-                    // 為 lipsync 系列設定對應端點
-                    if (et) {
-                        if (selectedProvider === 'parrot-test') {
-                            et.value = 'audio-to-video'; // fallback，實際會用 defaultEndpoint test
-                        } else {
-                            et.value = 'audio-to-video';
-                        }
-                    }
+                    // 注意：下拉選單沒有 'audio-to-video-test' 這個值，
+                    // 設為 'audio-to-video' 以便 refreshAudioVisibility 正確顯示音訊；
+                    // submit 時因為 endpoints 映射缺少該鍵會自動回落到 defaultEndpoint（即 test 路徑）。
+                    if (et) et.value = 'audio-to-video';
                     if (endpointTypeGroup) endpointTypeGroup.style.display = 'none';
                     if (audioGroupEl) audioGroupEl.style.display = 'block';
                 } else {
@@ -1625,7 +1678,7 @@
             const versionSelect = document.getElementById('apiVersionB');
             const endpointTypeGroup = document.getElementById('endpointTypeGroupB');
             if (!providerSelect || !versionSelect) return;
-            const selectedProvider = providerSelect.value || 'parrot_qb';
+            const selectedProvider = providerSelect.value || 'original';
             const providerConfig = API_PROVIDERS[selectedProvider];
             versionSelect.innerHTML = '';
             if (providerConfig && providerConfig.versions) {
@@ -1636,9 +1689,6 @@
                     option.textContent = version.name || versionKey;
                     versionSelect.appendChild(option);
                 });
-                if (!versionSelect.value && versionSelect.options.length > 0) {
-                    versionSelect.value = versionSelect.options[0].value;
-                }
             }
 
             // Default to original/v0 and endpoint image-to-video-v2
@@ -1714,13 +1764,7 @@
             const audioGroup = document.getElementById('audioGroup');
             if (!audioGroup) return;
             // parrot / parrot-test 一律顯示音訊上傳
-            if (
-                provider === 'parrot' ||
-                provider === 'parrot-test' ||
-                endpointType === 'audio-to-video' ||
-                endpointType === 'audio-to-video-test' ||
-                endpointType === 'audio-to-video-v2'
-            ) {
+            if (provider === 'parrot' || provider === 'parrot-test' || endpointType === 'audio-to-video' || endpointType === 'audio-to-video-test') {
                 audioGroup.style.display = 'block';
             } else {
                 audioGroup.style.display = 'none';
@@ -1729,39 +1773,6 @@
         document.getElementById('endpointType')?.addEventListener('change', refreshAudioVisibility);
         // 初次渲染時也刷新一次
         window.addEventListener('load', refreshAudioVisibility);
-
-        // KeyFrames（QB image-to-video-v2）顯示/隱藏 + 提示
-        function isKfContext() {
-            const provider = document.getElementById('apiProvider')?.value;
-            const endpointType = document.getElementById('endpointType')?.value;
-            return provider === 'parrot_qb' && endpointType === 'image-to-video-v2';
-        }
-
-        function refreshKfVisibility() {
-            const group = document.getElementById('kfGroup');
-            const toggle = document.getElementById('kfToggle');
-            const hint = document.getElementById('kfHint');
-            if (!group || !toggle || !hint) return;
-
-            if (isKfContext()) {
-                group.style.display = 'block';
-            } else {
-                group.style.display = 'none';
-                toggle.checked = false;
-                hint.style.display = 'none';
-            }
-        }
-
-        function updateKfHint() {
-            const toggle = document.getElementById('kfToggle');
-            const hint = document.getElementById('kfHint');
-            if (!toggle || !hint) return;
-            hint.style.display = toggle.checked ? 'block' : 'none';
-        }
-
-        document.getElementById('endpointType')?.addEventListener('change', refreshKfVisibility);
-        document.getElementById('apiProvider')?.addEventListener('change', refreshKfVisibility);
-        window.addEventListener('load', () => { refreshKfVisibility(); updateKfHint(); });
 
         // 更新API描述
         function updateAPIDescription() {
@@ -2110,17 +2121,20 @@
             const generateBtnText = document.getElementById('generateBtnText');
             const promptHint = document.getElementById('promptHint');
             const stickingVideoHint = document.getElementById('stickingVideoHint');
+            const stickingInputs = document.getElementById('stickingInputs');
             
             if (stickingVideoToggle.checked) {
                 // Disable i2i if sticking video is enabled
                 i2iToggle.checked = false;
                 i2iToggle.disabled = true;
                 stickingVideoHint.style.display = 'block';
+                if (stickingInputs) stickingInputs.classList.remove('hidden');
                 generateBtnText.textContent = '🎬 Generate Sticking Videos (3x)';
-                promptHint.textContent = '(AI will generate variants)';
+                promptHint.textContent = '(shared video prompt for 3 videos)';
             } else {
                 i2iToggle.disabled = false;
                 stickingVideoHint.style.display = 'none';
+                if (stickingInputs) stickingInputs.classList.add('hidden');
                 generateBtnText.textContent = '🚀 Generate Videos';
                 promptHint.textContent = '(for video generation)';
             }
@@ -2147,124 +2161,54 @@
             };
         }
 
-        // Process Sticking Video - Generate prompts and create multiple variants
+        // Process Sticking Video - Manual prompts: 2x i2i (parallel) -> 3x i2v (parallel) -> merge later
         async function processStickingVideo(imageFile, videoPrompt) {
             console.log('🎬 Starting Sticking Video process...');
             console.log(`📷 Image: ${imageFile.name}`);
             console.log(`📝 Video Prompt: ${videoPrompt}`);
             
             try {
-                // Step 1: Call backend to generate prompts
-                showSuccess(`🤖 Generating AI prompts for ${imageFile.name}...`);
-                
-                const formData = new FormData();
-                formData.append('image', imageFile);
-                formData.append('video_prompt', videoPrompt);
-                
-                console.log('📤 [Gemini] Sending request to /generate-prompts...');
-                console.log(`📤 [Gemini] Image: ${imageFile.name}, Size: ${(imageFile.size / 1024).toFixed(2)}KB`);
-                console.log(`📤 [Gemini] Video Prompt: ${videoPrompt}`);
-                
-                const startTime = Date.now();
-                const response = await fetch('/generate-prompts', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const elapsed = ((Date.now() - startTime) / 1000).toFixed(2);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error(`❌ [Gemini] Failed after ${elapsed}s: ${response.status}`);
-                    throw new Error(`Prompt generation failed: ${response.status} - ${errorText}`);
-                }
-                
-                const result = await response.json();
-                console.log(`✅ [Gemini] Completed in ${elapsed}s`);
-                console.log('✅ [Gemini] Generated prompts:', result);
-                
-                let imagePrompts = result.image_prompts || [];
-                let videoPrompts = result.video_prompts || [];
-                if (imagePrompts.length > 2) imagePrompts = imagePrompts.slice(0, 2);
-                if (videoPrompts.length > 2) videoPrompts = videoPrompts.slice(0, 2);
-                
-                if (imagePrompts.length === 0 || videoPrompts.length === 0) {
-                    throw new Error('No prompts generated');
-                }
-                
-                showSuccess(`✅ Generated ${imagePrompts.length} prompt variants! Starting baseline + variants...`);
-                
-                // Step 2: 基線(直接 i2v) + 變體(兩條：i2i→i2v)
-                console.log('🚀 Starting parallel processing: baseline + variants...');
+                const imgPrompt1 = (document.getElementById('stickingImagePrompt1')?.value || '').trim();
+                const imgPrompt2 = (document.getElementById('stickingImagePrompt2')?.value || '').trim();
+                const sharedVideoPrompt = (videoPrompt || '').trim();
 
-                // 基線：使用上傳圖片 + 原始視頻 Prompt 作為第1條
-                const baselinePromise = (async () => {
-                    try {
-                        showSuccess('🎬 [1/3] Submitting baseline video (reference image + original prompt)...');
-                        window.stickingVideoOverridePrompt = videoPrompt;
-                        window.stickingVideoVariantIndex = 1;
-                        window.stickingVideoTotalVariants = imagePrompts.length + 1;
-                        await submitTaskForStickingVideo(imageFile, videoPrompt, 1, imageFile.name, '(baseline)');
-                        console.log('✅ Baseline video submitted');
-                    } finally {
-                        window.stickingVideoOverridePrompt = null;
-                        window.stickingVideoVariantIndex = null;
-                        window.stickingVideoTotalVariants = null;
-                    }
-                })();
-                
-                // 并行生成所有图片变体
-                const i2iPromises = imagePrompts.map(async (imagePrompt, i) => {
-                    console.log(`\n${'='.repeat(70)}`);
-                    console.log(`🎨 Processing variant ${i + 1}/${imagePrompts.length} (parallel)`);
-                    console.log(`${'='.repeat(70)}`);
-                    console.log(`📝 Image Prompt: ${imagePrompt.substring(0, 100)}...`);
-                    
-                    try {
-                        showSuccess(`🎨 [${i + 1}/${imagePrompts.length}] Generating image variant (parallel)...`);
-                        const processedImage = await processI2I(imageFile, imagePrompt);
-                        console.log(`✅ Variant ${i + 1} image generated`);
-                        return { processedImage, videoPrompt: videoPrompts[i], imagePrompt, index: i + 2 };
-                    } catch (error) {
-                        console.error(`❌ Variant ${i + 1} i2i failed:`, error);
-                        throw error;
-                    }
-                });
-                
-                // 等待基線與 i2i 完成
-                const i2iResults = await Promise.allSettled([baselinePromise, ...i2iPromises]);
-                
-                // 并行提交所有 i2v 任务
-                const i2vPromises = i2iResults.slice(1).map(async (result, i) => {
-                    if (result.status === 'fulfilled') {
-                        const { processedImage, videoPrompt, imagePrompt, index } = result.value; // 2 or 3
-                        
-                        console.log(`📝 Video Prompt ${index}: ${videoPrompt.substring(0, 100)}...`);
-                        showSuccess(`🎬 [${index}/3] Submitting video generation (parallel)...`);
-                        
-                        window.stickingVideoOverridePrompt = videoPrompt;
-                        window.stickingVideoVariantIndex = index;
-                        window.stickingVideoTotalVariants = imagePrompts.length;
-                        
-                        try {
-                            await submitTaskForStickingVideo(processedImage, videoPrompt, index, imageFile.name, imagePrompt);
-                            console.log(`✅ Variant ${index} submitted`);
-                        } finally {
-                            window.stickingVideoOverridePrompt = null;
-                            window.stickingVideoVariantIndex = null;
-                            window.stickingVideoTotalVariants = null;
-                        }
-                    } else {
-                        console.error(`❌ Variant ${i + 2} was skipped due to i2i failure`);
-                        showError(`❌ Variant ${i + 2} failed: ${result.reason?.message || 'Unknown error'}`);
-                    }
-                });
-                
-                // 等待所有 i2v 提交完成
-                await Promise.allSettled(i2vPromises);
-                
-                const successCount = i2iResults.filter(r => r.status === 'fulfilled').length; // include baseline
-                showSuccess(`🎉 Submitted baseline + ${Math.max(0, successCount - 1)}/${imagePrompts.length} variants!`);
+                if (!sharedVideoPrompt) {
+                    throw new Error('Sticking Video requires a video prompt (shared) in the main Prompt box.');
+                }
+                if (!imgPrompt1 || !imgPrompt2) {
+                    throw new Error('Sticking Video requires 2 image prompts (Image Prompt 1/2).');
+                }
+
+                const stickingRunId = `run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+                console.log(`🧷 Sticking run: ${stickingRunId}`);
+
+                const STICKING_I2I_MODEL = 'seedream-4-5-251128';
+                showSuccess(`🎨 Generating 2 image variants (i2i)...`);
+
+                // Step 1: 2x i2i in parallel
+                const [variantImg1, variantImg2] = await Promise.all([
+                    processI2I(imageFile, imgPrompt1, STICKING_I2I_MODEL),
+                    processI2I(imageFile, imgPrompt2, STICKING_I2I_MODEL),
+                ]);
+
+                showSuccess(`🎬 Submitting 3 video jobs (original + 2 variants)...`);
+
+                // Step 2: 3x i2v in parallel (shared video prompt)
+                const submitPromises = [
+                    submitTaskForStickingVideo(imageFile, sharedVideoPrompt, 1, imageFile.name, '(original)', stickingRunId),
+                    submitTaskForStickingVideo(variantImg1, sharedVideoPrompt, 2, imageFile.name, imgPrompt1, stickingRunId),
+                    submitTaskForStickingVideo(variantImg2, sharedVideoPrompt, 3, imageFile.name, imgPrompt2, stickingRunId),
+                ];
+
+                const realIds = await Promise.all(submitPromises);
+                console.log('✅ Sticking submitted video ids:', realIds);
+
+                // show merge card early (auto-merge will trigger when all 3 finished)
+                try {
+                    document.getElementById('downloadStickingCard')?.style && (document.getElementById('downloadStickingCard').style.display = 'block');
+                    window.latestStickingRunId = stickingRunId;
+                } catch {}
+
                 return true;
                 
             } catch (error) {
@@ -2275,7 +2219,7 @@
         }
 
         // Modified submitTask for Sticking Video (submits a single variant)
-        async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName, imagePrompt) {
+        async function submitTaskForStickingVideo(processedImageFile, videoPrompt, variantIndex, originalImageName, imagePrompt, stickingRunId) {
             const apiKey = document.getElementById('apiKey').value || '';
             const apiConfig = getCurrentAPIConfig();
             const { duration: requestedDuration, resolution: requestedResolution } = getVideoSettings();
@@ -2292,6 +2236,7 @@
             task.videoResolution = requestedResolution || '';
             task.stickingVideoMode = true;
             task.stickingVideoVariant = variantIndex;
+            task.stickingRunId = stickingRunId || '';
             task.imagePrompt = imagePrompt || '';
             task.status = 'submitting';
             task.requestedAt = Date.now();
@@ -2359,7 +2304,7 @@
                         
                         updateTaskCard(task);
                         console.log(`✅ Sticking video variant ${variantIndex} submitted: ${realId}`);
-                        return;
+                        return realId;
                     }
                     
                     lastError = result.detail || result.message || `HTTP ${response.status}`;
@@ -2374,7 +2319,7 @@
                         task.status = 'failed';
                         updateTaskCard(task);
                         showError(lastError);
-                        return;
+                        return null;
                     }
                     
                 } catch (error) {
@@ -2388,17 +2333,19 @@
                     task.status = 'failed';
                     updateTaskCard(task);
                     showError(lastError);
-                    return;
+                    return null;
                 }
             }
             
             console.error(`❌ Sticking video variant ${variantIndex} failed after ${MAX_RETRIES} retries`);
             task.status = 'failed';
             updateTaskCard(task);
+            return null;
         }
 
         // Call Seedream API for i2i
-        async function processI2I(imageFile, prompt) {
+        // - modelOverride: optional model string for Seedream
+        async function processI2I(imageFile, prompt, modelOverride = null) {
             const i2iStartTime = Date.now();
             console.log('🎨 [Seedream] Starting i2i process...');
             console.log(`📝 [Seedream] Prompt: ${prompt.substring(0, 100)}...`);
@@ -2424,13 +2371,17 @@
                             const conversionTime = ((Date.now() - i2iStartTime) / 1000).toFixed(2);
                             console.log(`🔄 [Seedream] Converted to JPEG in ${conversionTime}s`);
                             
+                            const DEFAULT_SEEDREAM_MODEL = "ep-20250921042133-t769x";
+                            const model = modelOverride || DEFAULT_SEEDREAM_MODEL;
+
                             const seedreamPayload = {
-                                model: "ep-20250921042133-t769x",
+                                model,
                                 prompt: prompt,
                                 image: base64Image,
                                 size: "1440x2560",
                                 watermark: false
                             };
+                            console.log(`🤖 [Seedream] Model: ${model}`);
 
                             console.log('📤 [Seedream] Sending API request via proxy...');
                             
@@ -2545,7 +2496,6 @@
             const apiKey = document.getElementById('apiKey').value;
             const concurrencyLimit = getConcurrencyLimit();
             const imageFiles = Array.from(document.getElementById('imageFile').files);
-            const kfEnabled = !!document.getElementById('kfToggle')?.checked && isKfContext();
 
             // 驗證輸入
             if (!apiKey) {
@@ -2557,32 +2507,13 @@
                 return;
             }
 
-            // KeyFrames（QB image-to-video-v2）：一次請求傳兩張圖（支援 batch：1&2, 3&4...）
-            if (kfEnabled) {
-                if (imageFiles.length < 2) {
-                    showError('KeyFrames mode requires at least 2 images.');
-                    return;
-                }
-                if (imageFiles.length % 2 !== 0) {
-                    showError('KeyFrames mode requires an even number of images (pairs: 1&2, 3&4, ...).');
-                    return;
-                }
-            }
-
             // 初始化
             clearMessages();
             setButtonLoading(true);
             showBatchProgress();
             
-            // 將任務放入隊列：KeyFrames 模式下兩兩配對（1&2, 3&4...）
-            if (kfEnabled) {
-                imageQueue = [];
-                for (let i = 0; i < imageFiles.length; i += 2) {
-                    imageQueue.push({ __kf: true, frames: [imageFiles[i], imageFiles[i + 1]] });
-                }
-            } else {
-                imageQueue = [...imageFiles];
-            }
+            // 將所有圖片放入隊列
+            imageQueue = [...imageFiles];
             const totalTasks = imageQueue.length;
             
             console.log('=== New Concurrent Task Submission ===');
@@ -2590,10 +2521,7 @@
             console.log('Concurrency Limit:', concurrencyLimit);
             console.log('====================================');
             
-            showSuccess(kfEnabled
-                ? `🚀 Queued ${totalTasks} KeyFrames task(s) from ${imageFiles.length} image(s)...`
-                : `🚀 Queued ${totalTasks} image(s) for generation...`
-            );
+            showSuccess(`🚀 Queued ${totalTasks} image(s) for generation...`);
             
             // 啟動隊列管理器
             if (processingInterval) clearInterval(processingInterval);
@@ -2681,13 +2609,6 @@
 
         // 提交單個任務，包含重試邏輯
         async function submitTask(imageFile) {
-            // KeyFrames 任務：imageFile 會是一個 {__kf:true, frames:[File,File]} 的物件
-            const isKfTask = !!(imageFile && typeof imageFile === 'object' && imageFile.__kf);
-            const kfFrames = isKfTask ? (imageFile.frames || []) : [];
-            const kfFirst = isKfTask ? kfFrames[0] : null;
-            const kfLast = isKfTask ? kfFrames[1] : null;
-            const realImageFile = isKfTask ? kfFirst : imageFile;
-
             // Check if sticking video mode is enabled
             const stickingVideoToggle = document.getElementById('stickingVideoToggle');
             const stickingVideoEnabled = stickingVideoToggle?.checked || false;
@@ -2695,21 +2616,6 @@
             // Check if i2i mode is enabled
             const i2iToggle = document.getElementById('i2iToggle');
             const i2iEnabled = i2iToggle?.checked || false;
-
-            if (isKfTask) {
-                if (!kfFirst || !kfLast) {
-                    showError('KeyFrames mode requires 2 images (first + last frame)');
-                    return;
-                }
-                if (i2iEnabled) {
-                    showError('KeyFrames mode does not support i2i. Please disable i2i.');
-                    return;
-                }
-                if (stickingVideoEnabled && !window.benchmarkOverridePrompt) {
-                    showError('KeyFrames mode does not support Sticking Video. Please disable it.');
-                    return;
-                }
-            }
             
             // Get the unified prompt
             const promptText = (window.benchmarkOverridePrompt ?? document.getElementById('promptText').value) || '';
@@ -2724,7 +2630,7 @@
                 
                 console.log('🎬 Sticking Video mode detected - processing...');
                 try {
-                    await processStickingVideo(realImageFile, promptText);
+                    await processStickingVideo(imageFile, promptText);
                     return; // processStickingVideo handles everything
                 } catch (error) {
                     console.error('❌ Sticking Video failed:', error);
@@ -2733,7 +2639,7 @@
                 }
             }
             
-            let processedImageFile = realImageFile;
+            let processedImageFile = imageFile;
 
             if (i2iEnabled) {
                 if (!promptText.trim()) {
@@ -2742,13 +2648,13 @@
                 }
 
                 // Show i2i processing notification
-                showSuccess(`🎨 Processing i2i for ${realImageFile.name}... Please wait.`);
+                showSuccess(`🎨 Processing i2i for ${imageFile.name}... Please wait.`);
                 
                 try {
                     // Process image through Seedream first, using the same prompt
-                    processedImageFile = await processI2I(realImageFile, promptText);
-                    console.log(`✅ i2i processing complete. Original: ${realImageFile.name}, Processed: ${processedImageFile.name}`);
-                    showSuccess(`✅ i2i completed for ${realImageFile.name}, now generating video...`);
+                    processedImageFile = await processI2I(imageFile, promptText);
+                    console.log(`✅ i2i processing complete. Original: ${imageFile.name}, Processed: ${processedImageFile.name}`);
+                    showSuccess(`✅ i2i completed for ${imageFile.name}, now generating video...`);
                 } catch (error) {
                     showError(`❌ i2i processing failed: ${error.message}`);
                     console.error('i2i processing error:', error);
@@ -2766,9 +2672,7 @@
 
             // 創建一個臨時任務用於UI展示
             const tempId = `submitting-${Date.now()}-${Math.random()}`;
-            const kfName = isKfTask ? `${kfFirst.name} + ${kfLast.name}` : '';
-            const baseName = isKfTask ? `[KF] ${kfName}` : realImageFile.name;
-            const displayName = i2iEnabled ? `[i2i] ${baseName}` : baseName;
+            const displayName = i2iEnabled ? `[i2i] ${imageFile.name}` : imageFile.name;
             const task = createTask(tempId, promptText, displayName);
             task.videoDuration = requestedDuration || '';
             task.videoResolution = requestedResolution || '';
@@ -2798,7 +2702,7 @@
             showTasksArea();
 
             // audio-to-video 需要音頻文件，無則直接失敗並返回
-            if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test' || apiConfig.endpointType === 'audio-to-video-v2') {
+            if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test') {
                 const audioInputPre = document.getElementById('audioFile');
                 const audioFilePre = audioInputPre?.files?.[0];
                 if (!audioFilePre) {
@@ -2817,24 +2721,19 @@
                 
                 try {
                     if (attempt > 0) {
-                        console.log(`[Retry] Attempt ${attempt}/${MAX_RETRIES} for ${displayName}...`);
+                        console.log(`[Retry] Attempt ${attempt}/${MAX_RETRIES} for ${imageFile.name}...`);
                         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
                     }
 
                     // 準備 FormData 和 headers
                     const formData = new FormData();
                     // Use processed image if i2i was enabled
-                    if (isKfTask) {
-                        formData.append('keyFrames', kfFirst);
-                        formData.append('keyFrames', kfLast);
-                    } else {
-                        formData.append('image', processedImageFile);
-                    }
+                    formData.append('image', processedImageFile);
                     formData.append('provider', apiConfig.provider);
                     formData.append('version', apiConfig.version);
                     if (apiConfig.endpointType) formData.append('endpoint_type', apiConfig.endpointType);
-                    // 如果選擇的是 audio-to-video 類端點，附帶音頻文件
-                    if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test' || apiConfig.endpointType === 'audio-to-video-v2') {
+                    // 如果選擇的是 audio-to-video(-test)，附帶音頻文件
+                    if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test') {
                         const audioInput = document.getElementById('audioFile');
                         const audioFile = audioInput?.files?.[0];
                         if (!audioFile) {
@@ -2866,49 +2765,11 @@
                     console.log('📝 Prompt:', promptText.trim() || 'No prompt');
                     console.log('⏱️ Duration:', requestedDuration || 'API default');
                     console.log('🖥️ Resolution:', requestedResolution || 'API default');
-                    if (isKfTask) {
-                        console.log('📎 KeyFrames:', kfFirst.name, `(${(kfFirst.size / 1024).toFixed(2)} KB)`, '+', kfLast.name, `(${(kfLast.size / 1024).toFixed(2)} KB)`);
-                    } else {
-                        console.log('📎 Image:', processedImageFile.name, `(${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i processed]' : ''}`);
-                    }
+                    console.log('📎 Image:', processedImageFile.name, `(${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i processed]' : ''}`);
                     if (i2iEnabled) {
-                        console.log('🎨 Original Image:', realImageFile.name, `(${(realImageFile.size / 1024).toFixed(2)} KB)`);
+                        console.log('🎨 Original Image:', imageFile.name, `(${(imageFile.size / 1024).toFixed(2)} KB)`);
                     }
                     console.log('📋 Headers:', headers);
-
-                    // 打印等價的 cURL（呼叫本地 proxy /api/generate），方便你對照 KF 是否真的用 keyFrames 送出
-                    try {
-                        const proxyUrl = `${location.origin}/api/generate`;
-                        const curlParts = [
-                            `curl -X POST "${proxyUrl}"`,
-                            ...(apiKey ? [`  -H "X-API-KEY: ${apiKey}"`] : []),
-                            `  -F "provider=${apiConfig.provider}"`,
-                            `  -F "version=${apiConfig.version}"`,
-                            ...(apiConfig.endpointType ? [`  -F "endpoint_type=${apiConfig.endpointType}"`] : []),
-                            ...(promptText.trim() ? [`  -F "promptText=${promptText.trim().replaceAll('"', '\\"')}"`] : []),
-                            ...(requestedDuration ? [`  -F "duration=${requestedDuration}"`] : []),
-                            ...(requestedResolution ? [`  -F "resolution=${requestedResolution}"`] : []),
-                        ];
-
-                        if (isKfTask) {
-                            curlParts.push(`  -F "keyFrames=@${kfFirst?.name || 'first_frame.jpg'}"`);
-                            curlParts.push(`  -F "keyFrames=@${kfLast?.name || 'last_frame.jpg'}"`);
-                        } else {
-                            curlParts.push(`  -F "image=@${processedImageFile?.name || 'image.jpg'}"`);
-                        }
-
-                        if (apiConfig.endpointType === 'audio-to-video' || apiConfig.endpointType === 'audio-to-video-test' || apiConfig.endpointType === 'audio-to-video-v2') {
-                            const audioInput = document.getElementById('audioFile');
-                            const audioFile = audioInput?.files?.[0];
-                            if (audioFile) curlParts.push(`  -F "audio=@${audioFile.name}"`);
-                        }
-
-                        const curlCmd = curlParts.join(" \\\n");
-                        console.log('=== cURL (proxy) ===');
-                        console.log(curlCmd);
-                    } catch (e) {
-                        console.warn('Failed to build cURL preview:', e);
-                    }
                     
                     // 根据 provider 决定请求 URL
                     let requestUrl;
@@ -2946,7 +2807,7 @@ ${apiConfig.endpointType ? `🎯 Endpoint Type: ${apiConfig.endpointType}` : ''}
 📝 Prompt: ${(window.benchmarkOverridePrompt ?? promptText).trim() || 'No prompt provided'}
 ${requestedDuration ? `⏱️ Duration: ${requestedDuration}s` : ''}
 ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
-📎 ${isKfTask ? ('KeyFrames: ' + kfFirst.name + ' + ' + kfLast.name) : ('Image: ' + processedImageFile.name + ' (' + (processedImageFile.size / 1024).toFixed(2) + ' KB)' + (i2iEnabled ? (' [i2i processed from ' + realImageFile.name + ']') : ''))}
+📎 Image: ${processedImageFile.name} (${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i processed from ' + imageFile.name + ']' : ''}
 🏗️ Worker: ${result.worker || 'Not specified'}
 📊 Status: ${result.status || 'pending'}
 ⏰ Time: ${new Date().toLocaleTimeString()}
@@ -2954,7 +2815,7 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                         
                         console.log('=== Video Generation Success ===');
                         console.log(successDetails);
-                        console.log(`✅ Task submitted successfully: ${result.video_id} for ${displayName}`);
+                        console.log(`✅ Task submitted successfully: ${result.video_id} for ${imageFile.name}`);
                         
                         // 提交成功，用真實ID替換臨時ID
                         const realId = result.video_id;
@@ -2978,8 +2839,8 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                             prompt: promptText.trim() || 'No prompt provided',
                             duration: requestedDuration || null,
                             resolution: requestedResolution || null,
-                            imageInfo: isKfTask ? `${kfFirst.name} + ${kfLast.name} [keyFrames]` : `${processedImageFile.name} (${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i]' : ''}`,
-                            originalImageInfo: i2iEnabled ? `${realImageFile.name} (${(realImageFile.size / 1024).toFixed(2)} KB)` : null,
+                            imageInfo: `${processedImageFile.name} (${(processedImageFile.size / 1024).toFixed(2)} KB)${i2iEnabled ? ' [i2i]' : ''}`,
+                            originalImageInfo: i2iEnabled ? `${imageFile.name} (${(imageFile.size / 1024).toFixed(2)} KB)` : null,
                             worker: result.worker || 'Not specified',
                             submittedAt: new Date().toLocaleTimeString()
                         };
@@ -3012,7 +2873,7 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                     const isRetryable = response.status === 429 || response.status >= 500;
 
                     if (isRetryable && attempt < MAX_RETRIES) {
-                        console.warn(`[Retry] Will retry for ${displayName}. Error: ${lastError}`);
+                        console.warn(`[Retry] Will retry for ${imageFile.name}. Error: ${lastError}`);
                         task.status = `retrying (${attempt + 1})`;
                         updateTaskCard(task);
                         continue;
@@ -3042,7 +2903,7 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             }
 
             // 所有重試失敗
-            console.error(`❌ Task failed for ${displayName} after ${MAX_RETRIES} retries. Final error: ${lastError}`);
+            console.error(`❌ Task failed for ${imageFile.name} after ${MAX_RETRIES} retries. Final error: ${lastError}`);
             task.status = 'failed';
             updateTaskCard(task);
         }
@@ -3054,9 +2915,7 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             // 允許未輸入 API Key 時仍輪詢，後端會使用預設 key（若有）
             
             const activeTasks = Array.from(tasks.values()).filter(task => 
-                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status) &&
-                !task.status.startsWith('retrying') &&
-                !task.id.startsWith('submitting-')
+                !['finished', 'completed', 'failed', 'error', 'submitting'].includes(task.status)
             );
             
             if (activeTasks.length === 0) {
@@ -3199,6 +3058,13 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
 
             // 若為 Benchmark，嘗試合併到左右對比
             try { maybeRenderBenchmarkPair(task); } catch {}
+
+            // 若為 Sticking，嘗試自動 merge（同一個 stickingRunId 的 3 支完成後合併）
+            try {
+                if (task.stickingVideoMode && task.stickingRunId && (task.status === 'finished' || task.status === 'completed') && task.url) {
+                    autoMergeStickingRun(task.stickingRunId);
+                }
+            } catch {}
         }
 
         // 下載日誌：輸出 CSV，包含 id, provider, version, endpointType, prompt, submittedAt, startedAt, finishedAt, waitSec, genSec
@@ -4012,14 +3878,17 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             
             // 顯示/隱藏 Sticking Video 合併下載按鈕
             const downloadStickingCard = document.getElementById('downloadStickingCard');
-            const completedStickingVideos = Array.from(tasks.values()).filter(task => 
-                task.stickingVideoMode && 
-                (task.status === 'finished' || task.status === 'completed') && 
+            const runId = window.latestStickingRunId || '';
+            const completedStickingVideos = Array.from(tasks.values()).filter(task =>
+                task.stickingVideoMode &&
+                (!runId || task.stickingRunId === runId) &&
+                (task.status === 'finished' || task.status === 'completed') &&
                 task.url
             );
             
             if (downloadStickingCard) {
-                if (completedStickingVideos.length >= 3) {
+                const mergedReady = runId && stickingMergeStateByRunId.get(runId)?.mergedBlobUrl;
+                if (completedStickingVideos.length >= 3 || mergedReady) {
                     downloadStickingCard.style.display = 'block';
                 } else {
                     downloadStickingCard.style.display = 'none';
@@ -4032,9 +3901,11 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             console.log('🎬 Starting sticking videos merge...');
             
             // 獲取所有完成的 sticking video 任務
-            const completedStickingVideos = Array.from(tasks.values()).filter(task => 
-                task.stickingVideoMode && 
-                (task.status === 'finished' || task.status === 'completed') && 
+            const runId = window.latestStickingRunId || '';
+            const completedStickingVideos = Array.from(tasks.values()).filter(task =>
+                task.stickingVideoMode &&
+                (!runId || task.stickingRunId === runId) &&
+                (task.status === 'finished' || task.status === 'completed') &&
                 task.url
             ).sort((a, b) => a.stickingVideoVariant - b.stickingVideoVariant); // 按變體編號排序
             
@@ -4083,6 +3954,9 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 
                 // 創建下載連結
                 const url = window.URL.createObjectURL(blob);
+                if (runId) {
+                    stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: url });
+                }
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = `sticking_videos_merged_fade.mp4`;
@@ -4091,9 +3965,6 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                
-                // 清理 blob URL
-                window.URL.revokeObjectURL(url);
                 
                 showSuccess(`✅ Sticking videos merged successfully with fade effect!`);
                 
@@ -4104,6 +3975,81 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 downloadBtn.disabled = false;
                 downloadBtn.textContent = originalText;
             }
+        }
+
+        async function autoMergeStickingRun(runId) {
+            if (!runId) return;
+            const existing = stickingMergeStateByRunId.get(runId);
+            if (existing?.mergedBlobUrl || existing?.merging) return;
+            stickingMergeStateByRunId.set(runId, { merging: true, mergedBlobUrl: null });
+
+            try {
+                const completed = Array.from(tasks.values()).filter(task =>
+                    task.stickingVideoMode &&
+                    task.stickingRunId === runId &&
+                    (task.status === 'finished' || task.status === 'completed') &&
+                    task.url
+                ).sort((a, b) => a.stickingVideoVariant - b.stickingVideoVariant);
+
+                if (completed.length !== 3) {
+                    stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: null });
+                    return;
+                }
+
+                const downloadBtn = document.getElementById('downloadStickingBtn');
+                const originalText = downloadBtn?.textContent || '';
+                if (downloadBtn) {
+                    downloadBtn.disabled = true;
+                    downloadBtn.textContent = '⏳ Auto-merging...';
+                }
+
+                const response = await fetch('/merge-sticking-videos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ video_urls: completed.map(t => t.url), transition: 'fade' })
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: blobUrl });
+
+                // Update UI: allow download without re-merging
+                if (downloadBtn) {
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = '⬇️ Download merged (ready)';
+                    downloadBtn.onclick = () => downloadPreparedStickingMerged(runId);
+                } else if (originalText) {
+                    // no-op
+                }
+
+                const downloadStickingCard = document.getElementById('downloadStickingCard');
+                if (downloadStickingCard) downloadStickingCard.style.display = 'block';
+                showSuccess('✅ Sticking merge ready (fade). Click to download.');
+            } catch (e) {
+                console.error('❌ Auto-merge failed:', e);
+                stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: null });
+            }
+        }
+
+        function downloadPreparedStickingMerged(runId) {
+            const state = stickingMergeStateByRunId.get(runId);
+            const url = state?.mergedBlobUrl;
+            if (!url) {
+                showError('Merged video is not ready yet.');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `sticking_videos_merged_fade_${runId}.mp4`;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         // 下載所有完成的視頻

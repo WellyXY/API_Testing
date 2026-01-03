@@ -2561,7 +2561,9 @@
         // 隊列管理器
         function queueManager(_limit, totalTasks) {
             // 每次動態取得併發上限（UI可能已隱藏）
-            const concurrencyLimit = getConcurrencyLimit();
+            // Sticking Video 的 i2i 很耗時，若同時跑多張圖會把後端/Seedream 打爆；因此強制序列化提交
+            const stickingEnabled = document.getElementById('stickingVideoToggle')?.checked || false;
+            const concurrencyLimit = stickingEnabled ? 1 : getConcurrencyLimit();
             const activeTasks = Array.from(tasks.values()).filter(t => !['completed', 'failed', 'finished', 'error'].includes(t.status)).length;
             const effectiveActive = activeTasks + pendingSubmissions; // 把尚未加入 Map 的提交也算進去
             const canSubmitCount = concurrencyLimit - effectiveActive;

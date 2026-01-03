@@ -1567,7 +1567,7 @@ def seedream_generate():
                 'Authorization': f'Bearer {SEEDREAM_API_KEY}'
             },
             json=data,
-            timeout=120
+            timeout=180
         )
         print(f"📊 Seedream API 响应状态: {seedream_response.status_code}")
 
@@ -1599,7 +1599,7 @@ def seedream_generate():
             # 下載圖片並轉換為 base64，避免 CORS 問題
             try:
                 print(f"📥 正在下載生成的圖片...")
-                img_response = requests.get(image_url, timeout=60)
+                img_response = requests.get(image_url, timeout=120)
                 if img_response.status_code == 200:
                     img_base64 = base64.b64encode(img_response.content).decode('utf-8')
                     result['data'][0]['base64'] = f"data:image/jpeg;base64,{img_base64}"

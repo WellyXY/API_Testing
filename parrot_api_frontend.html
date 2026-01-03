@@ -1292,12 +1292,10 @@
                 <div class="card-header" style="border-bottom-color: rgba(255,255,255,0.2);">
                     <div class="card-title" style="color: white;">🎬 Sticking Video Merge</div>
                 </div>
-                <button class="btn btn-success" id="downloadStickingBtn" onclick="downloadMergedStickingVideos()" style="background: white; color: #667eea; font-weight: 600;">
-                    💫 Merge & Download (Fade Effect)
-                </button>
                 <div style="margin-top: var(--spacing-sm); font-size: 12px; color: rgba(255,255,255,0.9); background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;">
-                    💡 Merges 3 variants with smooth fade transitions
+                    💡 Each image will produce 3 videos (original + 2 variants). They will be merged automatically when ready.
                 </div>
+                <div id="stickingMergedList" style="margin-top: var(--spacing-md); display:flex; flex-direction:column; gap: var(--spacing-md);"></div>
             </div>
 
             <!-- Task Management -->
@@ -1348,6 +1346,7 @@
         let pendingSubmissions = 0; // Pending submissions not yet added to tasks Map
         // Sticking merge state per run
         const stickingMergeStateByRunId = new Map(); // runId -> { merging: boolean, mergedBlobUrl: string|null }
+        const stickingRunMetaByRunId = new Map(); // runId -> { imageName: string, createdAt: number }
         
         // API Provider and version configuration
         const API_PROVIDERS = {
@@ -2181,6 +2180,7 @@
 
                 const stickingRunId = `run-${Date.now()}-${Math.random().toString(16).slice(2)}`;
                 console.log(`🧷 Sticking run: ${stickingRunId}`);
+                stickingRunMetaByRunId.set(stickingRunId, { imageName: imageFile.name || '', createdAt: Date.now() });
 
                 const STICKING_I2I_MODEL = 'seedream-4-5-251128';
                 showSuccess(`🎨 Generating 2 image variants (i2i)...`);
@@ -2203,10 +2203,11 @@
                 const realIds = await Promise.all(submitPromises);
                 console.log('✅ Sticking submitted video ids:', realIds);
 
-                // show merge card early (auto-merge will trigger when all 3 finished)
+                // show merge sheet early (auto-merge will trigger when all 3 finished)
                 try {
-                    document.getElementById('downloadStickingCard')?.style && (document.getElementById('downloadStickingCard').style.display = 'block');
-                    window.latestStickingRunId = stickingRunId;
+                    const card = document.getElementById('downloadStickingCard');
+                    if (card) card.style.display = 'block';
+                    renderStickingMergedSheet();
                 } catch {}
 
                 return true;
@@ -3879,103 +3880,66 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
             
             // 顯示/隱藏 Sticking Video 合併下載按鈕
             const downloadStickingCard = document.getElementById('downloadStickingCard');
-            const runId = window.latestStickingRunId || '';
-            const completedStickingVideos = Array.from(tasks.values()).filter(task =>
-                task.stickingVideoMode &&
-                (!runId || task.stickingRunId === runId) &&
-                (task.status === 'finished' || task.status === 'completed') &&
-                task.url
-            );
-            
             if (downloadStickingCard) {
-                const mergedReady = runId && stickingMergeStateByRunId.get(runId)?.mergedBlobUrl;
-                if (completedStickingVideos.length >= 3 || mergedReady) {
+                const anySticking = Array.from(tasks.values()).some(t => t.stickingVideoMode);
+                const anyMerged = Array.from(stickingMergeStateByRunId.values()).some(v => v?.mergedBlobUrl);
+                if (anySticking || anyMerged) {
                     downloadStickingCard.style.display = 'block';
+                    try { renderStickingMergedSheet(); } catch {}
                 } else {
                     downloadStickingCard.style.display = 'none';
                 }
             }
         }
 
-        // 下載合併的 Sticking Videos
-        async function downloadMergedStickingVideos() {
-            console.log('🎬 Starting sticking videos merge...');
-            
-            // 獲取所有完成的 sticking video 任務
-            const runId = window.latestStickingRunId || '';
-            const completedStickingVideos = Array.from(tasks.values()).filter(task =>
-                task.stickingVideoMode &&
-                (!runId || task.stickingRunId === runId) &&
-                (task.status === 'finished' || task.status === 'completed') &&
-                task.url
-            ).sort((a, b) => a.stickingVideoVariant - b.stickingVideoVariant); // 按變體編號排序
-            
-            console.log(`📋 Found ${completedStickingVideos.length} completed sticking videos:`, 
-                completedStickingVideos.map(t => ({ variant: t.stickingVideoVariant, url: t.url })));
-            
-            if (completedStickingVideos.length !== 3) {
-                showError(`❌ Need exactly 3 completed sticking videos, but found ${completedStickingVideos.length}`);
+        // 渲染 Sticking 合併結果列表（每張圖一個 merged video）
+        function renderStickingMergedSheet() {
+            const list = document.getElementById('stickingMergedList');
+            const card = document.getElementById('downloadStickingCard');
+            if (!list || !card) return;
+
+            const entries = Array.from(stickingRunMetaByRunId.entries())
+                .map(([runId, meta]) => {
+                    const state = stickingMergeStateByRunId.get(runId) || {};
+                    return { runId, meta, state };
+                })
+                .sort((a, b) => (b.meta?.createdAt || 0) - (a.meta?.createdAt || 0));
+
+            if (entries.length === 0) {
+                list.innerHTML = '';
                 return;
             }
-            
-            const downloadBtn = document.getElementById('downloadStickingBtn');
-            const originalText = downloadBtn.textContent;
-            downloadBtn.disabled = true;
-            downloadBtn.textContent = '⏳ Merging videos...';
-            
-            try {
-                // 使用 fade 轉場效果
-                const transition = 'fade';
-                console.log(`💫 Using fade transition`);
-                
-                // 提取視頻 URLs
-                const videoUrls = completedStickingVideos.map(task => task.url);
-                
-                showSuccess('💫 Downloading and merging videos with fade effect...');
-                
-                // 調用後端合併 API
-                const response = await fetch('/merge-sticking-videos', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        video_urls: videoUrls,
-                        transition: transition
-                    })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
-                }
-                
-                // 獲取合併後的視頻 blob
-                const blob = await response.blob();
-                
-                // 創建下載連結
-                const url = window.URL.createObjectURL(blob);
-                if (runId) {
-                    stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: url });
-                }
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = `sticking_videos_merged_fade.mp4`;
-                link.style.display = 'none';
-                
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                showSuccess(`✅ Sticking videos merged successfully with fade effect!`);
-                
-            } catch (error) {
-                console.error('❌ Merge failed:', error);
-                showError(`❌ Merge failed: ${error.message}`);
-            } finally {
-                downloadBtn.disabled = false;
-                downloadBtn.textContent = originalText;
-            }
+
+            const rows = entries.map(({ runId, meta, state }) => {
+                const name = meta?.imageName || runId;
+                const when = meta?.createdAt ? new Date(meta.createdAt).toLocaleString() : '';
+                const mergedUrl = state?.mergedBlobUrl;
+                const merging = !!state?.merging;
+
+                const status = mergedUrl ? 'Merged ready' : (merging ? 'Merging...' : 'Waiting (will auto-merge when 3 videos finish)');
+                const videoHtml = mergedUrl
+                    ? `<video src="${mergedUrl}" controls style="width:100%; max-width:520px; border-radius:8px; background:black;"></video>`
+                    : `<div style="font-size:12px; color:rgba(255,255,255,0.85);">Status: ${status}</div>`;
+
+                const btnHtml = mergedUrl
+                    ? `<button class="btn btn-success btn-sm" style="background:white; color:#667eea; font-weight:600;" onclick="downloadPreparedStickingMerged('${runId}')">⬇️ Download</button>`
+                    : `<button class="btn btn-outline btn-sm" style="border-color: rgba(255,255,255,0.7); color:white;" disabled>${merging ? 'Merging' : 'Pending'}</button>`;
+
+                return `
+<div style="display:flex; flex-direction:column; gap:10px; background: rgba(0,0,0,0.22); padding: 12px; border-radius: 10px;">
+  <div style="display:flex; align-items:center; justify-content:space-between; gap: 12px;">
+    <div style="min-width:0;">
+      <div style="font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${name}</div>
+      <div style="font-size:12px; color:rgba(255,255,255,0.85);">Run: ${runId}${when ? ` • ${when}` : ''}</div>
+    </div>
+    <div style="flex:0 0 auto;">${btnHtml}</div>
+  </div>
+  ${videoHtml}
+</div>`;
+            }).join('\n');
+
+            list.innerHTML = rows;
+            card.style.display = 'block';
         }
 
         async function autoMergeStickingRun(runId) {
@@ -4019,18 +3983,10 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 const blobUrl = window.URL.createObjectURL(blob);
                 stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: blobUrl });
 
-                // Update UI: allow download without re-merging
-                if (downloadBtn) {
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = '⬇️ Download merged (ready)';
-                    downloadBtn.onclick = () => downloadPreparedStickingMerged(runId);
-                } else if (originalText) {
-                    // no-op
-                }
-
                 const downloadStickingCard = document.getElementById('downloadStickingCard');
                 if (downloadStickingCard) downloadStickingCard.style.display = 'block';
-                showSuccess('✅ Sticking merge ready (fade). Click to download.');
+                try { renderStickingMergedSheet(); } catch {}
+                showSuccess('✅ Sticking merge ready (fade).');
             } catch (e) {
                 console.error('❌ Auto-merge failed:', e);
                 try {
@@ -4042,6 +3998,7 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                     }
                 } catch {}
                 stickingMergeStateByRunId.set(runId, { merging: false, mergedBlobUrl: null });
+                try { renderStickingMergedSheet(); } catch {}
             }
         }
 
@@ -4052,9 +4009,15 @@ ${requestedResolution ? `🖥️ Resolution: ${requestedResolution}` : ''}
                 showError('Merged video is not ready yet.');
                 return;
             }
+            const meta = stickingRunMetaByRunId.get(runId) || {};
+            const base = (meta.imageName || 'sticking')
+                .toString()
+                .replace(/\.[^/.]+$/, '')
+                .replace(/[^\w\-]+/g, '_')
+                .slice(0, 80);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `sticking_videos_merged_fade_${runId}.mp4`;
+            link.download = `${base}_merged_fade_${runId}.mp4`;
             link.style.display = 'none';
             document.body.appendChild(link);
             link.click();
